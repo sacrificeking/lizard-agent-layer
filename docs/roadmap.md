@@ -9,13 +9,14 @@
 - Target analyzer for profile, harness, skill, and risk recommendations.
 - Adapter matrix for profile/harness compatibility checks.
 - Install plan reports with merge suggestions for existing instruction files.
+- Standalone merge suggestion generator with patch, block, Markdown, and JSON artifacts.
 
 ## Next
 
-- Project-specific merge suggestion generator with diff-style patches for existing instruction files.
 - Optional CI workflow templates for validate, smoke, and matrix runs.
 - Additional harness adapters when they have stable local instruction conventions.
 - Richer target analyzer scoring for monorepos and non-Node stacks.
+- Optional manifest comparison command for layer upgrades in installed target projects.
 
 ## Later
 

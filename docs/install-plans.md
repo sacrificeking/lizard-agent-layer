@@ -31,6 +31,14 @@ A plan report includes:
 - Merge suggestions for existing instruction files.
 - Suggested Markdown block for wiring the sidecar intentionally.
 
+## Patch workflow
+
+After reviewing the install plan, run `scripts/merge-suggestions.ps1` to generate concrete patch files and copy-ready Markdown blocks for existing instruction files.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard
+```
+
 ## Safety behavior
 
 Preview plus `-WritePlan` writes only the requested report file. It does not create `.agent/`, harness instruction files, skill mirrors, or sidecars in the target. Apply mode can also write a plan, but the plan is a report artifact and is not tracked as a layer-owned target path.

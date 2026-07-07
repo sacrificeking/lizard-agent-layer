@@ -1,5 +1,14 @@
 ﻿# Changelog
 
+## 0.5.0 - 2026-07-07
+
+### Added
+
+- Standalone `merge-suggestions.ps1` generator for existing instruction files.
+- Markdown, JSON, patch, and copy-block artifacts for manual harness instruction merges.
+- Smoke coverage proving merge suggestions do not write into target projects.
+- Merge suggestion documentation and quick-start integration.
+
 ## 0.4.0 - 2026-07-07
 
 ### Added

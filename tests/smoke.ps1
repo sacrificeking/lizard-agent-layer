@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$LayerRoot = (Split-Path -Parent $PSScriptRoot)
 )
 
@@ -10,6 +10,7 @@ $cursorTarget = Join-Path $tmpRoot 'cursor-target'
 $sidecarTarget = Join-Path $tmpRoot 'sidecar-target'
 $analysisTarget = Join-Path $tmpRoot 'analysis-target'
 $sidecarPlanPath = Join-Path $tmpRoot 'sidecar-install-plan.md'
+$mergeSuggestionDir = Join-Path $tmpRoot 'merge-suggestions'
 
 New-Item -ItemType Directory -Path $standardTarget -Force | Out-Null
 New-Item -ItemType Directory -Path $cursorTarget -Force | Out-Null
@@ -91,6 +92,27 @@ Run-Step 'install plan sidecar target' {
   if (Test-Path -LiteralPath (Join-Path $sidecarTarget 'AGENTS.lizard-agent-layer.md')) { throw 'Preview plan wrote sidecar into target.' }
 }
 
+
+Run-Step 'generate merge suggestions sidecar target' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\merge-suggestions.ps1') -TargetPath $sidecarTarget -Profile minimal -Harnesses generic-agents-md -OutputDir $mergeSuggestionDir | Out-String | Write-Host
+  $report = Join-Path $mergeSuggestionDir 'merge-suggestions.md'
+  $json = Join-Path $mergeSuggestionDir 'merge-suggestions.json'
+  $patch = Join-Path $mergeSuggestionDir 'generic-agents-md-AGENTS.md.patch'
+  $block = Join-Path $mergeSuggestionDir 'generic-agents-md-AGENTS.md.block.md'
+  foreach ($expectedPath in @($report, $json, $patch, $block)) {
+    if (-not (Test-Path -LiteralPath $expectedPath)) { throw "Expected merge suggestion artifact: $expectedPath" }
+  }
+  $reportText = Get-Content -LiteralPath $report -Raw
+  foreach ($expectedText in @('# lizard-agent-layer merge suggestions', 'merge-needed', 'AGENTS.lizard-agent-layer.md', 'Patch files')) {
+    if ($reportText -notmatch [regex]::Escape($expectedText)) { throw "Expected merge report to contain: $expectedText" }
+  }
+  $patchText = Get-Content -LiteralPath $patch -Raw
+  foreach ($expectedText in @('diff --git a/AGENTS.md b/AGENTS.md', '+## lizard-agent-layer', '+Review `AGENTS.lizard-agent-layer.md`')) {
+    if ($patchText -notmatch [regex]::Escape($expectedText)) { throw "Expected patch to contain: $expectedText" }
+  }
+  if (Test-Path -LiteralPath (Join-Path $sidecarTarget '.agent')) { throw 'Merge suggestion generator wrote .agent into target.' }
+  if (Test-Path -LiteralPath (Join-Path $sidecarTarget 'AGENTS.lizard-agent-layer.md')) { throw 'Merge suggestion generator wrote sidecar into target.' }
+}
 Run-Step 'install apply sidecar target' {
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $sidecarTarget -Profile minimal -Harnesses generic-agents-md -Apply | Out-String | Write-Host
   $agents = Get-Content -LiteralPath (Join-Path $sidecarTarget 'AGENTS.md') -Raw
