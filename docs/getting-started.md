@@ -72,6 +72,14 @@ Use `-Strict` in CI or release-style checks.
 
 ## 9. Validate this layer before changing it
 
+Run the full local CI gate:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\ci.ps1
+```
+
+Or run individual gates:
+
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\smoke.ps1

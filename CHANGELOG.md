@@ -1,5 +1,13 @@
 ﻿# Changelog
 
+## 0.6.0 - 2026-07-07
+
+### Added
+
+- Local `scripts/ci.ps1` gate runner for validate, smoke, matrix, and optional strict git status checks.
+- GitHub Actions workflow for repository CI on pull requests, pushes, and manual dispatches.
+- CI documentation and quick-start integration.
+
 ## 0.5.0 - 2026-07-07
 
 ### Added
