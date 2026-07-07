@@ -12,6 +12,8 @@ Portable agent infrastructure for projects that need consistent AI-assisted deve
 - Local project memory under `.agent/memory/`.
 - Permission, memory, secret, handoff, and release protocols.
 - Preview-first installers that avoid clobbering target files.
+- Target analyzer for profile, harness, and skill recommendations.
+- Adapter matrix tests for every profile/harness combination.
 - Doctor, validation, upgrade, manifest-sync, and smoke-test scripts.
 
 ## Profiles
@@ -22,7 +24,13 @@ Portable agent infrastructure for projects that need consistent AI-assisted deve
 
 ## Quick start
 
-Preview first:
+Analyze a target first:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project
+```
+
+Preview the recommended or chosen profile:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard
@@ -51,6 +59,7 @@ Validate this repository:
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\smoke.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\matrix.ps1
 ```
 
 ## Safety stance
@@ -67,6 +76,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\smoke.ps1
 - [Architecture](docs/architecture.md)
 - [Getting started](docs/getting-started.md)
 - [Profiles](docs/profiles.md)
+- [Target analysis](docs/target-analysis.md)
+- [Adapter matrix](docs/adapter-matrix.md)
 - [Safety model](docs/safety-model.md)
 - [Skill authoring](docs/skill-authoring.md)
 - [Roadmap](docs/roadmap.md)

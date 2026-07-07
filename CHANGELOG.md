@@ -1,5 +1,19 @@
 ﻿# Changelog
 
+## 0.3.0 - 2026-07-07
+
+### Added
+
+- Target analyzer for profile, harness, skill, signal, and risk recommendations.
+- Adapter matrix script that verifies selected profile/harness combinations through install plus strict doctor checks.
+- Documentation for target analysis and matrix testing.
+- Smoke coverage for analyzer recommendations.
+
+### Changed
+
+- Validation now parses the analyzer and matrix scripts.
+- Getting-started flow now starts with a read-only target analysis.
+
 ## 0.2.0 - 2026-07-07
 
 ### Added

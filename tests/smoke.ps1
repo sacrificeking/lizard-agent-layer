@@ -8,14 +8,25 @@ $tmpRoot = Join-Path $LayerRoot ".tmp\smoke-$stamp"
 $standardTarget = Join-Path $tmpRoot 'standard-target'
 $cursorTarget = Join-Path $tmpRoot 'cursor-target'
 $sidecarTarget = Join-Path $tmpRoot 'sidecar-target'
+$analysisTarget = Join-Path $tmpRoot 'analysis-target'
 
 New-Item -ItemType Directory -Path $standardTarget -Force | Out-Null
 New-Item -ItemType Directory -Path $cursorTarget -Force | Out-Null
 New-Item -ItemType Directory -Path $sidecarTarget -Force | Out-Null
+New-Item -ItemType Directory -Path $analysisTarget -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $analysisTarget 'supabase\functions\demo') -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $analysisTarget 'supabase\migrations') -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $analysisTarget 'src\pages\finance\dca') -Force | Out-Null
 Set-Content -LiteralPath (Join-Path $standardTarget 'README.md') -Value '# standard smoke target' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $cursorTarget 'README.md') -Value '# cursor smoke target' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $sidecarTarget 'README.md') -Value '# sidecar smoke target' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $sidecarTarget 'AGENTS.md') -Value '# Existing Project Instructions' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $analysisTarget 'README.md') -Value '# analysis smoke target' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $analysisTarget 'package.json') -Value '{"dependencies":{"@supabase/supabase-js":"latest","react":"latest"},"devDependencies":{"typescript":"latest","vite":"latest"}}' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $analysisTarget 'vite.config.ts') -Value 'export default {}' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $analysisTarget 'tsconfig.json') -Value '{}' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $analysisTarget 'DESIGN.md') -Value '# Design' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $analysisTarget 'src\pages\finance\dca\stocks-dca.ts') -Value 'export const marker = true;' -Encoding UTF8
 
 function Run-Step {
   param([string]$Name, [scriptblock]$Block)
@@ -25,6 +36,14 @@ function Run-Step {
 
 Run-Step 'validate layer' {
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\validate.ps1')
+}
+
+Run-Step 'analyze target recommendation' {
+  $json = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\analyze-target.ps1') -TargetPath $analysisTarget -Json | Out-String
+  $analysis = $json | ConvertFrom-Json
+  if ($analysis.recommendedProfile -ne 'supabase-react-finance') { throw "Expected supabase-react-finance recommendation, got $($analysis.recommendedProfile)." }
+  if (@($analysis.recommendedHarnesses) -notcontains 'codex') { throw 'Expected codex harness recommendation.' }
+  if (@($analysis.signals) -notcontains 'finance') { throw 'Expected finance signal.' }
 }
 
 Run-Step 'install preview standard multi-harness' {
