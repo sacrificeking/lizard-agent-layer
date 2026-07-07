@@ -1,0 +1,10 @@
+﻿# lizard-agent-layer private runtime outputs
+memory/episodic/
+memory/episodic/**
+data-layer/
+data-layer/**
+flywheel/
+flywheel/**
+*.log
+.index/
+.index/**

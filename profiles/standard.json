@@ -1,0 +1,12 @@
+﻿{
+  "projectName": "target-project",
+  "profile": "standard",
+  "stack": ["git"],
+  "projectSize": "medium",
+  "riskLevel": "medium",
+  "memoryMode": "curated",
+  "harnesses": ["codex"],
+  "skills": ["git-safety", "release", "dependency-upgrade", "research-audit"],
+  "verification": ["run project tests before release", "inspect git status before commits"],
+  "notes": "Default product-repo profile."
+}

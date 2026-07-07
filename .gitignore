@@ -1,0 +1,22 @@
+﻿# runtime and local state
+.agent/
+.agents/
+*.log
+.tmp/
+
+# environment
+.env
+.env.local
+*.key
+
+# editor
+.vscode/
+.idea/
+.DS_Store
+
+# package managers / build outputs
+node_modules/
+dist/
+build/
+__pycache__/
+.pytest_cache/

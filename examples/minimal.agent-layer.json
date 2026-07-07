@@ -1,0 +1,10 @@
+﻿{
+  "projectName": "tiny-cli",
+  "profile": "minimal",
+  "stack": ["powershell"],
+  "projectSize": "small",
+  "riskLevel": "low",
+  "memoryMode": "curated",
+  "harnesses": ["codex"],
+  "skills": ["git-safety", "research-audit"]
+}

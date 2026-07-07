@@ -1,0 +1,10 @@
+﻿{
+  "projectName": "product-app",
+  "profile": "standard",
+  "stack": ["typescript", "git"],
+  "projectSize": "medium",
+  "riskLevel": "medium",
+  "memoryMode": "curated",
+  "harnesses": ["codex"],
+  "skills": ["git-safety", "release", "dependency-upgrade", "research-audit"]
+}

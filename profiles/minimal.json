@@ -1,0 +1,12 @@
+﻿{
+  "projectName": "target-project",
+  "profile": "minimal",
+  "stack": [],
+  "projectSize": "small",
+  "riskLevel": "low",
+  "memoryMode": "curated",
+  "harnesses": ["codex"],
+  "skills": ["git-safety", "research-audit"],
+  "verification": [],
+  "notes": "Small repos with light guidance and no heavy release or database protocol."
+}

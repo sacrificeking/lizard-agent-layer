@@ -1,0 +1,20 @@
+﻿{
+  "projectName": "finance-hub",
+  "profile": "supabase-react-finance",
+  "stack": ["react", "vite", "typescript", "supabase", "edge-functions", "finance"],
+  "projectSize": "large",
+  "riskLevel": "high",
+  "memoryMode": "curated",
+  "harnesses": ["codex"],
+  "skills": [
+    "git-safety",
+    "release",
+    "dependency-upgrade",
+    "design-system",
+    "frontend-react",
+    "supabase",
+    "edge-functions",
+    "data-quality",
+    "research-audit"
+  ]
+}
