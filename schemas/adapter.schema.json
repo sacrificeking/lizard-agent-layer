@@ -1,0 +1,35 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/adapter.schema.json",
+  "title": "lizard-agent-layer adapter manifest",
+  "type": "object",
+  "required": ["name", "description", "instruction", "skillMirrors"],
+  "properties": {
+    "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "description": { "type": "string" },
+    "instruction": {
+      "type": "object",
+      "required": ["src", "dst"],
+      "properties": {
+        "src": { "type": "string" },
+        "dst": { "type": "string" },
+        "sidecar": { "type": "string" },
+        "mergePolicy": { "enum": ["skip-if-wired", "sidecar-if-exists", "overwrite"] }
+      },
+      "additionalProperties": false
+    },
+    "skillMirrors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["dst"],
+        "properties": {
+          "dst": { "type": "string" },
+          "description": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

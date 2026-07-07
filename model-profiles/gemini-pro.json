@@ -1,0 +1,9 @@
+﻿{
+  "name": "gemini-pro",
+  "provider": "google",
+  "bestFor": ["research", "broad analysis", "alternative design exploration", "large-context synthesis"],
+  "avoidFor": ["unapproved remote mutations", "high-risk writes without repository verification"],
+  "limits": ["must distinguish sourced facts from inference", "should write concise handoff state before implementation transfer"],
+  "handoffRole": "researcher",
+  "notes": "Useful for research and second-pass architecture exploration."
+}

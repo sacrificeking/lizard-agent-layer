@@ -1,0 +1,9 @@
+﻿{
+  "name": "gpt-5-codex",
+  "provider": "openai",
+  "bestFor": ["implementation", "repo editing", "test-driven iteration", "tool-heavy workflows"],
+  "avoidFor": ["unverified current events without browsing", "silent high-risk remote actions"],
+  "limits": ["Codex hooks may be unavailable or platform-dependent", "requires explicit approval for remote/destructive actions"],
+  "handoffRole": "implementer",
+  "notes": "Default implementation model for local repository work."
+}

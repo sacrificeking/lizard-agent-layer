@@ -6,8 +6,15 @@ The layer is built around conservative filesystem and workflow behavior.
 
 - Preview mode is the default.
 - Existing files are skipped unless `-Force` is passed.
-- Existing `AGENTS.md` receives a sidecar merge file instead of being overwritten.
+- Existing harness instruction files receive sidecar merge files instead of being overwritten.
 - Apply mode writes an ownership manifest to `.agent/lizard-agent-layer.install.json`.
+
+## Harness safety
+
+- Adapters are declarative manifests under `adapters/<name>/adapter.json`.
+- Adapters may mirror skills into harness-specific folders.
+- Duplicate instruction destinations should be avoided in the same profile unless intentional.
+- Generic `AGENTS.md` is intended for tools without a dedicated adapter, not as a default companion to Codex.
 
 ## Target-project safety
 

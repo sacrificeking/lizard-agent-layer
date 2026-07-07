@@ -1,5 +1,16 @@
 ﻿# Changelog
 
+## 0.2.0 - 2026-07-07
+
+### Added
+
+- Multi-harness adapter architecture for Codex, Claude Code, Gemini, Cursor, and generic AGENTS.md tools.
+- Adapter and model-profile schemas.
+- Model profiles for GPT-5 Codex, Claude Sonnet, Gemini Pro, and local small models.
+- Handoff protocol for cross-model development.
+- Harness override support in installer and upgrade workflows.
+- Doctor and smoke coverage for multi-harness targets.
+
 ## 0.1.0 - 2026-07-07
 
 ### Added

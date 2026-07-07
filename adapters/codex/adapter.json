@@ -1,0 +1,13 @@
+﻿{
+  "name": "codex",
+  "description": "OpenAI Codex adapter using AGENTS.md plus .agents/skills mirrors.",
+  "instruction": {
+    "src": "AGENTS.lizard.md",
+    "dst": "AGENTS.md",
+    "sidecar": "AGENTS.lizard-agent-layer.md",
+    "mergePolicy": "sidecar-if-exists"
+  },
+  "skillMirrors": [
+    { "dst": ".agents/skills", "description": "Codex repository skill discovery path." }
+  ]
+}

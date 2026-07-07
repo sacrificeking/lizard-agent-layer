@@ -19,6 +19,7 @@ function Check-File {
   if ($Required) { Add-Fail "$Relative missing" } else { Add-Warn "$Relative missing" }
   return $false
 }
+function Normalize-RelPath { param([string]$Path) return $Path.Replace('/', '\').TrimStart('\') }
 
 Write-Host "lizard-agent-layer doctor"
 Write-Host "Target: $TargetRoot"
@@ -28,6 +29,7 @@ $profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
 $manifestPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.install.json'
 $profile = $null
 $manifest = $null
+$harnesses = @()
 
 Check-File '.agent\project-profile.json' -Required | Out-Null
 if (Test-Path -LiteralPath $profilePath) {
@@ -42,6 +44,9 @@ if (Test-Path -LiteralPath $manifestPath) {
   Add-Warn '.agent\lizard-agent-layer.install.json missing; target may be preview-only or pre-manifest install.'
 }
 
+if ($null -ne $manifest -and $manifest.harnesses) { $harnesses = @($manifest.harnesses) }
+elseif ($null -ne $profile -and $profile.harnesses) { $harnesses = @($profile.harnesses) }
+
 foreach ($file in @(
   '.agent\.gitignore',
   '.agent\memory\personal\PREFERENCES.md',
@@ -52,6 +57,7 @@ foreach ($file in @(
   '.agent\protocols\memory-policy.md',
   '.agent\protocols\secret-handling.md',
   '.agent\protocols\release-gates.md',
+  '.agent\protocols\handoff.md',
   '.agent\skills\_index.md',
   '.agent\skills\_manifest.jsonl'
 )) {
@@ -61,21 +67,41 @@ foreach ($file in @(
 if ($null -ne $profile) {
   foreach ($skill in @($profile.skills)) {
     Check-File ".agent\skills\$skill\SKILL.md" -Required | Out-Null
-    Check-File ".agents\skills\$skill\SKILL.md" -Required | Out-Null
   }
 }
 
-$agentsPath = Join-Path $TargetRoot 'AGENTS.md'
-$sidecarPath = Join-Path $TargetRoot 'AGENTS.lizard-agent-layer.md'
-if (Test-Path -LiteralPath $agentsPath) {
-  $agents = Get-Content -LiteralPath $agentsPath -Raw
-  if ($agents -match 'lizard-agent-layer') { Add-Ok 'AGENTS.md is wired to lizard-agent-layer' }
-  elseif (Test-Path -LiteralPath $sidecarPath) { Add-Warn 'AGENTS.md exists but is not wired; sidecar merge file exists.' }
-  else { Add-Warn 'AGENTS.md exists but is not wired and no sidecar merge file exists.' }
-} elseif (Test-Path -LiteralPath $sidecarPath) {
-  Add-Warn 'Only AGENTS.lizard-agent-layer.md exists; merge or rename intentionally.'
-} else {
-  Add-Fail 'No AGENTS.md or AGENTS.lizard-agent-layer.md found.'
+foreach ($harness in $harnesses) {
+  $adapterPath = Join-Path $TargetRoot "..\..\lizard-agent-layer\adapters\$harness\adapter.json"
+  $layerAdapterPath = Join-Path (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)) "adapters\$harness\adapter.json"
+  if (-not (Test-Path -LiteralPath $layerAdapterPath)) {
+    Add-Warn "Adapter '$harness' is installed in manifest/profile, but this doctor cannot find its local adapter manifest."
+    continue
+  }
+  $adapter = Get-Content -LiteralPath $layerAdapterPath -Raw | ConvertFrom-Json
+  $dst = Normalize-RelPath $adapter.instruction.dst
+  $sidecar = if ($adapter.instruction.sidecar) { Normalize-RelPath $adapter.instruction.sidecar } else { "$dst.lizard-agent-layer" }
+  $dstPath = Join-Path $TargetRoot $dst
+  $sidecarPath = Join-Path $TargetRoot $sidecar
+  if (Test-Path -LiteralPath $dstPath) {
+    $content = Get-Content -LiteralPath $dstPath -Raw
+    if ($content -match 'lizard-agent-layer') { Add-Ok "$harness instruction wired at $dst" }
+    elseif (Test-Path -LiteralPath $sidecarPath) { Add-Warn "$harness instruction $dst exists but is not wired; sidecar $sidecar exists." }
+    else { Add-Warn "$harness instruction $dst exists but is not wired and no sidecar exists." }
+  } elseif (Test-Path -LiteralPath $sidecarPath) {
+    Add-Warn "$harness has only sidecar $sidecar; merge intentionally."
+  } else {
+    Add-Fail "$harness instruction missing: $dst"
+  }
+
+  foreach ($mirror in @($adapter.skillMirrors)) {
+    $mirrorRel = Normalize-RelPath $mirror.dst
+    Check-File $mirrorRel -Required | Out-Null
+    if ($null -ne $profile) {
+      foreach ($skill in @($profile.skills)) {
+        Check-File "$mirrorRel\$skill\SKILL.md" -Required | Out-Null
+      }
+    }
+  }
 }
 
 foreach ($line in $Ok) { Write-Host "  OK   $line" }

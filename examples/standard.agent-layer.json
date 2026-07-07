@@ -5,6 +5,11 @@
   "projectSize": "medium",
   "riskLevel": "medium",
   "memoryMode": "curated",
-  "harnesses": ["codex"],
+  "harnesses": ["codex", "claude-code", "gemini"],
+  "modelProfiles": {
+    "implementation": "gpt-5-codex",
+    "review": "claude-sonnet",
+    "research": "gemini-pro"
+  },
   "skills": ["git-safety", "release", "dependency-upgrade", "research-audit"]
 }

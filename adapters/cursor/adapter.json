@@ -1,0 +1,13 @@
+﻿{
+  "name": "cursor",
+  "description": "Cursor adapter using a project rule file under .cursor/rules.",
+  "instruction": {
+    "src": "lizard-agent-layer.mdc",
+    "dst": ".cursor/rules/lizard-agent-layer.mdc",
+    "sidecar": ".cursor/rules/lizard-agent-layer.local-merge.mdc",
+    "mergePolicy": "sidecar-if-exists"
+  },
+  "skillMirrors": [
+    { "dst": ".cursor/skills", "description": "Optional Cursor-local skill mirror." }
+  ]
+}

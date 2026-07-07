@@ -5,6 +5,11 @@
   "projectSize": "small",
   "riskLevel": "low",
   "memoryMode": "curated",
-  "harnesses": ["codex"],
+  "harnesses": ["generic-agents-md"],
+  "modelProfiles": {
+    "implementation": "gpt-5-codex",
+    "review": "claude-sonnet",
+    "research": "gemini-pro"
+  },
   "skills": ["git-safety", "research-audit"]
 }

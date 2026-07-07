@@ -5,8 +5,13 @@
   "projectSize": "small",
   "riskLevel": "low",
   "memoryMode": "curated",
-  "harnesses": ["codex"],
+  "harnesses": ["generic-agents-md"],
+  "modelProfiles": {
+    "implementation": "gpt-5-codex",
+    "review": "claude-sonnet",
+    "research": "gemini-pro"
+  },
   "skills": ["git-safety", "research-audit"],
   "verification": [],
-  "notes": "Small repos with light guidance and no heavy release or database protocol."
+  "notes": "Small repos with light guidance and no heavy release or database protocol. Use -Harnesses to install Codex, Claude, Gemini, or Cursor shims when needed."
 }

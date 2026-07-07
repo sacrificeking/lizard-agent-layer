@@ -12,6 +12,10 @@
     "riskLevel": { "enum": ["low", "medium", "high"] },
     "memoryMode": { "enum": ["curated", "private-episodic", "off"] },
     "harnesses": { "type": "array", "items": { "type": "string" } },
+    "modelProfiles": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
     "skills": { "type": "array", "items": { "type": "string" } },
     "verification": { "type": "array", "items": { "type": "string" } },
     "notes": { "type": "string" }

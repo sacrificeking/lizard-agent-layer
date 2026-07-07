@@ -1,0 +1,11 @@
+﻿{
+  "name": "generic-agents-md",
+  "description": "Generic AGENTS.md adapter for tools that read repository instructions but have no dedicated harness path.",
+  "instruction": {
+    "src": "AGENTS.generic.lizard.md",
+    "dst": "AGENTS.md",
+    "sidecar": "AGENTS.lizard-agent-layer.md",
+    "mergePolicy": "sidecar-if-exists"
+  },
+  "skillMirrors": []
+}

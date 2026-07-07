@@ -1,0 +1,11 @@
+﻿---
+description: Use lizard-agent-layer memory, skills, protocols, and handoff state for this project.
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Lizard Agent Layer for Cursor
+
+Read `.agent/project-profile.json`, curated memory, permissions, handoff protocol, and relevant `.agent/skills/*/SKILL.md` files before non-trivial work.
+
+Do not push, deploy, migrate, install dependencies, change CI, or expose secrets without explicit approval. Preserve unrelated user changes. Update `.agent/memory/working/WORKSPACE.md` before handing off to another model.

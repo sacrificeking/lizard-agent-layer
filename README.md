@@ -1,23 +1,24 @@
 ﻿# lizard-agent-layer
 
-Portable agent infrastructure for projects that need consistent AI-assisted development without copying a whole agent stack into every repository.
+Portable agent infrastructure for projects that need consistent AI-assisted development across Codex, Claude, Gemini, Cursor, and generic AGENTS.md-compatible tools.
 
-`lizard-agent-layer` is the source of truth for reusable agent logic. Target projects receive a tailored local instance: project profile, curated memory files, safety protocols, and Codex-readable skills.
+`lizard-agent-layer` is the source of truth for reusable agent logic. Target projects receive a tailored local instance: project profile, curated memory files, safety protocols, handoff protocol, harness adapters, and mirrored skills.
 
 ## What it provides
 
-- Project profiles for different sizes, stacks, and risk levels.
-- Codex-friendly skills under `.agents/skills/`.
+- Project profiles for different sizes, stacks, risk levels, harnesses, and model roles.
+- Codex, Claude Code, Gemini, Cursor, and generic adapters.
+- Codex-friendly skills under `.agents/skills/` and harness-specific mirrors where useful.
 - Local project memory under `.agent/memory/`.
-- Permission, memory, secret, and release protocols.
+- Permission, memory, secret, handoff, and release protocols.
 - Preview-first installers that avoid clobbering target files.
-- Doctor, validation, and smoke-test scripts.
+- Doctor, validation, upgrade, manifest-sync, and smoke-test scripts.
 
 ## Profiles
 
-- `minimal`: small repositories, light guidance, few skills.
-- `standard`: normal product repositories with release and git safety.
-- `supabase-react-finance`: high-risk React/Vite/Supabase finance applications.
+- `minimal`: small repositories, light generic guidance, few skills.
+- `standard`: normal product repositories with Codex, Claude, Gemini, release, and git safety.
+- `supabase-react-finance`: high-risk React/Vite/Supabase finance applications with multi-model handoff.
 
 ## Quick start
 
@@ -25,6 +26,12 @@ Preview first:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard
+```
+
+Override harnesses if needed:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,cursor
 ```
 
 Apply after reviewing the plan:
@@ -52,7 +59,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\smoke.ps1
 - Project decisions and curated lessons live in the target project.
 - Raw episodic logs stay private unless a project explicitly opts in.
 - Existing target files are skipped by default.
-- Existing `AGENTS.md` is not overwritten; a sidecar merge file is generated.
+- Existing harness instruction files get sidecar merge files instead of silent overwrites.
 - High-risk projects get stricter gates than small utility repos.
 
 ## Documentation

@@ -1,0 +1,13 @@
+﻿{
+  "name": "claude-code",
+  "description": "Claude Code adapter using CLAUDE.md plus optional .claude/skills mirrors.",
+  "instruction": {
+    "src": "CLAUDE.lizard.md",
+    "dst": "CLAUDE.md",
+    "sidecar": "CLAUDE.lizard-agent-layer.md",
+    "mergePolicy": "sidecar-if-exists"
+  },
+  "skillMirrors": [
+    { "dst": ".claude/skills", "description": "Claude-local skill mirror for projects that read skill folders." }
+  ]
+}

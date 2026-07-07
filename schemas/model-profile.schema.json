@@ -1,0 +1,17 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/model-profile.schema.json",
+  "title": "lizard-agent-layer model profile",
+  "type": "object",
+  "required": ["name", "provider", "bestFor", "limits"],
+  "properties": {
+    "name": { "type": "string" },
+    "provider": { "type": "string" },
+    "bestFor": { "type": "array", "items": { "type": "string" } },
+    "avoidFor": { "type": "array", "items": { "type": "string" } },
+    "limits": { "type": "array", "items": { "type": "string" } },
+    "handoffRole": { "type": "string" },
+    "notes": { "type": "string" }
+  },
+  "additionalProperties": true
+}
