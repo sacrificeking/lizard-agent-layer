@@ -3,7 +3,9 @@ param(
   [string]$Profile = "standard",
   [string[]]$Harnesses,
   [switch]$Apply,
-  [switch]$Force
+  [switch]$Force,
+  [switch]$WritePlan,
+  [string]$PlanPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,6 +15,8 @@ $TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
 $ProfilePath = Join-Path $LayerRoot "profiles\$Profile.json"
 $VersionPath = Join-Path $LayerRoot "VERSION"
 $LayerVersion = if (Test-Path -LiteralPath $VersionPath) { (Get-Content -LiteralPath $VersionPath -Raw).Trim() } else { "0.0.0-dev" }
+$ShouldWritePlan = $WritePlan.IsPresent -or -not [string]::IsNullOrWhiteSpace($PlanPath)
+$EffectivePlanPath = $null
 
 if (-not (Test-Path -LiteralPath $ProfilePath)) {
   throw "Unknown profile '$Profile'. Expected a JSON file under profiles/."
@@ -33,11 +37,27 @@ function Expand-HarnessList {
 $SelectedHarnesses = if ($Harnesses -and $Harnesses.Count -gt 0) { Expand-HarnessList $Harnesses } else { Expand-HarnessList $ProfileDoc.harnesses }
 if ($SelectedHarnesses.Count -eq 0) { throw "No harnesses selected. Set profile.harnesses or pass -Harnesses." }
 
+function Resolve-PlanReportPath {
+  if (-not [string]::IsNullOrWhiteSpace($PlanPath)) {
+    if ([System.IO.Path]::IsPathRooted($PlanPath)) { return $PlanPath }
+    return (Join-Path (Get-Location).Path $PlanPath)
+  }
+  $stamp = Get-Date -Format 'yyyyMMddHHmmss'
+  return (Join-Path $LayerRoot ".tmp\install-plans\lizard-agent-layer-$Profile-$stamp.md")
+}
+
+if ($ShouldWritePlan) {
+  $EffectivePlanPath = Resolve-PlanReportPath
+  $planParent = Split-Path -Parent $EffectivePlanPath
+  if ($planParent -and -not (Test-Path -LiteralPath $planParent)) { New-Item -ItemType Directory -Path $planParent -Force | Out-Null }
+}
+
 $Mode = if ($Apply) { "APPLY" } else { "PREVIEW" }
 $Planned = New-Object System.Collections.Generic.List[string]
 $Created = New-Object System.Collections.Generic.List[string]
 $Skipped = New-Object System.Collections.Generic.List[string]
 $MergeNeeded = New-Object System.Collections.Generic.List[string]
+$MergeSuggestions = New-Object System.Collections.Generic.List[object]
 $ManagedPaths = New-Object System.Collections.Generic.List[string]
 $OwnedPaths = New-Object System.Collections.Generic.List[string]
 $InstalledAdapters = New-Object System.Collections.Generic.List[string]
@@ -68,6 +88,113 @@ function To-RelativeDisplay {
     return $Path.Substring($TargetRoot.Length).TrimStart("\", "/")
   }
   return $Path
+}
+
+function New-MergeSuggestion {
+  param([string]$Harness, [string]$InstructionPath, [string]$SidecarPath)
+  $snippet = @(
+    '## lizard-agent-layer',
+    '',
+    ('Review `{0}` before using this project with the `{1}` harness.' -f $SidecarPath, $Harness),
+    'The sidecar contains reusable agent rules, skills, memory, safety, and handoff guidance installed by `lizard-agent-layer`.',
+    ('Keep repository-specific rules in `{0}` authoritative; merge sidecar guidance intentionally when it fits this project.' -f $InstructionPath)
+  ) -join "`n"
+  return [ordered]@{
+    harness = $Harness
+    instruction_path = $InstructionPath
+    sidecar_path = $SidecarPath
+    action = "Review the sidecar and paste the suggested block into $InstructionPath when you want the harness to load lizard-agent-layer guidance."
+    suggested_block = $snippet
+  }
+}
+
+function Add-MergeSuggestion {
+  param([string]$Harness, [string]$InstructionPath, [string]$SidecarPath)
+  foreach ($item in @($MergeSuggestions.ToArray())) {
+    if ($item.harness -eq $Harness -and $item.instruction_path -eq $InstructionPath -and $item.sidecar_path -eq $SidecarPath) { return }
+  }
+  $MergeSuggestions.Add((New-MergeSuggestion -Harness $Harness -InstructionPath $InstructionPath -SidecarPath $SidecarPath)) | Out-Null
+}
+
+function Add-MarkdownList {
+  param($Lines, [string]$Title, $Items)
+  $Lines.Add("## $Title") | Out-Null
+  $Lines.Add("") | Out-Null
+  if (@($Items).Count -eq 0) {
+    $Lines.Add('- None') | Out-Null
+  } else {
+    foreach ($item in @($Items)) { $Lines.Add(('- `{0}`' -f $item)) | Out-Null }
+  }
+  $Lines.Add("") | Out-Null
+}
+
+function New-InstallPlanMarkdown {
+  $lines = New-Object System.Collections.Generic.List[string]
+  $lines.Add('# lizard-agent-layer install plan') | Out-Null
+  $lines.Add('') | Out-Null
+  $lines.Add(('- Generated: {0}' -f (Get-Date).ToUniversalTime().ToString('o'))) | Out-Null
+  $lines.Add(('- Mode: `{0}`' -f $Mode)) | Out-Null
+  $lines.Add(('- Target: `{0}`' -f $TargetRoot)) | Out-Null
+  $lines.Add(('- Layer version: `{0}`' -f $LayerVersion)) | Out-Null
+  $lines.Add(('- Profile: `{0}`' -f $Profile)) | Out-Null
+  $lines.Add(('- Risk level: `{0}`' -f $ProfileDoc.riskLevel)) | Out-Null
+  $lines.Add(('- Memory mode: `{0}`' -f $ProfileDoc.memoryMode)) | Out-Null
+  $lines.Add(('- Harnesses: `{0}`' -f ($SelectedHarnesses -join ', '))) | Out-Null
+  $lines.Add('') | Out-Null
+  $lines.Add('## Summary') | Out-Null
+  $lines.Add('') | Out-Null
+  $lines.Add(('- Planned paths: `{0}`' -f $Planned.Count)) | Out-Null
+  $lines.Add(('- Created paths: `{0}`' -f $Created.Count)) | Out-Null
+  $lines.Add(('- Skipped existing paths: `{0}`' -f $Skipped.Count)) | Out-Null
+  $lines.Add(('- Manual merge items: `{0}`' -f $MergeNeeded.Count)) | Out-Null
+  $lines.Add('') | Out-Null
+  $lines.Add('## Commands') | Out-Null
+  $lines.Add('') | Out-Null
+  $previewCommand = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath "{0}" -Profile {1} -Harnesses {2}' -f $TargetRoot, $Profile, ($SelectedHarnesses -join ',')
+  $applyCommand = "$previewCommand -Apply"
+  $lines.Add('Preview:') | Out-Null
+  $lines.Add('') | Out-Null
+  $lines.Add('```powershell') | Out-Null
+  $lines.Add($previewCommand) | Out-Null
+  $lines.Add('```') | Out-Null
+  $lines.Add('') | Out-Null
+  $lines.Add('Apply:') | Out-Null
+  $lines.Add('') | Out-Null
+  $lines.Add('```powershell') | Out-Null
+  $lines.Add($applyCommand) | Out-Null
+  $lines.Add('```') | Out-Null
+  $lines.Add('') | Out-Null
+  Add-MarkdownList $lines 'Skills' @($ProfileDoc.skills)
+  Add-MarkdownList $lines 'Planned paths' @($Planned)
+  Add-MarkdownList $lines 'Created paths' @($Created)
+  Add-MarkdownList $lines 'Skipped existing paths' @($Skipped)
+  Add-MarkdownList $lines 'Manual merge needed' @($MergeNeeded)
+  $lines.Add('## Merge suggestions') | Out-Null
+  $lines.Add('') | Out-Null
+  if ($MergeSuggestions.Count -eq 0) {
+    $lines.Add('- None') | Out-Null
+  } else {
+    foreach ($suggestion in @($MergeSuggestions.ToArray())) {
+      $lines.Add(('### {0}: {1}' -f $suggestion.harness, $suggestion.instruction_path)) | Out-Null
+      $lines.Add('') | Out-Null
+      $lines.Add(('- Sidecar: `{0}`' -f $suggestion.sidecar_path)) | Out-Null
+      $lines.Add(('- Action: {0}' -f $suggestion.action)) | Out-Null
+      $lines.Add('') | Out-Null
+      $lines.Add('Suggested block:') | Out-Null
+      $lines.Add('') | Out-Null
+      $lines.Add('```markdown') | Out-Null
+      $lines.Add($suggestion.suggested_block) | Out-Null
+      $lines.Add('```') | Out-Null
+      $lines.Add('') | Out-Null
+    }
+  }
+  return ($lines -join "`n")
+}
+
+function Write-PlanReport {
+  if (-not $ShouldWritePlan) { return }
+  $markdown = New-InstallPlanMarkdown
+  Set-Content -LiteralPath $EffectivePlanPath -Value $markdown -Encoding UTF8
 }
 
 function Ensure-Dir {
@@ -128,7 +255,7 @@ function Write-IfMissing {
 }
 
 function Copy-InstructionFile {
-  param($Adapter, [string]$AdapterDir)
+  param($Adapter, [string]$AdapterDir, [string]$AdapterName)
   $instruction = $Adapter.instruction
   $srcRel = Assert-SafeRelativePath $instruction.src "adapter instruction src"
   $dstRel = Assert-SafeRelativePath $instruction.dst "adapter instruction dst"
@@ -147,6 +274,7 @@ function Copy-InstructionFile {
       $sidecarRel = if ($instruction.sidecar) { Assert-SafeRelativePath $instruction.sidecar "adapter instruction sidecar" } else { "$dstRel.lizard-agent-layer" }
       Copy-IfMissing $src (Join-Path $TargetRoot $sidecarRel)
       Add-UniqueListItem $MergeNeeded "$dstRel exists; review $sidecarRel and merge intentionally."
+      Add-MergeSuggestion -Harness $AdapterName -InstructionPath $dstRel -SidecarPath $sidecarRel
       return
     }
     Add-UniqueListItem $Skipped $dstRel
@@ -166,7 +294,7 @@ function Install-Adapter {
   if ($adapter.name -ne $AdapterName) { throw "Adapter manifest name '$($adapter.name)' does not match folder '$AdapterName'." }
 
   Add-UniqueListItem $InstalledAdapters $AdapterName
-  Copy-InstructionFile $adapter $adapterDir
+  Copy-InstructionFile $adapter $adapterDir $AdapterName
 
   foreach ($mirror in @($adapter.skillMirrors)) {
     $mirrorRel = Assert-SafeRelativePath $mirror.dst "skill mirror dst"
@@ -182,23 +310,23 @@ function Write-InstallManifest {
   $manifestPath = Join-Path $TargetRoot ".agent\lizard-agent-layer.install.json"
   $label = To-RelativeDisplay $manifestPath
   Add-UniqueListItem $ManagedPaths $label
-  $doc = [ordered]@{
-    schema_version = 2
-    layer = "lizard-agent-layer"
-    layer_version = $LayerVersion
-    profile = $Profile
-    installed_at = (Get-Date).ToUniversalTime().ToString("o")
-    target_root = $TargetRoot
-    memory_mode = $ProfileDoc.memoryMode
-    risk_level = $ProfileDoc.riskLevel
-    harnesses = @($SelectedHarnesses)
-    model_profiles = $ProfileDoc.modelProfiles
-    skills = @($ProfileDoc.skills)
-    adapters = @($InstalledAdapters)
-    managed_paths = @($ManagedPaths)
-    owned_paths = @($OwnedPaths)
-    merge_needed = @($MergeNeeded)
-  }
+  $doc = New-Object System.Collections.Specialized.OrderedDictionary
+  $doc['schema_version'] = 2
+  $doc['layer'] = "lizard-agent-layer"
+  $doc['layer_version'] = $LayerVersion
+  $doc['profile'] = $Profile
+  $doc['installed_at'] = (Get-Date).ToUniversalTime().ToString("o")
+  $doc['target_root'] = $TargetRoot
+  $doc['memory_mode'] = $ProfileDoc.memoryMode
+  $doc['risk_level'] = $ProfileDoc.riskLevel
+  $doc['harnesses'] = @($SelectedHarnesses)
+  $doc['model_profiles'] = $ProfileDoc.modelProfiles
+  $doc['skills'] = @($ProfileDoc.skills)
+  $doc['adapters'] = @($InstalledAdapters.ToArray())
+  $doc['managed_paths'] = @($ManagedPaths.ToArray())
+  $doc['owned_paths'] = @($OwnedPaths.ToArray())
+  $doc['merge_needed'] = @($MergeNeeded.ToArray())
+  $doc['merge_suggestions'] = @($MergeSuggestions.ToArray())
   if ($Apply) {
     $doc | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
     Add-UniqueListItem $Created $label
@@ -213,6 +341,7 @@ Write-Host "Target: $TargetRoot"
 Write-Host "Profile: $Profile"
 Write-Host "Harnesses: $($SelectedHarnesses -join ', ')"
 Write-Host "Version: $LayerVersion"
+if ($ShouldWritePlan) { Write-Host "Plan report: $EffectivePlanPath" }
 Write-Host ""
 
 Ensure-Dir (Join-Path $TargetRoot ".agent")
@@ -260,6 +389,7 @@ foreach ($adapterName in $SelectedHarnesses) {
 }
 
 Write-InstallManifest
+Write-PlanReport
 
 Write-Host "Summary"
 Write-Host "Planned: $($Planned.Count)"
@@ -271,6 +401,14 @@ foreach ($item in $Skipped) { Write-Host "  ~ $item" }
 if ($MergeNeeded.Count -gt 0) {
   Write-Host "Manual merge needed:"
   foreach ($item in $MergeNeeded) { Write-Host "  ! $item" }
+}
+if ($MergeSuggestions.Count -gt 0) {
+  Write-Host "Merge suggestions: $($MergeSuggestions.Count)"
+  foreach ($item in @($MergeSuggestions.ToArray())) { Write-Host "  ? $($item.harness): add pointer in $($item.instruction_path) for $($item.sidecar_path)" }
+}
+if ($ShouldWritePlan) {
+  Write-Host ""
+  Write-Host "Plan report written: $EffectivePlanPath"
 }
 if (-not $Apply) {
   Write-Host ""

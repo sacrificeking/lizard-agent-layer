@@ -1,5 +1,19 @@
 ﻿# Changelog
 
+## 0.4.0 - 2026-07-07
+
+### Added
+
+- Optional install plan reports through `install.ps1 -WritePlan` and `-PlanPath`.
+- Structured merge suggestions when existing instruction files require sidecar review.
+- Merge suggestions persisted into the install manifest on apply.
+- Install plan documentation and smoke coverage for read-only preview plan behavior.
+
+### Changed
+
+- Installer output now reports merge suggestion counts when sidecars are needed.
+- Getting-started flow now includes a reviewable plan step before preview/apply.
+
 ## 0.3.0 - 2026-07-07
 
 ### Added

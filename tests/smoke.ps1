@@ -9,6 +9,7 @@ $standardTarget = Join-Path $tmpRoot 'standard-target'
 $cursorTarget = Join-Path $tmpRoot 'cursor-target'
 $sidecarTarget = Join-Path $tmpRoot 'sidecar-target'
 $analysisTarget = Join-Path $tmpRoot 'analysis-target'
+$sidecarPlanPath = Join-Path $tmpRoot 'sidecar-install-plan.md'
 
 New-Item -ItemType Directory -Path $standardTarget -Force | Out-Null
 New-Item -ItemType Directory -Path $cursorTarget -Force | Out-Null
@@ -79,11 +80,24 @@ Run-Step 'doctor cursor strict' {
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\doctor.ps1') -TargetPath $cursorTarget -Strict | Out-String | Write-Host
 }
 
+Run-Step 'install plan sidecar target' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $sidecarTarget -Profile minimal -Harnesses generic-agents-md -WritePlan -PlanPath $sidecarPlanPath | Out-String | Write-Host
+  if (-not (Test-Path -LiteralPath $sidecarPlanPath)) { throw 'Expected install plan report.' }
+  $plan = Get-Content -LiteralPath $sidecarPlanPath -Raw
+  foreach ($expected in @('# lizard-agent-layer install plan', '## Merge suggestions', 'generic-agents-md', 'AGENTS.lizard-agent-layer.md', 'Suggested block')) {
+    if ($plan -notmatch [regex]::Escape($expected)) { throw "Expected install plan to contain: $expected" }
+  }
+  if (Test-Path -LiteralPath (Join-Path $sidecarTarget '.agent')) { throw 'Preview plan wrote .agent into target.' }
+  if (Test-Path -LiteralPath (Join-Path $sidecarTarget 'AGENTS.lizard-agent-layer.md')) { throw 'Preview plan wrote sidecar into target.' }
+}
+
 Run-Step 'install apply sidecar target' {
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $sidecarTarget -Profile minimal -Harnesses generic-agents-md -Apply | Out-String | Write-Host
   $agents = Get-Content -LiteralPath (Join-Path $sidecarTarget 'AGENTS.md') -Raw
   if ($agents -match 'lizard-agent-layer') { throw 'Existing AGENTS.md was overwritten or modified.' }
   if (-not (Test-Path -LiteralPath (Join-Path $sidecarTarget 'AGENTS.lizard-agent-layer.md'))) { throw 'Expected sidecar AGENTS.lizard-agent-layer.md.' }
+  $manifest = Get-Content -LiteralPath (Join-Path $sidecarTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  if (@($manifest.merge_suggestions).Count -lt 1) { throw 'Expected merge suggestions in install manifest.' }
 }
 
 Run-Step 'doctor sidecar non-strict' {
