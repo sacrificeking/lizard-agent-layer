@@ -1,4 +1,4 @@
-# CI
+﻿# CI
 
 `lizard-agent-layer` has one canonical local gate runner and one GitHub Actions workflow.
 
@@ -28,9 +28,14 @@ The runner writes JSON reports under `.tmp/ci/`.
 
 The workflow lives at `.github/workflows/lizard-agent-layer-ci.yml` and runs on pull requests, pushes to `main` or `master`, and manual dispatches.
 
-The workflow executes:
+The workflow executes the canonical local CI runner, which includes validate, packs, drift, quality, smoke, and matrix gates by default.
+
+The runner includes:
 
 - `scripts/validate.ps1`
+- `scripts/pack-report.ps1 -Strict`
+- `scripts/drift-check.ps1 -Strict`
+- `scripts/score-layer.ps1 -Strict`
 - `tests/smoke.ps1`
 - `scripts/matrix.ps1`
 
@@ -52,4 +57,9 @@ CI runs `scripts/score-layer.ps1 -Strict` after structural validation. This writ
 ## Drift gate
 
 CI runs `scripts/drift-check.ps1 -Strict` after structural validation. This compares tracked agent artifacts against `registry/drift-baseline.json` and fails when behavior changed without an intentional baseline update.
+
+
+## Pack gate
+
+CI runs `scripts/pack-report.ps1 -Strict` after structural validation. This writes reports under `.tmp/packs/` and fails on invalid pack manifests, missing skills, invalid harnesses, invalid model profiles, or incomplete bundle metadata.
 

@@ -1,0 +1,12 @@
+{
+  "name": "supabase-react",
+  "description": "React plus Supabase pack for database, auth, edge functions, and frontend integration work.",
+  "riskLevel": "high",
+  "projectSize": "large",
+  "stack": ["react", "vite", "typescript", "supabase", "edge-functions"],
+  "harnesses": ["codex", "claude-code", "gemini"],
+  "skills": ["frontend-react", "supabase", "edge-functions", "data-quality", "security-hardening", "git-safety", "release", "research-audit"],
+  "verification": ["validate Supabase migrations before remote apply", "run typecheck", "run build", "verify edge function env handling"],
+  "recommendedForSignals": ["react", "vite", "supabase", "edge-functions", "database-migrations"],
+  "notes": "Use when frontend behavior crosses Supabase auth, database, functions, or generated types."
+}

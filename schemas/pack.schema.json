@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/pack.schema.json",
+  "title": "lizard-agent-layer pack",
+  "type": "object",
+  "required": ["name", "description", "riskLevel", "projectSize", "skills"],
+  "properties": {
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "riskLevel": { "enum": ["low", "medium", "high"] },
+    "projectSize": { "enum": ["small", "medium", "large"] },
+    "stack": { "type": "array", "items": { "type": "string" } },
+    "harnesses": { "type": "array", "items": { "type": "string" } },
+    "skills": { "type": "array", "items": { "type": "string" } },
+    "verification": { "type": "array", "items": { "type": "string" } },
+    "modelProfiles": { "type": "object", "additionalProperties": { "type": "string" } },
+    "recommendedForSignals": { "type": "array", "items": { "type": "string" } },
+    "notes": { "type": "string" }
+  },
+  "additionalProperties": true
+}

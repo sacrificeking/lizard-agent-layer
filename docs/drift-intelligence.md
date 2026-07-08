@@ -13,7 +13,9 @@ The drift baseline tracks files under:
 - `protocols/`
 - `profiles/`
 - `model-profiles/`
+- `packs/`
 - `registry/`, excluding `registry/drift-baseline.json`
+- `schemas/`
 
 It intentionally does not track generated `.tmp/` reports.
 
@@ -59,4 +61,4 @@ Before updating the baseline:
 - Read the changed artifacts.
 - Check whether token estimates changed materially.
 - Confirm new or changed behavior is intentional.
-- Run `validate`, `drift`, `quality`, `smoke`, and `matrix` gates.
+- Run `validate`, `packs`, `drift`, `quality`, `smoke`, and `matrix` gates.

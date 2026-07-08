@@ -1,8 +1,8 @@
-﻿# Getting Started
+# Getting Started
 
 ## 1. Analyze the target
 
-Start with a read-only recommendation for profile, risk level, harnesses, and skills.
+Start with a read-only recommendation for profile, risk level, harnesses, skills, and packs.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project
@@ -14,7 +14,19 @@ Use `-Json` when another script should consume the recommendation.
 
 Use `minimal` for small repositories, `standard` for normal product work, and `supabase-react-finance` for high-risk React/Supabase finance projects. Treat the analyzer as a starting point, not as an irreversible decision.
 
-## 3. Write a plan report
+## 3. Choose packs when useful
+
+Use packs to add reusable project-shape logic on top of the chosen profile. The analyzer prints `recommendedPacks` and includes `-Packs` in the preview command when signals match known bundles.
+
+Example:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs frontend-product -WritePlan
+```
+
+See [Packs](packs.md) for the current bundle catalog.
+
+## 4. Write a plan report
 
 Generate a human-readable plan before touching the target project.
 
@@ -30,7 +42,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -T
 
 Preview mode still does not create `.agent/`, sidecars, or harness files in the target. The plan is the only explicit write.
 
-## 4. Generate merge suggestions
+## 5. Generate merge suggestions
 
 When a target already has `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, or a Cursor rule, generate patch artifacts for review.
 
@@ -40,7 +52,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\merge-suggesti
 
 Use `-OutputDir` to choose where reports, patch files, and copy-block files are written.
 
-## 5. Preview first
+## 6. Preview first
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard
@@ -48,13 +60,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -T
 
 Preview mode prints planned creates, existing skips, harness files, skill mirrors, manual merge needs, and merge suggestion counts.
 
-## 6. Optionally override harnesses
+## 7. Optionally override harnesses
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,cursor
 ```
 
-## 7. Apply when the plan is acceptable
+## 8. Apply when the plan is acceptable
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Apply
@@ -62,7 +74,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -T
 
 If an existing instruction file such as `AGENTS.md` already exists, the installer writes a sidecar and records merge suggestions instead of modifying the original file.
 
-## 8. Audit the target
+## 9. Audit the target
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\doctor.ps1 -TargetPath D:\path\to\project
@@ -70,7 +82,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\doctor.ps1 -Ta
 
 Use `-Strict` in CI or release-style checks.
 
-## 9. Validate this layer before changing it
+## 10. Validate this layer before changing it
 
 Run the full local CI gate:
 

@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$TargetPath = (Get-Location).Path,
   [switch]$Json,
   [int]$MaxFiles = 20000
@@ -9,10 +9,12 @@ $TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
 $signals = New-Object System.Collections.Generic.List[string]
 $reasons = New-Object System.Collections.Generic.List[string]
 $warnings = New-Object System.Collections.Generic.List[string]
+$packs = New-Object System.Collections.Generic.List[string]
 
 function Add-Signal { param([string]$Signal) if (-not $signals.Contains($Signal)) { $signals.Add($Signal) | Out-Null } }
 function Add-Reason { param([string]$Reason) if (-not $reasons.Contains($Reason)) { $reasons.Add($Reason) | Out-Null } }
 function Add-Warning { param([string]$Warning) if (-not $warnings.Contains($Warning)) { $warnings.Add($Warning) | Out-Null } }
+function Add-Pack { param([string]$Pack) if (-not $packs.Contains($Pack)) { $packs.Add($Pack) | Out-Null } }
 function Has-Path { param([string]$Relative) return Test-Path -LiteralPath (Join-Path $TargetRoot $Relative) }
 function Read-JsonSafe {
   param([string]$Relative)
@@ -66,6 +68,8 @@ if ($null -ne $package) {
       '^typescript$' { Add-Signal 'typescript'; Add-Reason 'package.json uses TypeScript.' }
       '^@supabase/supabase-js$|^supabase$' { Add-Signal 'supabase'; Add-Reason 'package.json references Supabase packages.' }
       '^next$' { Add-Signal 'nextjs'; Add-Reason 'package.json uses Next.js.' }
+      '^openai$|^@anthropic-ai/sdk$|^ai$|^langchain$|^@langchain/' { Add-Signal 'agent-runtime'; Add-Reason 'package.json references agent or LLM runtime packages.' }
+      '^tailwindcss$|^@radix-ui/|^lucide-react$|^framer-motion$' { Add-Signal 'design-ui'; Add-Reason 'package.json references UI/design-system packages.' }
     }
   }
 }
@@ -116,6 +120,15 @@ switch ($profile) {
   'standard' { foreach ($s in @('git-safety', 'release', 'dependency-upgrade', 'research-audit')) { $skills.Add($s) | Out-Null } }
   'supabase-react-finance' { foreach ($s in @('git-safety', 'release', 'dependency-upgrade', 'design-system', 'frontend-react', 'supabase', 'edge-functions', 'data-quality', 'research-audit')) { $skills.Add($s) | Out-Null } }
 }
+if (($signals.Contains('react') -or $signals.Contains('vite') -or $signals.Contains('nextjs')) -and $signals.Contains('typescript')) { Add-Pack 'frontend-product' }
+if ($signals.Contains('design-system') -or $signals.Contains('design-ui')) { Add-Pack 'design-system' }
+if ($signals.Contains('supabase') -or $signals.Contains('edge-functions') -or $signals.Contains('database-migrations')) { Add-Pack 'supabase-react' }
+if ($signals.Contains('finance')) { Add-Pack 'finance-app' }
+if ($signals.Contains('agent-runtime')) { Add-Pack 'agent-runtime' }
+if ($risk -eq 'high' -or $signals.Contains('database-migrations') -or $signals.Contains('edge-functions')) { Add-Pack 'security-hardening' }
+
+$previewCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath `"$TargetRoot`" -Profile $profile -Harnesses $($harnesses -join ',')"
+if ($packs.Count -gt 0) { $previewCommand += " -Packs $($packs -join ',')" }
 
 $result = [ordered]@{
   target = $TargetRoot
@@ -123,10 +136,11 @@ $result = [ordered]@{
   riskLevel = $risk
   recommendedHarnesses = @($harnesses)
   recommendedSkills = @($skills)
+  recommendedPacks = @($packs)
   signals = @($signals)
   reasons = @($reasons)
   warnings = @($warnings)
-  previewCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath `"$TargetRoot`" -Profile $profile -Harnesses $($harnesses -join ',')"
+  previewCommand = $previewCommand
 }
 
 if ($Json) {
@@ -140,6 +154,7 @@ Write-Host "Recommended profile: $profile"
 Write-Host "Risk level: $risk"
 Write-Host "Recommended harnesses: $($harnesses -join ', ')"
 Write-Host "Recommended skills: $($skills -join ', ')"
+Write-Host "Recommended packs: $($packs -join ', ')"
 Write-Host ""
 Write-Host "Signals:"
 foreach ($signal in $signals) { Write-Host "  - $signal" }

@@ -1,0 +1,12 @@
+{
+  "name": "security-hardening",
+  "description": "Security and permission hardening pack for secrets, auth, CI, dependencies, and production-risk workflows.",
+  "riskLevel": "high",
+  "projectSize": "medium",
+  "stack": ["security", "auth", "ci", "dependencies"],
+  "harnesses": ["codex", "claude-code", "gemini"],
+  "skills": ["security-hardening", "git-safety", "dependency-upgrade", "research-audit"],
+  "verification": ["run available security audit", "inspect secret handling", "review permission changes", "verify rollback path"],
+  "recommendedForSignals": ["security", "auth", "secret", "token", "dependency", "ci"],
+  "notes": "Use for hardening passes or any task that touches secrets, auth, permissions, CI, or dependency risk."
+}

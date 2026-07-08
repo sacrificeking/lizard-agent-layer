@@ -2,6 +2,7 @@ param(
   [string]$TargetPath = (Get-Location).Path,
   [string]$Profile = "standard",
   [string[]]$Harnesses,
+  [string[]]$Packs,
   [switch]$Apply,
   [switch]$Force,
   [switch]$WritePlan,
@@ -23,7 +24,8 @@ if (-not (Test-Path -LiteralPath $ProfilePath)) {
 }
 
 $ProfileDoc = Get-Content -LiteralPath $ProfilePath -Raw | ConvertFrom-Json
-function Expand-HarnessList {
+
+function Expand-ValueList {
   param($Values)
   $out = New-Object System.Collections.Generic.List[string]
   foreach ($value in @($Values)) {
@@ -32,9 +34,95 @@ function Expand-HarnessList {
       if ($trimmed -and -not $out.Contains($trimmed)) { $out.Add($trimmed) | Out-Null }
     }
   }
-  return @($out)
+  @($out.ToArray())
 }
-$SelectedHarnesses = if ($Harnesses -and $Harnesses.Count -gt 0) { Expand-HarnessList $Harnesses } else { Expand-HarnessList $ProfileDoc.harnesses }
+
+function Set-DocProperty {
+  param([object]$Doc, [string]$Name, $Value)
+  if ($Doc.PSObject.Properties.Name -contains $Name) { $Doc.$Name = $Value }
+  else { $Doc | Add-Member -NotePropertyName $Name -NotePropertyValue $Value }
+}
+
+function Merge-ArrayProperty {
+  param([object]$Doc, [string]$Name, $Values)
+  $list = New-Object System.Collections.Generic.List[string]
+  if ($Doc.PSObject.Properties.Name -contains $Name) {
+    foreach ($item in @($Doc.$Name)) { if ($item -and -not $list.Contains([string]$item)) { $list.Add([string]$item) | Out-Null } }
+  }
+  foreach ($item in @($Values)) { if ($item -and -not $list.Contains([string]$item)) { $list.Add([string]$item) | Out-Null } }
+  Set-DocProperty $Doc $Name @($list.ToArray())
+}
+
+function Get-RiskRank {
+  param([string]$Risk)
+  switch ($Risk) { 'high' { 3 } 'medium' { 2 } 'low' { 1 } default { 0 } }
+}
+
+function Get-SizeRank {
+  param([string]$Size)
+  switch ($Size) { 'large' { 3 } 'medium' { 2 } 'small' { 1 } default { 0 } }
+}
+
+function Max-RiskLevel {
+  param([string]$A, [string]$B)
+  if ((Get-RiskRank $B) -gt (Get-RiskRank $A)) { $B } else { $A }
+}
+
+function Max-ProjectSize {
+  param([string]$A, [string]$B)
+  if ((Get-SizeRank $B) -gt (Get-SizeRank $A)) { $B } else { $A }
+}
+
+function Load-Pack {
+  param([string]$PackName)
+  if ($PackName -notmatch '^[a-z0-9][a-z0-9-]{0,62}$') { throw "Invalid pack name '$PackName'." }
+  $packPath = Join-Path $LayerRoot "packs\$PackName.json"
+  if (-not (Test-Path -LiteralPath $packPath)) { throw "Unknown pack '$PackName'. Expected packs/$PackName.json." }
+  $pack = Get-Content -LiteralPath $packPath -Raw | ConvertFrom-Json
+  if ($pack.name -ne $PackName) { throw "Pack manifest name '$($pack.name)' does not match '$PackName'." }
+  $pack
+}
+
+$SelectedPacks = Expand-ValueList $Packs
+$PackDocs = New-Object System.Collections.Generic.List[object]
+foreach ($packName in @($SelectedPacks)) {
+  $pack = Load-Pack $packName
+  $PackDocs.Add($pack) | Out-Null
+  Merge-ArrayProperty $ProfileDoc 'stack' @($pack.stack)
+  Merge-ArrayProperty $ProfileDoc 'skills' @($pack.skills)
+  Merge-ArrayProperty $ProfileDoc 'verification' @($pack.verification)
+  Set-DocProperty $ProfileDoc 'riskLevel' (Max-RiskLevel ([string]$ProfileDoc.riskLevel) ([string]$pack.riskLevel))
+  Set-DocProperty $ProfileDoc 'projectSize' (Max-ProjectSize ([string]$ProfileDoc.projectSize) ([string]$pack.projectSize))
+  if ($pack.modelProfiles) {
+    if (-not ($ProfileDoc.PSObject.Properties.Name -contains 'modelProfiles') -or $null -eq $ProfileDoc.modelProfiles) {
+      Set-DocProperty $ProfileDoc 'modelProfiles' ([pscustomobject]@{})
+    }
+    foreach ($prop in $pack.modelProfiles.PSObject.Properties) {
+      $ProfileDoc.modelProfiles | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
+    }
+  }
+  if (-not [string]::IsNullOrWhiteSpace([string]$pack.notes)) {
+    $currentNotes = if ($ProfileDoc.PSObject.Properties.Name -contains 'notes') { [string]$ProfileDoc.notes } else { '' }
+    $suffix = "Pack $($pack.name): $($pack.notes)"
+    if ($currentNotes -and $currentNotes -notmatch [regex]::Escape($suffix)) { Set-DocProperty $ProfileDoc 'notes' ($currentNotes.TrimEnd() + "`n" + $suffix) }
+    elseif (-not $currentNotes) { Set-DocProperty $ProfileDoc 'notes' $suffix }
+  }
+}
+Set-DocProperty $ProfileDoc 'packs' @($SelectedPacks)
+
+function Expand-HarnessList { param($Values) Expand-ValueList $Values }
+$DefaultHarnesses = New-Object System.Collections.Generic.List[string]
+foreach ($harness in @(Expand-HarnessList $ProfileDoc.harnesses)) {
+  if ($harness -and -not $DefaultHarnesses.Contains([string]$harness)) { $DefaultHarnesses.Add([string]$harness) | Out-Null }
+}
+if (-not ($Harnesses -and $Harnesses.Count -gt 0)) {
+  foreach ($pack in @($PackDocs.ToArray())) {
+    foreach ($harness in @($pack.harnesses)) {
+      if ($harness -and -not $DefaultHarnesses.Contains([string]$harness)) { $DefaultHarnesses.Add([string]$harness) | Out-Null }
+    }
+  }
+}
+$SelectedHarnesses = if ($Harnesses -and $Harnesses.Count -gt 0) { Expand-HarnessList $Harnesses } else { @($DefaultHarnesses.ToArray()) }
 if ($SelectedHarnesses.Count -eq 0) { throw "No harnesses selected. Set profile.harnesses or pass -Harnesses." }
 
 function Resolve-PlanReportPath {
@@ -51,7 +139,6 @@ if ($ShouldWritePlan) {
   $planParent = Split-Path -Parent $EffectivePlanPath
   if ($planParent -and -not (Test-Path -LiteralPath $planParent)) { New-Item -ItemType Directory -Path $planParent -Force | Out-Null }
 }
-
 $Mode = if ($Apply) { "APPLY" } else { "PREVIEW" }
 $Planned = New-Object System.Collections.Generic.List[string]
 $Created = New-Object System.Collections.Generic.List[string]
@@ -137,6 +224,8 @@ function New-InstallPlanMarkdown {
   $lines.Add(('- Target: `{0}`' -f $TargetRoot)) | Out-Null
   $lines.Add(('- Layer version: `{0}`' -f $LayerVersion)) | Out-Null
   $lines.Add(('- Profile: `{0}`' -f $Profile)) | Out-Null
+  $packDisplay = if ($SelectedPacks.Count -gt 0) { $SelectedPacks -join ', ' } else { 'none' }
+  $lines.Add(('- Packs: `{0}`' -f $packDisplay)) | Out-Null
   $lines.Add(('- Risk level: `{0}`' -f $ProfileDoc.riskLevel)) | Out-Null
   $lines.Add(('- Memory mode: `{0}`' -f $ProfileDoc.memoryMode)) | Out-Null
   $lines.Add(('- Harnesses: `{0}`' -f ($SelectedHarnesses -join ', '))) | Out-Null
@@ -151,6 +240,7 @@ function New-InstallPlanMarkdown {
   $lines.Add('## Commands') | Out-Null
   $lines.Add('') | Out-Null
   $previewCommand = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath "{0}" -Profile {1} -Harnesses {2}' -f $TargetRoot, $Profile, ($SelectedHarnesses -join ',')
+  if ($SelectedPacks.Count -gt 0) { $previewCommand += (' -Packs {0}' -f ($SelectedPacks -join ',')) }
   $applyCommand = "$previewCommand -Apply"
   $lines.Add('Preview:') | Out-Null
   $lines.Add('') | Out-Null
@@ -164,6 +254,7 @@ function New-InstallPlanMarkdown {
   $lines.Add($applyCommand) | Out-Null
   $lines.Add('```') | Out-Null
   $lines.Add('') | Out-Null
+  Add-MarkdownList $lines 'Packs' @($SelectedPacks)
   Add-MarkdownList $lines 'Skills' @($ProfileDoc.skills)
   Add-MarkdownList $lines 'Planned paths' @($Planned)
   Add-MarkdownList $lines 'Created paths' @($Created)
@@ -327,6 +418,7 @@ function Write-InstallManifest {
   $doc['layer'] = "lizard-agent-layer"
   $doc['layer_version'] = $LayerVersion
   $doc['profile'] = $Profile
+  $doc['packs'] = @($SelectedPacks)
   $doc['installed_at'] = (Get-Date).ToUniversalTime().ToString("o")
   $doc['target_root'] = $TargetRoot
   $doc['memory_mode'] = $ProfileDoc.memoryMode
@@ -351,6 +443,8 @@ function Write-InstallManifest {
 Write-Host "lizard-agent-layer $Mode"
 Write-Host "Target: $TargetRoot"
 Write-Host "Profile: $Profile"
+$packDisplay = if ($SelectedPacks.Count -gt 0) { $SelectedPacks -join ', ' } else { 'none' }
+Write-Host "Packs: $packDisplay"
 Write-Host "Harnesses: $($SelectedHarnesses -join ', ')"
 Write-Host "Version: $LayerVersion"
 if ($ShouldWritePlan) { Write-Host "Plan report: $EffectivePlanPath" }
@@ -364,7 +458,11 @@ Ensure-Dir (Join-Path $TargetRoot ".agent\protocols")
 Ensure-Dir (Join-Path $TargetRoot ".agent\skills")
 
 Copy-IfMissing (Join-Path $LayerRoot "templates\agent-gitignore") (Join-Path $TargetRoot ".agent\.gitignore")
-Copy-IfMissing $ProfilePath (Join-Path $TargetRoot ".agent\project-profile.json")
+if ($SelectedPacks.Count -gt 0) {
+  Write-IfMissing (Join-Path $TargetRoot ".agent\project-profile.json") ($ProfileDoc | ConvertTo-Json -Depth 10)
+} else {
+  Copy-IfMissing $ProfilePath (Join-Path $TargetRoot ".agent\project-profile.json")
+}
 Copy-IfMissing (Join-Path $LayerRoot "templates\memory\personal\PREFERENCES.md") (Join-Path $TargetRoot ".agent\memory\personal\PREFERENCES.md")
 Copy-IfMissing (Join-Path $LayerRoot "templates\memory\semantic\DECISIONS.md") (Join-Path $TargetRoot ".agent\memory\semantic\DECISIONS.md")
 Copy-IfMissing (Join-Path $LayerRoot "templates\memory\semantic\LESSONS.md") (Join-Path $TargetRoot ".agent\memory\semantic\LESSONS.md")
@@ -426,4 +524,3 @@ if (-not $Apply) {
   Write-Host ""
   Write-Host "Preview only. Re-run with -Apply to write files."
 }
-

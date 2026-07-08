@@ -1,0 +1,12 @@
+{
+  "name": "finance-app",
+  "description": "High-risk finance, market data, DCA, crypto, DeFi, stock, and portfolio workflow pack.",
+  "riskLevel": "high",
+  "projectSize": "large",
+  "stack": ["finance", "market-data", "data-quality"],
+  "harnesses": ["codex", "claude-code", "gemini"],
+  "skills": ["data-quality", "research-audit", "security-hardening", "git-safety", "release", "dependency-upgrade"],
+  "verification": ["validate data provenance", "run calculation tests when available", "check stale market data risk", "run build before release"],
+  "recommendedForSignals": ["finance", "crypto", "defi", "stock", "market", "dca"],
+  "notes": "Use when incorrect data, stale calculations, or misleading finance UX could cause user harm."
+}

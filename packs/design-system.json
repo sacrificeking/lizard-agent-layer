@@ -1,0 +1,12 @@
+{
+  "name": "design-system",
+  "description": "Design contract pack for DESIGN.md, UI consistency, accessibility, and frontend implementation review.",
+  "riskLevel": "medium",
+  "projectSize": "medium",
+  "stack": ["design-system", "frontend", "ui"],
+  "harnesses": ["codex", "claude-code", "gemini"],
+  "skills": ["design-system", "frontend-react", "research-audit"],
+  "verification": ["check DESIGN.md alignment", "run build", "review responsive layout and accessibility risks"],
+  "recommendedForSignals": ["design-system", "DESIGN.md", "ui", "frontend"],
+  "notes": "Use when visual consistency and explicit design contracts are important."
+}

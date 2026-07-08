@@ -14,11 +14,13 @@
 - Quality registry with skill, adapter, profile scoring, risk labels, and reports.
 - Skill maturity levels with scoring, package support, and a certified example skill.
 - Drift intelligence with artifact hashes, token estimates, baseline reports, and CI gate.
+- Bundle pack system with curated project-shape manifests, analyzer recommendations, installer merge support, and CI validation.
 
 ## Next
 
 - Additional harness adapters when they have stable local instruction conventions.
 - Richer target analyzer scoring for monorepos and non-Node stacks.
+- Pack authoring lifecycle for external teams and project-specific pack overlays.
 - Optional manifest comparison command for layer upgrades in installed target projects.
 - Optional workflow templates for target repositories after installation.
 
@@ -28,6 +30,3 @@
 - Release-readiness dashboard.
 - Skill usage reports.
 - Private, gitignored exports.
-
-
-

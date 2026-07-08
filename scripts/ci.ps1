@@ -3,6 +3,7 @@ param(
   [switch]$SkipSmoke,
   [switch]$SkipMatrix,
   [switch]$SkipQuality,
+  [switch]$SkipPacks,
   [switch]$SkipDrift,
   [switch]$StrictGitStatus
 )
@@ -41,12 +42,18 @@ Write-Host "Layer: $LayerRoot"
 Write-Host "SkipSmoke: $($SkipSmoke.IsPresent)"
 Write-Host "SkipMatrix: $($SkipMatrix.IsPresent)"
 Write-Host "SkipQuality: $($SkipQuality.IsPresent)"
+Write-Host "SkipPacks: $($SkipPacks.IsPresent)"
 Write-Host "SkipDrift: $($SkipDrift.IsPresent)"
 Write-Host "StrictGitStatus: $($StrictGitStatus.IsPresent)"
 Write-Host ""
 
 Invoke-CiStep 'validate' {
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\validate.ps1') -LayerRoot $LayerRoot
+}
+if (-not $SkipPacks) {
+  Invoke-CiStep 'packs' {
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\pack-report.ps1') -LayerRoot $LayerRoot -Strict
+  }
 }
 
 if (-not $SkipDrift) {
@@ -88,6 +95,7 @@ $Report = [ordered]@{
   skip_smoke = $SkipSmoke.IsPresent
   skip_matrix = $SkipMatrix.IsPresent
   skip_quality = $SkipQuality.IsPresent
+  skip_packs = $SkipPacks.IsPresent
   skip_drift = $SkipDrift.IsPresent
   strict_git_status = $StrictGitStatus.IsPresent
   results = @($Results.ToArray())

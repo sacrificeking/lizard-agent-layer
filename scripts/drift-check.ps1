@@ -27,7 +27,9 @@ function Get-ArtifactKind {
     'protocols' { 'protocol' }
     'profiles' { 'profile' }
     'model-profiles' { 'model-profile' }
+    'packs' { 'pack' }
     'registry' { 'registry' }
+    'schemas' { 'schema' }
     default { 'other' }
   }
 }
@@ -58,7 +60,7 @@ function New-ArtifactRecord {
 }
 
 function Get-TrackedFiles {
-  $roots = @('adapters', 'skills', 'protocols', 'profiles', 'model-profiles', 'registry')
+  $roots = @('adapters', 'skills', 'protocols', 'profiles', 'model-profiles', 'packs', 'registry', 'schemas')
   $files = New-Object System.Collections.Generic.List[System.IO.FileInfo]
   foreach ($root in $roots) {
     $path = Join-Path $LayerRoot $root

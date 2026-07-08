@@ -1,0 +1,12 @@
+{
+  "name": "frontend-product",
+  "description": "React/Vite/TypeScript product UI pack with design and dependency discipline.",
+  "riskLevel": "medium",
+  "projectSize": "medium",
+  "stack": ["react", "vite", "typescript", "frontend"],
+  "harnesses": ["codex", "claude-code", "gemini"],
+  "skills": ["frontend-react", "design-system", "dependency-upgrade", "git-safety", "research-audit"],
+  "verification": ["run typecheck", "run frontend tests when available", "run build before release"],
+  "recommendedForSignals": ["react", "vite", "typescript", "design-system"],
+  "notes": "Use for product frontends where UI consistency and implementation safety matter."
+}

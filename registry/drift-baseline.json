@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-07-08T14:03:43.4417167Z",
-    "layer_version":  "0.9.0",
-    "artifact_count":  36,
-    "total_bytes":  25339,
-    "token_estimate":  6327,
+    "generated_at":  "2026-07-08T14:31:24.1071774Z",
+    "layer_version":  "1.0.0",
+    "artifact_count":  50,
+    "total_bytes":  38168,
+    "token_estimate":  9538,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -98,6 +98,15 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/agent-runtime/SKILL.md",
+                          "sha256":  "90a682791f6db94f23cd8dbf0d7fa470110b97545458c0fe2d0d12d50ad471d8",
+                          "bytes":  1257,
+                          "lines":  28,
+                          "words":  175,
+                          "token_estimate":  315
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/data-quality/SKILL.md",
                           "sha256":  "37ed963687420f56639ebf2ec3caf59ac1fd55b39ec4c4d68ce21950f7c68342",
                           "bytes":  584,
@@ -185,6 +194,15 @@
                           "lines":  19,
                           "words":  117,
                           "token_estimate":  215
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/security-hardening/SKILL.md",
+                          "sha256":  "858062f81ae38cf6d9ba3a8deb677a279ac966317c1cb2519e0032bfe09630d9",
+                          "bytes":  1204,
+                          "lines":  28,
+                          "words":  169,
+                          "token_estimate":  301
                       },
                       {
                           "kind":  "skill",
@@ -304,6 +322,60 @@
                           "token_estimate":  114
                       },
                       {
+                          "kind":  "pack",
+                          "path":  "packs/agent-runtime.json",
+                          "sha256":  "897ec297a391538d87364e5ae2375c60541305ddeb80523c79f038c51c78ddd4",
+                          "bytes":  756,
+                          "lines":  13,
+                          "words":  75,
+                          "token_estimate":  189
+                      },
+                      {
+                          "kind":  "pack",
+                          "path":  "packs/design-system.json",
+                          "sha256":  "d7bde5b476ddfe089788d1f5004cf52962e859d262cbc82aa02cf9822949a394",
+                          "bytes":  650,
+                          "lines":  13,
+                          "words":  61,
+                          "token_estimate":  163
+                      },
+                      {
+                          "kind":  "pack",
+                          "path":  "packs/finance-app.json",
+                          "sha256":  "9fb90c0a04b3fd7f980f2aa133f8f080c75c984c7cb9d2cebe10ee0f7d21da3e",
+                          "bytes":  747,
+                          "lines":  13,
+                          "words":  76,
+                          "token_estimate":  187
+                      },
+                      {
+                          "kind":  "pack",
+                          "path":  "packs/frontend-product.json",
+                          "sha256":  "0c1c4dd0df62a1ad2e689f1b05989723ca2c997c1876504f2f4d814c84e1df95",
+                          "bytes":  667,
+                          "lines":  13,
+                          "words":  62,
+                          "token_estimate":  167
+                      },
+                      {
+                          "kind":  "pack",
+                          "path":  "packs/security-hardening.json",
+                          "sha256":  "eeeb579d0678bcb75de5907fca3d6b556eb22335a63dfe38aec38b3b9d3f5c2b",
+                          "bytes":  745,
+                          "lines":  13,
+                          "words":  74,
+                          "token_estimate":  187
+                      },
+                      {
+                          "kind":  "pack",
+                          "path":  "packs/supabase-react.json",
+                          "sha256":  "c805ec19a452fb7dd7820032d02345cc193403a672431354914ed1cc6d1bd08b",
+                          "bytes":  804,
+                          "lines":  13,
+                          "words":  76,
+                          "token_estimate":  201
+                      },
+                      {
                           "kind":  "registry",
                           "path":  "registry/maturity-levels.json",
                           "sha256":  "ed2cd6c60f3874708e999b056097cff3314a2bd43f93eea1ddc3987f97605ba5",
@@ -329,6 +401,60 @@
                           "lines":  13,
                           "words":  115,
                           "token_estimate":  357
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/adapter.schema.json",
+                          "sha256":  "0ff8b602ee712d4d30a5d172bb2cdcad5955a52afb06cc1ada886574ed5051b6",
+                          "bytes":  1096,
+                          "lines":  36,
+                          "words":  96,
+                          "token_estimate":  274
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/lizard-agent-layer.schema.json",
+                          "sha256":  "f4db211d4236dcbada59744d35da22b33d19065051c1317da9e5f76c59c7a757",
+                          "bytes":  1029,
+                          "lines":  25,
+                          "words":  109,
+                          "token_estimate":  257
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/maturity-levels.schema.json",
+                          "sha256":  "0369052721c2acd8b09514c5440ee4ef0bc71c6b109f39deca9a53b68317a8c9",
+                          "bytes":  1010,
+                          "lines":  30,
+                          "words":  88,
+                          "token_estimate":  253
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/model-profile.schema.json",
+                          "sha256":  "19ced8ef3275e6c11274043147ea80fbd56b884653450937226765cd93f108a2",
+                          "bytes":  674,
+                          "lines":  18,
+                          "words":  72,
+                          "token_estimate":  168
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/pack.schema.json",
+                          "sha256":  "1bcb1ac42abcd215ec9b50a48d0e05792d803a4892bce5a1f6e8d34008f9c848",
+                          "bytes":  993,
+                          "lines":  22,
+                          "words":  111,
+                          "token_estimate":  249
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/quality-registry.schema.json",
+                          "sha256":  "d06d7ee12b29a5d4b72ed1787d1188f2e1b59033c44b64e39b460f69f7ec7405",
+                          "bytes":  1197,
+                          "lines":  39,
+                          "words":  111,
+                          "token_estimate":  300
                       }
                   ]
 }

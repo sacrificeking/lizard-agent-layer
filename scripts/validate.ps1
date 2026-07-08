@@ -97,11 +97,37 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'examples') -Filter '*.json' -F
     if (-not $adapterNames.Contains($harness)) { Fail "Example $($_.Name) references missing adapter '$harness'." }
   }
 }
+Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'packs') -Filter '*.json' -File -ErrorAction SilentlyContinue | ForEach-Object {
+  $pack = Read-JsonFile $_.FullName
+  if ($null -eq $pack) { return }
+  $expectedName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
+  foreach ($field in @('name', 'description', 'riskLevel', 'projectSize', 'skills')) {
+    if (-not ($pack.PSObject.Properties.Name -contains $field)) { Fail "Pack $($_.Name) missing '$field'." }
+  }
+  if ($pack.name -ne $expectedName) { Fail "Pack $($_.Name) manifest name '$($pack.name)' does not match filename." }
+  if ($pack.name -and -not (Is-HyphenName $pack.name)) { Fail "Pack $($_.Name) has invalid name '$($pack.name)'." }
+  if ($pack.riskLevel -and $pack.riskLevel -notin @('low', 'medium', 'high')) { Fail "Pack $($_.Name) has invalid riskLevel '$($pack.riskLevel)'." }
+  if ($pack.projectSize -and $pack.projectSize -notin @('small', 'medium', 'large')) { Fail "Pack $($_.Name) has invalid projectSize '$($pack.projectSize)'." }
+  foreach ($skill in @($pack.skills)) {
+    if (-not (Is-HyphenName $skill)) { Fail "Pack $($_.Name) references invalid skill name '$skill'."; continue }
+    $skillPath = Join-Path $LayerRoot "skills\$skill\SKILL.md"
+    if (-not (Test-Path -LiteralPath $skillPath)) { Fail "Pack $($_.Name) references missing skill '$skill'." }
+  }
+  foreach ($harness in @($pack.harnesses)) {
+    if (-not $adapterNames.Contains($harness)) { Fail "Pack $($_.Name) references missing adapter '$harness'." }
+  }
+  if ($pack.modelProfiles) {
+    foreach ($prop in $pack.modelProfiles.PSObject.Properties) {
+      if (-not $modelNames.Contains([string]$prop.Value)) { Fail "Pack $($_.Name) references missing model profile '$($prop.Value)' for '$($prop.Name)'." }
+    }
+  }
+}
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\lizard-agent-layer.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\adapter.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-profile.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\quality-registry.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\maturity-levels.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\pack.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\quality-rubric.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\maturity-levels.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\risk-signals.json')
@@ -139,7 +165,7 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory | ForEach-
   if ([string]::IsNullOrWhiteSpace($values['description'])) { Fail "Skill '$folderName' has empty description." }
 }
 
-foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'score-layer.ps1', 'drift-check.ps1')) {
+foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1')) {
   $path = Join-Path $LayerRoot "scripts\$script"
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing script $script."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }
@@ -158,7 +184,3 @@ if ($Failures.Count -gt 0) {
 }
 
 Write-Host 'lizard-agent-layer validation passed.'
-
-
-
-

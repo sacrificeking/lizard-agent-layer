@@ -1,4 +1,20 @@
-﻿# Changelog
+# Changelog
+
+## 1.0.0 - 2026-07-08
+
+### Added
+
+- Bundle and pack system with curated manifests for frontend, Supabase React, finance, agent runtime, design system, and security hardening project shapes.
+- `pack-report.ps1` with strict pack integrity checks and Markdown/JSON reports.
+- Installer `-Packs` support that merges pack skills, stack, verification, harnesses, risk, size, model profiles, notes, and install manifest metadata into the selected profile.
+- Target analyzer pack recommendations through `recommendedPacks` and generated preview commands with `-Packs`.
+- Pack schema, pack documentation, CI pack gate, and drift tracking for packs and schemas.
+- Reusable `agent-runtime` and `security-hardening` skills.
+
+### Changed
+
+- CI now runs the pack gate by default and supports `-SkipPacks` for diagnosis.
+- Drift intelligence now tracks pack manifests and schemas.
 
 ## 0.9.0 - 2026-07-08
 
@@ -96,8 +112,3 @@
 - Preview-first installer for target projects.
 - Curated memory templates and core safety protocols.
 - Validation, doctor, and smoke-test scripts.
-
-
-
-
-

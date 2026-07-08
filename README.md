@@ -7,6 +7,7 @@ Portable agent infrastructure for projects that need consistent AI-assisted deve
 ## What it provides
 
 - Project profiles for different sizes, stacks, risk levels, harnesses, and model roles.
+- Curated packs for frontend products, Supabase React apps, finance workflows, agent runtimes, design systems, and security hardening.
 - Codex, Claude Code, Gemini, Cursor, and generic adapters.
 - Codex-friendly skills under `.agents/skills/` and harness-specific mirrors where useful.
 - Local project memory under `.agent/memory/`.
@@ -14,9 +15,9 @@ Portable agent infrastructure for projects that need consistent AI-assisted deve
 - Preview-first installers that avoid clobbering target files.
 - Optional install plan reports with merge suggestions for existing instruction files.
 - Standalone merge suggestion reports with patch and copy-block artifacts.
-- Target analyzer for profile, harness, and skill recommendations.
+- Target analyzer for profile, harness, skill, and pack recommendations.
 - Adapter matrix tests for every profile/harness combination.
-- Local CI runner plus GitHub Actions workflow for validate, quality, smoke, and matrix gates.
+- Local CI runner plus GitHub Actions workflow for validate, packs, drift, quality, smoke, and matrix gates.
 - Quality registry with scoring, risk labels, maturity levels, drift detection, and Markdown/JSON reports.
 - Doctor, validation, upgrade, manifest-sync, scoring, and smoke-test scripts.
 
@@ -35,6 +36,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\analyze-target
 ```
 
 Write a reviewable install plan without touching the target project:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs frontend-product -WritePlan
+```
+
+Write a profile-only plan when packs are not needed:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -WritePlan
@@ -68,6 +75,12 @@ Audit a target project:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\doctor.ps1 -TargetPath D:\path\to\project
+```
+
+Run a local pack report:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\pack-report.ps1 -Strict
 ```
 
 Run a local drift report:
@@ -112,6 +125,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\matrix.ps1
 - [Architecture](docs/architecture.md)
 - [Getting started](docs/getting-started.md)
 - [Profiles](docs/profiles.md)
+- [Packs](docs/packs.md)
 - [Install plans](docs/install-plans.md)
 - [Merge suggestions](docs/merge-suggestions.md)
 - [Target analysis](docs/target-analysis.md)
@@ -122,6 +136,3 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\matrix.ps1
 - [Skill authoring](docs/skill-authoring.md)
 - [Skill maturity](docs/skill-maturity.md)
 - [Roadmap](docs/roadmap.md)
-
-
-
