@@ -1,4 +1,4 @@
-﻿# Roadmap
+# Roadmap
 
 ## Completed
 
@@ -11,10 +11,13 @@
 - Install plan reports with merge suggestions for existing instruction files.
 - Standalone merge suggestion generator with patch, block, Markdown, and JSON artifacts.
 - Local CI runner and GitHub Actions workflow for validate, smoke, and matrix gates.
+- Quality registry with skill, adapter, profile scoring, risk labels, and reports.
 
 ## Next
 
 - Additional harness adapters when they have stable local instruction conventions.
+- Skill maturity levels with references, scenario tests, and examples.
+- Drift intelligence for adapter prompts, token budgets, and upstream host changes.
 - Richer target analyzer scoring for monorepos and non-Node stacks.
 - Optional manifest comparison command for layer upgrades in installed target projects.
 - Optional workflow templates for target repositories after installation.
@@ -25,3 +28,4 @@
 - Release-readiness dashboard.
 - Skill usage reports.
 - Private, gitignored exports.
+

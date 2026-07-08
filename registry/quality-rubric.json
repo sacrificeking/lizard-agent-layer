@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "minimumScore": 65,
+  "dimensions": [
+    { "id": "metadata", "name": "Metadata", "maxScore": 15, "description": "The artifact has valid identity, description, and discoverable ownership data." },
+    { "id": "activation", "name": "Activation", "maxScore": 15, "description": "The artifact explains when it should be used and what triggers it." },
+    { "id": "procedure", "name": "Procedure", "maxScore": 20, "description": "The artifact gives actionable, ordered, or rule-based execution guidance." },
+    { "id": "verification", "name": "Verification", "maxScore": 15, "description": "The artifact names checks, tests, builds, reviews, or other verification steps." },
+    { "id": "safety", "name": "Safety", "maxScore": 15, "description": "The artifact addresses permission, destructive action, secret, privacy, or rollback risk." },
+    { "id": "supporting-material", "name": "Supporting material", "maxScore": 10, "description": "The artifact has references, examples, scripts, tests, or other support assets." },
+    { "id": "portability", "name": "Portability", "maxScore": 10, "description": "The artifact avoids hard-coded local assumptions and works across target repositories." }
+  ],
+  "healthBands": [
+    { "id": "excellent", "minimum": 90 },
+    { "id": "strong", "minimum": 80 },
+    { "id": "ready", "minimum": 70 },
+    { "id": "watch", "minimum": 60 },
+    { "id": "weak", "minimum": 0 }
+  ]
+}

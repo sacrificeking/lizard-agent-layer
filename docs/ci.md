@@ -1,4 +1,4 @@
-﻿# CI
+# CI
 
 `lizard-agent-layer` has one canonical local gate runner and one GitHub Actions workflow.
 
@@ -43,3 +43,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\ci.ps1
 ```
 
 For quick iteration, `-SkipMatrix` is acceptable while developing, but the full matrix should pass before a version commit.
+
+## Quality gate
+
+CI runs `scripts/score-layer.ps1 -Strict` after structural validation. This writes quality reports under `.tmp/quality/` and fails on artifacts below the default minimum score or critical risk signals.
+

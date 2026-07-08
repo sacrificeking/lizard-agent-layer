@@ -1,4 +1,4 @@
-﻿# lizard-agent-layer
+# lizard-agent-layer
 
 Portable agent infrastructure for projects that need consistent AI-assisted development across Codex, Claude, Gemini, Cursor, and generic AGENTS.md-compatible tools.
 
@@ -16,8 +16,9 @@ Portable agent infrastructure for projects that need consistent AI-assisted deve
 - Standalone merge suggestion reports with patch and copy-block artifacts.
 - Target analyzer for profile, harness, and skill recommendations.
 - Adapter matrix tests for every profile/harness combination.
-- Local CI runner plus GitHub Actions workflow for validate, smoke, and matrix gates.
-- Doctor, validation, upgrade, manifest-sync, and smoke-test scripts.
+- Local CI runner plus GitHub Actions workflow for validate, quality, smoke, and matrix gates.
+- Quality registry with scoring, risk labels, and Markdown/JSON reports.
+- Doctor, validation, upgrade, manifest-sync, scoring, and smoke-test scripts.
 
 ## Profiles
 
@@ -69,6 +70,12 @@ Audit a target project:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\doctor.ps1 -TargetPath D:\path\to\project
 ```
 
+Run a local quality report:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\score-layer.ps1
+```
+
 Run local CI for this repository:
 
 ```powershell
@@ -107,3 +114,4 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\matrix.ps1
 - [Safety model](docs/safety-model.md)
 - [Skill authoring](docs/skill-authoring.md)
 - [Roadmap](docs/roadmap.md)
+

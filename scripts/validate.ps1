@@ -100,6 +100,9 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'examples') -Filter '*.json' -F
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\lizard-agent-layer.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\adapter.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-profile.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\quality-registry.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'registry\quality-rubric.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'registry\risk-signals.json')
 
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory | ForEach-Object {
   $folderName = $_.Name
@@ -134,7 +137,7 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory | ForEach-
   if ([string]::IsNullOrWhiteSpace($values['description'])) { Fail "Skill '$folderName' has empty description." }
 }
 
-foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1')) {
+foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'score-layer.ps1')) {
   $path = Join-Path $LayerRoot "scripts\$script"
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing script $script."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }
@@ -153,3 +156,4 @@ if ($Failures.Count -gt 0) {
 }
 
 Write-Host 'lizard-agent-layer validation passed.'
+

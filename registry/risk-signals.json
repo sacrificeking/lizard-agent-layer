@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "signals": [
+    { "id": "remote-push", "severity": "high", "pattern": "(?i)\\b(git\\s+push|push\\s+to\\s+remote|remote\\s+repository)\\b", "message": "Mentions remote push or remote repository changes; require explicit user approval." },
+    { "id": "history-rewrite", "severity": "high", "pattern": "(?i)\\b(reset\\s+--hard|rebase|force\\s+push|rewrite\\s+history)\\b", "message": "Mentions history-sensitive git operations; preserve unrelated local work." },
+    { "id": "destructive-filesystem", "severity": "critical", "pattern": "(?i)\\b(rm\\s+-rf|Remove-Item|delete\\s+recursively)\\b", "message": "Mentions destructive filesystem operations; require explicit safeguards." },
+    { "id": "secret-handling", "severity": "high", "pattern": "(?i)\\b(secret|token|api[_-]?key|password|credential|env\\s+var)\\b", "message": "Mentions secrets or credentials; apply secret-handling protocol." },
+    { "id": "database-risk", "severity": "high", "pattern": "(?i)\\b(database|migration|schema|RLS|remote\\s+migration|production)\\b", "message": "Mentions database or production state; require migration and rollback discipline." },
+    { "id": "external-network", "severity": "medium", "pattern": "(?i)\\b(download|fetch|network|npm\\s+install|pip\\s+install|curl|Invoke-WebRequest)\\b", "message": "Mentions external network or dependency access; verify provenance and approval boundaries." }
+  ]
+}
+

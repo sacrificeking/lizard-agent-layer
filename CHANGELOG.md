@@ -1,5 +1,15 @@
 ﻿# Changelog
 
+## 0.7.0 - 2026-07-08
+
+### Added
+
+- Quality registry with rubric and configurable risk signals.
+- `score-layer.ps1` for skill, adapter, and profile scoring.
+- JSON and Markdown quality reports under `.tmp/quality/`.
+- Strict quality gate integrated into local CI.
+- Quality registry documentation and skill-authoring guidance.
+
 ## 0.6.0 - 2026-07-07
 
 ### Added
@@ -66,3 +76,6 @@
 - Preview-first installer for target projects.
 - Curated memory templates and core safety protocols.
 - Validation, doctor, and smoke-test scripts.
+
+
+

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/quality-registry.schema.json",
+  "title": "lizard-agent-layer quality registry",
+  "type": "object",
+  "required": ["version", "minimumScore", "dimensions"],
+  "properties": {
+    "version": { "type": "string" },
+    "minimumScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "dimensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "maxScore", "description"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "maxScore": { "type": "integer", "minimum": 1, "maximum": 100 },
+          "description": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "healthBands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "minimum"],
+        "properties": {
+          "id": { "type": "string" },
+          "minimum": { "type": "integer", "minimum": 0, "maximum": 100 }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}
