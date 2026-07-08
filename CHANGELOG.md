@@ -1,5 +1,15 @@
 ﻿# Changelog
 
+## 0.9.0 - 2026-07-08
+
+### Added
+
+- Drift intelligence for adapters, skills, protocols, profiles, model profiles, and registry rules.
+- `drift-check.ps1` with baseline update, strict comparison, token estimates, and Markdown/JSON reports.
+- Committed `registry/drift-baseline.json` for intentional behavior tracking.
+- Drift gate integrated into local CI with `-SkipDrift` for diagnosis.
+- Drift intelligence documentation and README integration.
+
 ## 0.8.0 - 2026-07-08
 
 ### Added
@@ -86,6 +96,7 @@
 - Preview-first installer for target projects.
 - Curated memory templates and core safety protocols.
 - Validation, doctor, and smoke-test scripts.
+
 
 
 

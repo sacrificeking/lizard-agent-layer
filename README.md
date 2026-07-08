@@ -17,7 +17,7 @@ Portable agent infrastructure for projects that need consistent AI-assisted deve
 - Target analyzer for profile, harness, and skill recommendations.
 - Adapter matrix tests for every profile/harness combination.
 - Local CI runner plus GitHub Actions workflow for validate, quality, smoke, and matrix gates.
-- Quality registry with scoring, risk labels, maturity levels, and Markdown/JSON reports.
+- Quality registry with scoring, risk labels, maturity levels, drift detection, and Markdown/JSON reports.
 - Doctor, validation, upgrade, manifest-sync, scoring, and smoke-test scripts.
 
 ## Profiles
@@ -70,6 +70,12 @@ Audit a target project:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\doctor.ps1 -TargetPath D:\path\to\project
 ```
 
+Run a local drift report:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\drift-check.ps1
+```
+
 Run a local quality report:
 
 ```powershell
@@ -111,9 +117,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\matrix.ps1
 - [Target analysis](docs/target-analysis.md)
 - [Adapter matrix](docs/adapter-matrix.md)
 - [CI](docs/ci.md)
+- [Drift intelligence](docs/drift-intelligence.md)
 - [Safety model](docs/safety-model.md)
 - [Skill authoring](docs/skill-authoring.md)
 - [Skill maturity](docs/skill-maturity.md)
 - [Roadmap](docs/roadmap.md)
+
 
 

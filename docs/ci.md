@@ -48,3 +48,8 @@ For quick iteration, `-SkipMatrix` is acceptable while developing, but the full 
 
 CI runs `scripts/score-layer.ps1 -Strict` after structural validation. This writes quality reports under `.tmp/quality/` and fails on artifacts below the default minimum score or critical risk signals.
 
+
+## Drift gate
+
+CI runs `scripts/drift-check.ps1 -Strict` after structural validation. This compares tracked agent artifacts against `registry/drift-baseline.json` and fails when behavior changed without an intentional baseline update.
+
