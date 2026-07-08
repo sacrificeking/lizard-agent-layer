@@ -1,4 +1,4 @@
-﻿# CI
+# CI
 
 `lizard-agent-layer` has one canonical local gate runner and one GitHub Actions workflow.
 
@@ -63,3 +63,7 @@ CI runs `scripts/drift-check.ps1 -Strict` after structural validation. This comp
 
 CI runs `scripts/pack-report.ps1 -Strict` after structural validation. This writes reports under `.tmp/packs/` and fails on invalid pack manifests, missing skills, invalid harnesses, invalid model profiles, or incomplete bundle metadata.
 
+
+## Smoke hardening
+
+The smoke test includes pack install checks, target pack overlay checks, `manifest-diff.ps1 -Strict`, and upgrade verification that requested packs are preserved.

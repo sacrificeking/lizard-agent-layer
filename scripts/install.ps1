@@ -73,21 +73,83 @@ function Max-ProjectSize {
   if ((Get-SizeRank $B) -gt (Get-SizeRank $A)) { $B } else { $A }
 }
 
-function Load-Pack {
+function Get-PackManifestInfo {
   param([string]$PackName)
   if ($PackName -notmatch '^[a-z0-9][a-z0-9-]{0,62}$') { throw "Invalid pack name '$PackName'." }
-  $packPath = Join-Path $LayerRoot "packs\$PackName.json"
-  if (-not (Test-Path -LiteralPath $packPath)) { throw "Unknown pack '$PackName'. Expected packs/$PackName.json." }
-  $pack = Get-Content -LiteralPath $packPath -Raw | ConvertFrom-Json
+  $builtInPath = Join-Path $LayerRoot "packs\$PackName.json"
+  if (Test-Path -LiteralPath $builtInPath) {
+    return [ordered]@{ path = $builtInPath; source = 'builtin'; display = "packs/$PackName.json" }
+  }
+  $overlayPath = Join-Path $TargetRoot ".lizard-agent-layer\packs\$PackName.json"
+  if (Test-Path -LiteralPath $overlayPath) {
+    return [ordered]@{ path = $overlayPath; source = 'target-overlay'; display = ".lizard-agent-layer/packs/$PackName.json" }
+  }
+  throw "Unknown pack '$PackName'. Expected packs/$PackName.json or .lizard-agent-layer/packs/$PackName.json in the target."
+}
+
+function Read-PackManifest {
+  param([string]$PackName)
+  $info = Get-PackManifestInfo $PackName
+  $pack = Get-Content -LiteralPath $info.path -Raw | ConvertFrom-Json
   if ($pack.name -ne $PackName) { throw "Pack manifest name '$($pack.name)' does not match '$PackName'." }
+  $pack | Add-Member -NotePropertyName '_sourceKind' -NotePropertyValue $info.source -Force
+  $pack | Add-Member -NotePropertyName '_sourcePath' -NotePropertyValue $info.display -Force
   $pack
 }
 
-$SelectedPacks = Expand-ValueList $Packs
+$PackCache = @{}
+function Get-Pack {
+  param([string]$PackName)
+  if (-not $PackCache.ContainsKey($PackName)) { $PackCache[$PackName] = Read-PackManifest $PackName }
+  $PackCache[$PackName]
+}
+
+$ExpandedPackNames = New-Object System.Collections.Generic.List[string]
+function Add-PackWithExtends {
+  param([string]$PackName, [string[]]$Stack = @())
+  if ($Stack -contains $PackName) { throw "Pack extends cycle detected: $(@($Stack + $PackName) -join ' -> ')" }
+  $pack = Get-Pack $PackName
+  if ($pack.PSObject.Properties.Name -contains 'extends') {
+    foreach ($basePack in @(Expand-ValueList $pack.extends)) {
+      Add-PackWithExtends -PackName $basePack -Stack @($Stack + $PackName)
+    }
+  }
+  if (-not $ExpandedPackNames.Contains($PackName)) { $ExpandedPackNames.Add($PackName) | Out-Null }
+}
+
+$ModelProfileNames = New-Object System.Collections.Generic.HashSet[string]
+Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'model-profiles') -Filter '*.json' -File -ErrorAction SilentlyContinue | ForEach-Object {
+  $model = Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json
+  if ($model.name) { $ModelProfileNames.Add([string]$model.name) | Out-Null }
+}
+
+function Assert-PackReferences {
+  param($Pack)
+  foreach ($skill in @($Pack.skills)) {
+    if ($skill -notmatch '^[a-z0-9][a-z0-9-]{0,62}$') { throw "Pack $($Pack.name) references invalid skill '$skill'." }
+    if (-not (Test-Path -LiteralPath (Join-Path $LayerRoot "skills\$skill\SKILL.md"))) { throw "Pack $($Pack.name) references missing skill '$skill'." }
+  }
+  foreach ($harness in @($Pack.harnesses)) {
+    if ($harness -notmatch '^[a-z0-9][a-z0-9-]{0,62}$') { throw "Pack $($Pack.name) references invalid harness '$harness'." }
+    if (-not (Test-Path -LiteralPath (Join-Path $LayerRoot "adapters\$harness\adapter.json"))) { throw "Pack $($Pack.name) references missing adapter '$harness'." }
+  }
+  if ($Pack.modelProfiles) {
+    foreach ($prop in $Pack.modelProfiles.PSObject.Properties) {
+      if (-not $ModelProfileNames.Contains([string]$prop.Value)) { throw "Pack $($Pack.name) references missing model profile '$($prop.Value)' for '$($prop.Name)'." }
+    }
+  }
+}
+
+$RequestedPacks = Expand-ValueList $Packs
+foreach ($packName in @($RequestedPacks)) { Add-PackWithExtends -PackName $packName }
+$SelectedPacks = @($ExpandedPackNames.ToArray())
 $PackDocs = New-Object System.Collections.Generic.List[object]
+$PackSources = New-Object System.Collections.Generic.List[object]
 foreach ($packName in @($SelectedPacks)) {
-  $pack = Load-Pack $packName
+  $pack = Get-Pack $packName
+  Assert-PackReferences $pack
   $PackDocs.Add($pack) | Out-Null
+  $PackSources.Add([ordered]@{ name = [string]$pack.name; source = [string]$pack._sourceKind; path = [string]$pack._sourcePath }) | Out-Null
   Merge-ArrayProperty $ProfileDoc 'stack' @($pack.stack)
   Merge-ArrayProperty $ProfileDoc 'skills' @($pack.skills)
   Merge-ArrayProperty $ProfileDoc 'verification' @($pack.verification)
@@ -109,6 +171,7 @@ foreach ($packName in @($SelectedPacks)) {
   }
 }
 Set-DocProperty $ProfileDoc 'packs' @($SelectedPacks)
+Set-DocProperty $ProfileDoc 'requestedPacks' @($RequestedPacks)
 
 function Expand-HarnessList { param($Values) Expand-ValueList $Values }
 $DefaultHarnesses = New-Object System.Collections.Generic.List[string]
@@ -226,6 +289,8 @@ function New-InstallPlanMarkdown {
   $lines.Add(('- Profile: `{0}`' -f $Profile)) | Out-Null
   $packDisplay = if ($SelectedPacks.Count -gt 0) { $SelectedPacks -join ', ' } else { 'none' }
   $lines.Add(('- Packs: `{0}`' -f $packDisplay)) | Out-Null
+  $requestedPackDisplay = if ($RequestedPacks.Count -gt 0) { $RequestedPacks -join ', ' } else { 'none' }
+  $lines.Add(('- Requested packs: `{0}`' -f $requestedPackDisplay)) | Out-Null
   $lines.Add(('- Risk level: `{0}`' -f $ProfileDoc.riskLevel)) | Out-Null
   $lines.Add(('- Memory mode: `{0}`' -f $ProfileDoc.memoryMode)) | Out-Null
   $lines.Add(('- Harnesses: `{0}`' -f ($SelectedHarnesses -join ', '))) | Out-Null
@@ -240,7 +305,7 @@ function New-InstallPlanMarkdown {
   $lines.Add('## Commands') | Out-Null
   $lines.Add('') | Out-Null
   $previewCommand = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath "{0}" -Profile {1} -Harnesses {2}' -f $TargetRoot, $Profile, ($SelectedHarnesses -join ',')
-  if ($SelectedPacks.Count -gt 0) { $previewCommand += (' -Packs {0}' -f ($SelectedPacks -join ',')) }
+  if ($RequestedPacks.Count -gt 0) { $previewCommand += (' -Packs {0}' -f ($RequestedPacks -join ',')) }
   $applyCommand = "$previewCommand -Apply"
   $lines.Add('Preview:') | Out-Null
   $lines.Add('') | Out-Null
@@ -254,6 +319,7 @@ function New-InstallPlanMarkdown {
   $lines.Add($applyCommand) | Out-Null
   $lines.Add('```') | Out-Null
   $lines.Add('') | Out-Null
+  Add-MarkdownList $lines 'Requested packs' @($RequestedPacks)
   Add-MarkdownList $lines 'Packs' @($SelectedPacks)
   Add-MarkdownList $lines 'Skills' @($ProfileDoc.skills)
   Add-MarkdownList $lines 'Planned paths' @($Planned)
@@ -418,6 +484,8 @@ function Write-InstallManifest {
   $doc['layer'] = "lizard-agent-layer"
   $doc['layer_version'] = $LayerVersion
   $doc['profile'] = $Profile
+  $doc['requested_packs'] = @($RequestedPacks)
+  $doc['pack_sources'] = @($PackSources.ToArray())
   $doc['packs'] = @($SelectedPacks)
   $doc['installed_at'] = (Get-Date).ToUniversalTime().ToString("o")
   $doc['target_root'] = $TargetRoot
@@ -445,6 +513,8 @@ Write-Host "Target: $TargetRoot"
 Write-Host "Profile: $Profile"
 $packDisplay = if ($SelectedPacks.Count -gt 0) { $SelectedPacks -join ', ' } else { 'none' }
 Write-Host "Packs: $packDisplay"
+$requestedPackDisplay = if ($RequestedPacks.Count -gt 0) { $RequestedPacks -join ', ' } else { 'none' }
+Write-Host "Requested packs: $requestedPackDisplay"
 Write-Host "Harnesses: $($SelectedHarnesses -join ', ')"
 Write-Host "Version: $LayerVersion"
 if ($ShouldWritePlan) { Write-Host "Plan report: $EffectivePlanPath" }

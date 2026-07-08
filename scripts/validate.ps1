@@ -57,6 +57,9 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'adapters') -Directory | ForEac
   }
 }
 
+$packNames = New-Object System.Collections.Generic.HashSet[string]
+Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'packs') -Filter '*.json' -File -ErrorAction SilentlyContinue | ForEach-Object { $packNames.Add([System.IO.Path]::GetFileNameWithoutExtension($_.Name)) | Out-Null }
+
 $modelNames = New-Object System.Collections.Generic.HashSet[string]
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'model-profiles') -Filter '*.json' -File -ErrorAction SilentlyContinue | ForEach-Object {
   $model = Read-JsonFile $_.FullName
@@ -108,7 +111,12 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'packs') -Filter '*.json' -File
   if ($pack.name -and -not (Is-HyphenName $pack.name)) { Fail "Pack $($_.Name) has invalid name '$($pack.name)'." }
   if ($pack.riskLevel -and $pack.riskLevel -notin @('low', 'medium', 'high')) { Fail "Pack $($_.Name) has invalid riskLevel '$($pack.riskLevel)'." }
   if ($pack.projectSize -and $pack.projectSize -notin @('small', 'medium', 'large')) { Fail "Pack $($_.Name) has invalid projectSize '$($pack.projectSize)'." }
-  foreach ($skill in @($pack.skills)) {
+  if ($pack.PSObject.Properties.Name -contains 'extends') {
+    foreach ($basePack in @(($pack.extends | ForEach-Object { [string]$_ }) -split ',')) {
+      $basePack = $basePack.Trim()
+      if ($basePack -and -not $packNames.Contains($basePack)) { Fail "Pack $($_.Name) references missing extended pack '$basePack'." }
+    }
+  }  foreach ($skill in @($pack.skills)) {
     if (-not (Is-HyphenName $skill)) { Fail "Pack $($_.Name) references invalid skill name '$skill'."; continue }
     $skillPath = Join-Path $LayerRoot "skills\$skill\SKILL.md"
     if (-not (Test-Path -LiteralPath $skillPath)) { Fail "Pack $($_.Name) references missing skill '$skill'." }
@@ -165,7 +173,7 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory | ForEach-
   if ([string]::IsNullOrWhiteSpace($values['description'])) { Fail "Skill '$folderName' has empty description." }
 }
 
-foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1')) {
+foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1', 'manifest-diff.ps1')) {
   $path = Join-Path $LayerRoot "scripts\$script"
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing script $script."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }

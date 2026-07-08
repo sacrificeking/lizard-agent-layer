@@ -29,6 +29,9 @@ $skillNames = New-Object System.Collections.Generic.HashSet[string]
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory -ErrorAction SilentlyContinue | ForEach-Object { $skillNames.Add($_.Name) | Out-Null }
 $adapterNames = New-Object System.Collections.Generic.HashSet[string]
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'adapters') -Directory -ErrorAction SilentlyContinue | ForEach-Object { $adapterNames.Add($_.Name) | Out-Null }
+$packNames = New-Object System.Collections.Generic.HashSet[string]
+Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'packs') -Filter '*.json' -File -ErrorAction SilentlyContinue | ForEach-Object { $packNames.Add([System.IO.Path]::GetFileNameWithoutExtension($_.Name)) | Out-Null }
+
 $modelNames = New-Object System.Collections.Generic.HashSet[string]
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'model-profiles') -Filter '*.json' -File -ErrorAction SilentlyContinue | ForEach-Object {
   $model = Read-JsonFile $_.FullName
@@ -50,7 +53,12 @@ else {
     if (-not (Is-HyphenName ([string]$pack.name))) { Fail "Pack $($_.Name) has invalid name '$($pack.name)'." }
     if ($pack.riskLevel -and $pack.riskLevel -notin @('low', 'medium', 'high')) { Fail "Pack $($pack.name) has invalid riskLevel '$($pack.riskLevel)'." }
     if ($pack.projectSize -and $pack.projectSize -notin @('small', 'medium', 'large')) { Fail "Pack $($pack.name) has invalid projectSize '$($pack.projectSize)'." }
-    foreach ($skill in @($pack.skills)) {
+    if ($pack.PSObject.Properties.Name -contains 'extends') {
+      foreach ($basePack in @(($pack.extends | ForEach-Object { [string]$_ }) -split ',')) {
+        $basePack = $basePack.Trim()
+        if ($basePack -and -not $packNames.Contains($basePack)) { Fail "Pack $($pack.name) extends missing pack '$basePack'." }
+      }
+    }    foreach ($skill in @($pack.skills)) {
       if (-not $skillNames.Contains([string]$skill)) { Fail "Pack $($pack.name) references missing skill '$skill'." }
     }
     foreach ($harness in @($pack.harnesses)) {

@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.1.0 - 2026-07-08
+
+### Added
+
+- Target pack overlays under `.lizard-agent-layer/packs/` with `extends` support for built-in packs.
+- `manifest-diff.ps1` for comparing installed target manifests against the current layer, requested packs, expanded packs, expected skills, risk posture, and missing managed paths.
+- Pack-specific smoke coverage for built-in pack installs, target overlay packs, manifest diff strict checks, and pack-preserving upgrades.
+- Analyzer detection for monorepos, Python, Rust, Go, Java, .NET, CI/security markers, and path-based agent runtime signals.
+- Manifest metadata for `requested_packs` and `pack_sources`.
+
+### Changed
+
+- `upgrade.ps1` now preserves requested packs from install manifests and project profiles.
+- Install plans now distinguish requested packs from expanded packs.
+- Pack schema, validation, and reports now understand `extends`.
+
 ## 1.0.0 - 2026-07-08
 
 ### Added

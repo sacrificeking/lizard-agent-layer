@@ -15,12 +15,13 @@
 - Skill maturity levels with scoring, package support, and a certified example skill.
 - Drift intelligence with artifact hashes, token estimates, baseline reports, and CI gate.
 - Bundle pack system with curated project-shape manifests, analyzer recommendations, installer merge support, and CI validation.
+- Target pack overlays, pack-preserving upgrades, manifest diff checks, and stronger analyzer coverage for monorepos/non-Node/security/agent-runtime signals.
 
 ## Next
 
 - Additional harness adapters when they have stable local instruction conventions.
 - Richer target analyzer scoring for monorepos and non-Node stacks.
-- Pack authoring lifecycle for external teams and project-specific pack overlays.
+- Pack authoring lifecycle for external teams and richer external pack distribution.
 - Optional manifest comparison command for layer upgrades in installed target projects.
 - Optional workflow templates for target repositories after installation.
 

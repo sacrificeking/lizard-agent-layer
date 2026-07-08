@@ -7,6 +7,7 @@
   "properties": {
     "name": { "type": "string" },
     "description": { "type": "string" },
+    "extends": { "oneOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] },
     "riskLevel": { "enum": ["low", "medium", "high"] },
     "projectSize": { "enum": ["small", "medium", "large"] },
     "stack": { "type": "array", "items": { "type": "string" } },

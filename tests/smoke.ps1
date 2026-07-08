@@ -6,29 +6,57 @@ $ErrorActionPreference = "Stop"
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 $tmpRoot = Join-Path $LayerRoot ".tmp\smoke-$stamp"
 $standardTarget = Join-Path $tmpRoot 'standard-target'
+$packTarget = Join-Path $tmpRoot 'pack-target'
+$overlayTarget = Join-Path $tmpRoot 'overlay-target'
 $cursorTarget = Join-Path $tmpRoot 'cursor-target'
 $sidecarTarget = Join-Path $tmpRoot 'sidecar-target'
 $analysisTarget = Join-Path $tmpRoot 'analysis-target'
 $sidecarPlanPath = Join-Path $tmpRoot 'sidecar-install-plan.md'
+$packPlanPath = Join-Path $tmpRoot 'pack-install-plan.md'
 $mergeSuggestionDir = Join-Path $tmpRoot 'merge-suggestions'
 
-New-Item -ItemType Directory -Path $standardTarget -Force | Out-Null
-New-Item -ItemType Directory -Path $cursorTarget -Force | Out-Null
-New-Item -ItemType Directory -Path $sidecarTarget -Force | Out-Null
-New-Item -ItemType Directory -Path $analysisTarget -Force | Out-Null
+foreach ($target in @($standardTarget, $packTarget, $overlayTarget, $cursorTarget, $sidecarTarget, $analysisTarget)) {
+  New-Item -ItemType Directory -Path $target -Force | Out-Null
+}
+New-Item -ItemType Directory -Path (Join-Path $overlayTarget '.lizard-agent-layer\packs') -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $analysisTarget 'supabase\functions\demo') -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $analysisTarget 'supabase\migrations') -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $analysisTarget 'src\pages\finance\dca') -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $analysisTarget '.github\workflows') -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $analysisTarget 'src\agents\openai\rag') -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $analysisTarget 'src\lib\auth\token') -Force | Out-Null
+
 Set-Content -LiteralPath (Join-Path $standardTarget 'README.md') -Value '# standard smoke target' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $packTarget 'README.md') -Value '# pack smoke target' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $overlayTarget 'README.md') -Value '# overlay smoke target' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $cursorTarget 'README.md') -Value '# cursor smoke target' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $sidecarTarget 'README.md') -Value '# sidecar smoke target' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $sidecarTarget 'AGENTS.md') -Value '# Existing Project Instructions' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'README.md') -Value '# analysis smoke target' -Encoding UTF8
-Set-Content -LiteralPath (Join-Path $analysisTarget 'package.json') -Value '{"dependencies":{"@supabase/supabase-js":"latest","react":"latest"},"devDependencies":{"typescript":"latest","vite":"latest"}}' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $analysisTarget 'package.json') -Value '{"dependencies":{"@supabase/supabase-js":"latest","react":"latest","openai":"latest"},"devDependencies":{"typescript":"latest","vite":"latest","tailwindcss":"latest"},"workspaces":["apps/*"]}' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'vite.config.ts') -Value 'export default {}' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'tsconfig.json') -Value '{}' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'DESIGN.md') -Value '# Design' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $analysisTarget 'pnpm-workspace.yaml') -Value "packages:`n  - apps/*" -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $analysisTarget '.github\workflows\ci.yml') -Value 'name: ci' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'src\pages\finance\dca\stocks-dca.ts') -Value 'export const marker = true;' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $analysisTarget 'src\agents\openai\rag\agent.ts') -Value 'export const agent = true;' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $analysisTarget 'src\lib\auth\token\jwt.ts') -Value 'export const token = true;' -Encoding UTF8
+
+$overlayPack = @{
+  name = 'project-overlay'
+  extends = 'finance-app'
+  description = 'Project-specific smoke overlay pack.'
+  riskLevel = 'high'
+  projectSize = 'large'
+  stack = @('overlay')
+  harnesses = @('codex')
+  skills = @('frontend-react')
+  verification = @('verify overlay-specific behavior')
+  recommendedForSignals = @('overlay')
+  notes = 'Smoke overlay pack.'
+}
+$overlayPack | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $overlayTarget '.lizard-agent-layer\packs\project-overlay.json') -Encoding UTF8
 
 function Run-Step {
   param([string]$Name, [scriptblock]$Block)
@@ -45,7 +73,63 @@ Run-Step 'analyze target recommendation' {
   $analysis = $json | ConvertFrom-Json
   if ($analysis.recommendedProfile -ne 'supabase-react-finance') { throw "Expected supabase-react-finance recommendation, got $($analysis.recommendedProfile)." }
   if (@($analysis.recommendedHarnesses) -notcontains 'codex') { throw 'Expected codex harness recommendation.' }
-  if (@($analysis.signals) -notcontains 'finance') { throw 'Expected finance signal.' }
+  foreach ($expectedSignal in @('finance', 'monorepo', 'agent-runtime', 'security')) {
+    if (@($analysis.signals) -notcontains $expectedSignal) { throw "Expected signal: $expectedSignal" }
+  }
+  foreach ($expectedPack in @('frontend-product', 'design-system', 'supabase-react', 'finance-app', 'security-hardening', 'agent-runtime')) {
+    if (@($analysis.recommendedPacks) -notcontains $expectedPack) { throw "Expected pack recommendation: $expectedPack" }
+  }
+  if (-not $analysis.projectShape.monorepo) { throw 'Expected monorepo project shape.' }
+}
+
+Run-Step 'install apply pack merge' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $packTarget -Profile minimal -Packs frontend-product,security-hardening -WritePlan -PlanPath $packPlanPath -Apply | Out-String | Write-Host
+  if (-not (Test-Path -LiteralPath $packPlanPath)) { throw 'Expected pack install plan report.' }
+  $packPlan = Get-Content -LiteralPath $packPlanPath -Raw
+  foreach ($expected in @('Requested packs', 'frontend-product', 'security-hardening', 'Risk level: `high`')) {
+    if ($packPlan -notmatch [regex]::Escape($expected)) { throw "Expected pack plan to contain: $expected" }
+  }
+  $manifest = Get-Content -LiteralPath (Join-Path $packTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  foreach ($expected in @('frontend-product', 'security-hardening')) {
+    if (@($manifest.requested_packs) -notcontains $expected) { throw "Expected requested pack in manifest: $expected" }
+    if (@($manifest.packs) -notcontains $expected) { throw "Expected expanded pack in manifest: $expected" }
+  }
+  if (@($manifest.pack_sources).Count -lt 2) { throw 'Expected pack sources in manifest.' }
+  $profileDoc = Get-Content -LiteralPath (Join-Path $packTarget '.agent\project-profile.json') -Raw | ConvertFrom-Json
+  if ($profileDoc.riskLevel -ne 'high') { throw "Expected pack-merged risk high, got $($profileDoc.riskLevel)." }
+  foreach ($expectedSkill in @('frontend-react', 'design-system', 'dependency-upgrade', 'security-hardening')) {
+    if (@($profileDoc.skills) -notcontains $expectedSkill) { throw "Expected pack-merged skill: $expectedSkill" }
+    if (-not (Test-Path -LiteralPath (Join-Path $packTarget ".agent\skills\$expectedSkill\SKILL.md"))) { throw "Expected installed pack skill: $expectedSkill" }
+  }
+}
+
+Run-Step 'manifest diff pack target strict' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\manifest-diff.ps1') -TargetPath $packTarget -Strict | Out-String | Write-Host
+}
+
+Run-Step 'install apply target pack overlay' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $overlayTarget -Profile minimal -Packs project-overlay -Apply | Out-String | Write-Host
+  $manifest = Get-Content -LiteralPath (Join-Path $overlayTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  if (@($manifest.requested_packs) -notcontains 'project-overlay') { throw 'Expected requested overlay pack.' }
+  foreach ($expectedPack in @('finance-app', 'project-overlay')) {
+    if (@($manifest.packs) -notcontains $expectedPack) { throw "Expected expanded overlay pack: $expectedPack" }
+  }
+  $overlaySource = @($manifest.pack_sources) | Where-Object { $_.name -eq 'project-overlay' } | Select-Object -First 1
+  if (-not $overlaySource -or $overlaySource.source -ne 'target-overlay') { throw 'Expected target-overlay pack source.' }
+  foreach ($expectedSkill in @('data-quality', 'security-hardening', 'frontend-react')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $overlayTarget ".agent\skills\$expectedSkill\SKILL.md"))) { throw "Expected overlay-expanded skill: $expectedSkill" }
+  }
+}
+
+Run-Step 'manifest diff overlay target strict' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\manifest-diff.ps1') -TargetPath $overlayTarget -Strict | Out-String | Write-Host
+}
+
+Run-Step 'upgrade preserves requested packs' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\upgrade.ps1') -TargetPath $overlayTarget -Apply | Out-String | Write-Host
+  $manifest = Get-Content -LiteralPath (Join-Path $overlayTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  if (@($manifest.requested_packs) -notcontains 'project-overlay') { throw 'Upgrade did not preserve requested overlay pack.' }
+  if (@($manifest.packs) -notcontains 'finance-app') { throw 'Upgrade did not preserve expanded base pack.' }
 }
 
 Run-Step 'install preview standard multi-harness' {
@@ -92,7 +176,6 @@ Run-Step 'install plan sidecar target' {
   if (Test-Path -LiteralPath (Join-Path $sidecarTarget 'AGENTS.lizard-agent-layer.md')) { throw 'Preview plan wrote sidecar into target.' }
 }
 
-
 Run-Step 'generate merge suggestions sidecar target' {
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\merge-suggestions.ps1') -TargetPath $sidecarTarget -Profile minimal -Harnesses generic-agents-md -OutputDir $mergeSuggestionDir | Out-String | Write-Host
   $report = Join-Path $mergeSuggestionDir 'merge-suggestions.md'
@@ -113,6 +196,7 @@ Run-Step 'generate merge suggestions sidecar target' {
   if (Test-Path -LiteralPath (Join-Path $sidecarTarget '.agent')) { throw 'Merge suggestion generator wrote .agent into target.' }
   if (Test-Path -LiteralPath (Join-Path $sidecarTarget 'AGENTS.lizard-agent-layer.md')) { throw 'Merge suggestion generator wrote sidecar into target.' }
 }
+
 Run-Step 'install apply sidecar target' {
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $sidecarTarget -Profile minimal -Harnesses generic-agents-md -Apply | Out-String | Write-Host
   $agents = Get-Content -LiteralPath (Join-Path $sidecarTarget 'AGENTS.md') -Raw

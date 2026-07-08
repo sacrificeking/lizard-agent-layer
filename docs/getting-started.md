@@ -82,7 +82,15 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\doctor.ps1 -Ta
 
 Use `-Strict` in CI or release-style checks.
 
-## 10. Validate this layer before changing it
+## 10. Compare an installed target
+
+After installing or upgrading a target, compare the install manifest against the current layer:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project -Strict
+```
+
+## 11. Validate this layer before changing it
 
 Run the full local CI gate:
 

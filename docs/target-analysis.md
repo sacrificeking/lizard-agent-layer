@@ -13,6 +13,9 @@ The analyzer currently detects:
 - Finance, market, crypto, DeFi, stock, DCA, and yield markers in repository paths.
 - Design-system signal through `DESIGN.md`.
 - Agent-runtime signals through common LLM and tool-runtime dependencies.
+- Monorepo signals through workspaces, pnpm, Turborepo, Nx, Lerna, and Rush markers.
+- Non-Node signals through Python, Rust, Go, Java, and .NET project markers.
+- Security and CI signals through workflow, env, container, auth, token, policy, and permission markers.
 - UI/design package signals through Tailwind, Radix, lucide, and framer-motion dependencies.
 
 Dependency, build, coverage, and cache directories are skipped during recursive marker scans.

@@ -15,11 +15,11 @@ Portable agent infrastructure for projects that need consistent AI-assisted deve
 - Preview-first installers that avoid clobbering target files.
 - Optional install plan reports with merge suggestions for existing instruction files.
 - Standalone merge suggestion reports with patch and copy-block artifacts.
-- Target analyzer for profile, harness, skill, and pack recommendations.
+- Target analyzer for profile, harness, skill, pack, monorepo, non-Node, and risk recommendations.
 - Adapter matrix tests for every profile/harness combination.
 - Local CI runner plus GitHub Actions workflow for validate, packs, drift, quality, smoke, and matrix gates.
 - Quality registry with scoring, risk labels, maturity levels, drift detection, and Markdown/JSON reports.
-- Doctor, validation, upgrade, manifest-sync, scoring, and smoke-test scripts.
+- Doctor, validation, upgrade, manifest-sync, manifest diff, scoring, and smoke-test scripts.
 
 ## Profiles
 
@@ -89,6 +89,12 @@ Run a local drift report:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\drift-check.ps1
 ```
 
+Run an installed-target manifest diff:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project -Strict
+```
+
 Run a local quality report:
 
 ```powershell
@@ -128,6 +134,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\matrix.ps1
 - [Packs](docs/packs.md)
 - [Install plans](docs/install-plans.md)
 - [Merge suggestions](docs/merge-suggestions.md)
+- [Manifest diff](docs/manifest-diff.md)
 - [Target analysis](docs/target-analysis.md)
 - [Adapter matrix](docs/adapter-matrix.md)
 - [CI](docs/ci.md)

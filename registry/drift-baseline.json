@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-07-08T14:31:24.1071774Z",
-    "layer_version":  "1.0.0",
+    "generated_at":  "2026-07-08T17:41:06.2525864Z",
+    "layer_version":  "1.1.0",
     "artifact_count":  50,
-    "total_bytes":  38168,
-    "token_estimate":  9538,
+    "total_bytes":  38273,
+    "token_estimate":  9564,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -441,11 +441,11 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/pack.schema.json",
-                          "sha256":  "1bcb1ac42abcd215ec9b50a48d0e05792d803a4892bce5a1f6e8d34008f9c848",
-                          "bytes":  993,
-                          "lines":  22,
-                          "words":  111,
-                          "token_estimate":  249
+                          "sha256":  "52668a2e03f34715016571fc2a1d6e27a5fc96b30fe6fe5a321efb36aa12ee63",
+                          "bytes":  1098,
+                          "lines":  23,
+                          "words":  128,
+                          "token_estimate":  275
                       },
                       {
                           "kind":  "schema",

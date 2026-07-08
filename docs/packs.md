@@ -1,4 +1,4 @@
-﻿# Packs
+# Packs
 
 Packs are reusable bundle manifests for common project shapes. A profile sets the base posture; packs add stack-specific skills, harnesses, verification notes, model preferences, risk level, project size, and install-plan context.
 
@@ -71,3 +71,36 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\ci.ps1
 - Add only skills and harnesses that should apply together most of the time.
 - Keep verification steps concrete enough to guide an agent but generic enough to adapt per repository.
 - Use high risk when incorrect behavior could affect secrets, auth, production data, user money, or runtime agent permissions.
+
+## Target Pack Overlays
+
+Target projects can define local packs without changing this repository:
+
+```text
+.lizard-agent-layer/
+  packs/
+    project-overlay.json
+```
+
+Install an overlay pack by name:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs project-overlay
+```
+
+Overlay packs can extend built-in packs:
+
+```json
+{
+  "name": "project-overlay",
+  "extends": "finance-app",
+  "description": "Project-specific finance additions.",
+  "riskLevel": "high",
+  "projectSize": "large",
+  "skills": ["frontend-react"],
+  "harnesses": ["codex"],
+  "verification": ["verify project-specific finance workflows"]
+}
+```
+
+The installer expands base packs first, records `requested_packs`, records expanded `packs`, and writes `pack_sources` into the install manifest.

@@ -61,6 +61,7 @@ if ($null -ne $package) {
       $depNames += @($package.$bucket.PSObject.Properties.Name)
     }
   }
+  if ($package.PSObject.Properties.Name -contains 'workspaces') { Add-Signal 'monorepo'; Add-Reason 'package.json declares workspaces.' }
   foreach ($dep in $depNames) {
     switch -Regex ($dep) {
       '^react$' { Add-Signal 'react'; Add-Reason 'package.json depends on React.' }
@@ -85,6 +86,14 @@ if (Has-Path 'AGENTS.md') { Add-Signal 'existing-agents'; Add-Reason 'AGENTS.md 
 if (Has-Path 'CLAUDE.md') { Add-Signal 'existing-claude'; Add-Reason 'CLAUDE.md already exists; install should use sidecar merge behavior.' }
 if (Has-Path 'GEMINI.md') { Add-Signal 'existing-gemini'; Add-Reason 'GEMINI.md already exists; install should use sidecar merge behavior.' }
 if (Has-Path '.cursor') { Add-Signal 'cursor'; Add-Reason '.cursor directory exists.' }
+if (Has-Path 'pnpm-workspace.yaml' -or Has-Path 'turbo.json' -or Has-Path 'nx.json' -or Has-Path 'lerna.json' -or Has-Path 'rush.json') { Add-Signal 'monorepo'; Add-Reason 'Workspace or monorepo config exists.' }
+if (Has-Path 'pyproject.toml' -or Has-Path 'requirements.txt' -or Has-Path 'poetry.lock') { Add-Signal 'python'; Add-Reason 'Python project markers exist.' }
+if (Has-Path 'Cargo.toml') { Add-Signal 'rust'; Add-Reason 'Rust Cargo project marker exists.' }
+if (Has-Path 'go.mod') { Add-Signal 'go'; Add-Reason 'Go module marker exists.' }
+if (Has-Path 'pom.xml' -or Has-Path 'build.gradle' -or Has-Path 'build.gradle.kts') { Add-Signal 'java'; Add-Reason 'Java build marker exists.' }
+if ((Get-ChildItem -LiteralPath $TargetRoot -Filter '*.csproj' -File -ErrorAction SilentlyContinue | Select-Object -First 1)) { Add-Signal 'dotnet'; Add-Reason '.NET project marker exists.' }
+if (Has-Path '.github\workflows') { Add-Signal 'ci'; Add-Reason 'GitHub Actions workflows exist.' }
+if (Has-Path '.env.example' -or Has-Path 'Dockerfile' -or Has-Path 'docker-compose.yml') { Add-Signal 'security'; Add-Reason 'Environment, container, or deployment markers exist.' }
 
 $repoFiles = Get-RepositoryFiles -Root $TargetRoot -Limit $MaxFiles
 $relativePaths = @($repoFiles | ForEach-Object { $_.FullName.Substring($TargetRoot.Length).TrimStart([char[]]@('\', '/')) })
@@ -96,6 +105,23 @@ foreach ($marker in $financeMarkers) {
   if ($match) { $markerHits++ }
 }
 if ($markerHits -ge 2) { Add-Signal 'finance'; Add-Reason "Finance/market marker paths detected ($markerHits marker groups)." }
+$agentMarkers = @('agent', 'llm', 'openai', 'anthropic', 'gemini', 'mcp', 'rag', 'prompt')
+$agentMarkerHits = 0
+foreach ($marker in $agentMarkers) {
+  $escaped = [regex]::Escape($marker)
+  $match = $relativePaths | Where-Object { $_ -match $escaped } | Select-Object -First 1
+  if ($match) { $agentMarkerHits++ }
+}
+if ($agentMarkerHits -ge 2) { Add-Signal 'agent-runtime'; Add-Reason "Agent/runtime marker paths detected ($agentMarkerHits marker groups)." }
+
+$securityMarkers = @('auth', 'secret', 'token', 'permission', 'policy', 'jwt', 'oauth', 'rls')
+$securityMarkerHits = 0
+foreach ($marker in $securityMarkers) {
+  $escaped = [regex]::Escape($marker)
+  $match = $relativePaths | Where-Object { $_ -match $escaped } | Select-Object -First 1
+  if ($match) { $securityMarkerHits++ }
+}
+if ($securityMarkerHits -ge 2) { Add-Signal 'security'; Add-Reason "Security-sensitive marker paths detected ($securityMarkerHits marker groups)." }
 
 $profile = 'minimal'
 $risk = 'low'
@@ -103,7 +129,11 @@ $harnesses = New-Object System.Collections.Generic.List[string]
 $skills = New-Object System.Collections.Generic.List[string]
 foreach ($h in @('generic-agents-md')) { $harnesses.Add($h) | Out-Null }
 
-if ($signals.Contains('react') -or $signals.Contains('vite') -or $signals.Contains('typescript') -or $signals.Contains('supabase')) {
+if ($signals.Contains('python') -or $signals.Contains('rust') -or $signals.Contains('go') -or $signals.Contains('java') -or $signals.Contains('dotnet') -or $signals.Contains('monorepo')) {
+  $profile = 'standard'
+  $risk = 'medium'
+  $harnesses.Clear(); foreach ($h in @('codex', 'claude-code', 'gemini')) { $harnesses.Add($h) | Out-Null }
+}if ($signals.Contains('react') -or $signals.Contains('vite') -or $signals.Contains('typescript') -or $signals.Contains('supabase')) {
   $profile = 'standard'
   $risk = 'medium'
   $harnesses.Clear(); foreach ($h in @('codex', 'claude-code', 'gemini')) { $harnesses.Add($h) | Out-Null }
@@ -125,7 +155,7 @@ if ($signals.Contains('design-system') -or $signals.Contains('design-ui')) { Add
 if ($signals.Contains('supabase') -or $signals.Contains('edge-functions') -or $signals.Contains('database-migrations')) { Add-Pack 'supabase-react' }
 if ($signals.Contains('finance')) { Add-Pack 'finance-app' }
 if ($signals.Contains('agent-runtime')) { Add-Pack 'agent-runtime' }
-if ($risk -eq 'high' -or $signals.Contains('database-migrations') -or $signals.Contains('edge-functions')) { Add-Pack 'security-hardening' }
+if ($risk -eq 'high' -or $signals.Contains('database-migrations') -or $signals.Contains('edge-functions') -or $signals.Contains('security') -or $signals.Contains('ci')) { Add-Pack 'security-hardening' }
 
 $previewCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath `"$TargetRoot`" -Profile $profile -Harnesses $($harnesses -join ',')"
 if ($packs.Count -gt 0) { $previewCommand += " -Packs $($packs -join ',')" }
@@ -140,6 +170,7 @@ $result = [ordered]@{
   signals = @($signals)
   reasons = @($reasons)
   warnings = @($warnings)
+  projectShape = [ordered]@{ monorepo = $signals.Contains('monorepo'); nonNode = ($signals.Contains('python') -or $signals.Contains('rust') -or $signals.Contains('go') -or $signals.Contains('java') -or $signals.Contains('dotnet')); highRisk = ($risk -eq 'high') }
   previewCommand = $previewCommand
 }
 
