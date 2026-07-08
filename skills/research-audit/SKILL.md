@@ -25,3 +25,7 @@ description: Structured research, source checking, repository analysis, product/
 - Do not copy third-party code into a target project without license review.
 - Treat benchmark repos as inspiration unless the user explicitly approves adoption.
 - Avoid exposing private project details when comparing against public sources.
+## Supporting material
+
+- `references/source-evaluation.md`: source priority, recency, inference, and adoption checks.
+- `tests/third-party-repo-audit.md`: scenario test for external repository benchmark tasks.

@@ -12,11 +12,11 @@
 - Standalone merge suggestion generator with patch, block, Markdown, and JSON artifacts.
 - Local CI runner and GitHub Actions workflow for validate, smoke, and matrix gates.
 - Quality registry with skill, adapter, profile scoring, risk labels, and reports.
+- Skill maturity levels with scoring, package support, and a certified example skill.
 
 ## Next
 
 - Additional harness adapters when they have stable local instruction conventions.
-- Skill maturity levels with references, scenario tests, and examples.
 - Drift intelligence for adapter prompts, token budgets, and upstream host changes.
 - Richer target analyzer scoring for monorepos and non-Node stacks.
 - Optional manifest comparison command for layer upgrades in installed target projects.
@@ -28,4 +28,5 @@
 - Release-readiness dashboard.
 - Skill usage reports.
 - Private, gitignored exports.
+
 

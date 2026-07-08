@@ -234,6 +234,19 @@ function Copy-IfMissing {
   }
 }
 
+function Copy-SkillPackage {
+  param([string]$SkillName, [string]$DestRoot)
+  if ($SkillName -notmatch '^[a-z0-9][a-z0-9-]{0,62}$') { throw "Invalid skill name '$SkillName'." }
+  $sourceDir = Join-Path $LayerRoot "skills\$SkillName"
+  $sourceSkill = Join-Path $sourceDir 'SKILL.md'
+  if (-not (Test-Path -LiteralPath $sourceSkill)) { throw "Missing skill package: $SkillName" }
+  $destSkillDir = Join-Path $DestRoot $SkillName
+  Ensure-Dir $destSkillDir
+  Get-ChildItem -LiteralPath $sourceDir -Recurse -File | Sort-Object FullName | ForEach-Object {
+    $relative = $_.FullName.Substring($sourceDir.Length).TrimStart('\')
+    Copy-IfMissing $_.FullName (Join-Path $destSkillDir $relative)
+  }
+}
 function Write-IfMissing {
   param([string]$Dest, [string]$Content)
   $label = To-RelativeDisplay $Dest
@@ -300,8 +313,7 @@ function Install-Adapter {
     $mirrorRel = Assert-SafeRelativePath $mirror.dst "skill mirror dst"
     Ensure-Dir (Join-Path $TargetRoot $mirrorRel)
     foreach ($skill in @($ProfileDoc.skills)) {
-      $source = Join-Path $LayerRoot "skills\$skill\SKILL.md"
-      Copy-IfMissing $source (Join-Path $TargetRoot "$mirrorRel\$skill\SKILL.md")
+      Copy-SkillPackage $skill (Join-Path $TargetRoot $mirrorRel)
     }
   }
 }
@@ -373,7 +385,7 @@ foreach ($skill in $ProfileDoc.skills) {
     Write-Warning "Profile references missing skill '$skill'."
     continue
   }
-  Copy-IfMissing $source (Join-Path $TargetRoot ".agent\skills\$skill\SKILL.md")
+  Copy-SkillPackage $skill (Join-Path $TargetRoot ".agent\skills")
   $indexLines.Add("## $skill") | Out-Null
   $indexLines.Add(('Source: `.agent/skills/{0}/SKILL.md`' -f $skill)) | Out-Null
   $indexLines.Add("") | Out-Null
@@ -414,3 +426,4 @@ if (-not $Apply) {
   Write-Host ""
   Write-Host "Preview only. Re-run with -Apply to write files."
 }
+

@@ -30,3 +30,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\score-layer.ps
 
 A strong skill should explain when it activates, what the agent should do, how to verify the work, and what safety boundaries matter. References, scripts, examples, and tests raise maturity but are not required for the baseline gate.
 
+## Package maturity
+
+Keep simple skills as `baseline` or `ready`. Promote high-impact skills toward `hardened` or `certified` by adding `references/`, `examples/`, `scripts/`, or `tests/` only when those assets reduce ambiguity. See [Skill maturity](skill-maturity.md).

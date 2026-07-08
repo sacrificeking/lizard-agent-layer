@@ -66,3 +66,4 @@ The current gate enforces baseline quality. Future versions should add deeper ma
 - `ready`: clear activation, workflow, and verification.
 - `hardened`: includes references, examples, scripts, or tests.
 - `certified`: has scenario tests, drift checks, and target-specific evidence.
+

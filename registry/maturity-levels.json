@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "levels": [
+    {
+      "id": "baseline",
+      "minimumScore": 65,
+      "description": "Valid, safe, installable, and understandable as a standalone skill."
+    },
+    {
+      "id": "ready",
+      "minimumScore": 75,
+      "requiresVerification": true,
+      "requiresSafety": true,
+      "description": "Clear activation, procedure, verification, and safety boundaries."
+    },
+    {
+      "id": "hardened",
+      "minimumScore": 80,
+      "requiresSupportingMaterial": true,
+      "description": "Ready plus references, examples, scripts, or tests that reduce ambiguity."
+    },
+    {
+      "id": "certified",
+      "minimumScore": 90,
+      "requiresReferences": true,
+      "requiresTests": true,
+      "description": "Hardened plus explicit reference material and scenario tests."
+    }
+  ]
+}

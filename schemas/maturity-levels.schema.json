@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/maturity-levels.schema.json",
+  "title": "lizard-agent-layer maturity levels",
+  "type": "object",
+  "required": ["version", "levels"],
+  "properties": {
+    "version": { "type": "string" },
+    "levels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "minimumScore", "description"],
+        "properties": {
+          "id": { "type": "string" },
+          "minimumScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "requiresVerification": { "type": "boolean" },
+          "requiresSafety": { "type": "boolean" },
+          "requiresSupportingMaterial": { "type": "boolean" },
+          "requiresReferences": { "type": "boolean" },
+          "requiresTests": { "type": "boolean" },
+          "description": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

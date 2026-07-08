@@ -1,5 +1,15 @@
 ﻿# Changelog
 
+## 0.8.0 - 2026-07-08
+
+### Added
+
+- Skill maturity registry with baseline, ready, hardened, and certified levels.
+- Maturity reporting in `score-layer.ps1` and generated quality reports.
+- Complete skill-package installation for references, examples, scripts, and tests.
+- Certified `research-audit` example package with reference material and scenario test.
+- Skill maturity documentation and authoring guidance.
+
 ## 0.7.0 - 2026-07-08
 
 ### Added
@@ -76,6 +86,7 @@
 - Preview-first installer for target projects.
 - Curated memory templates and core safety protocols.
 - Validation, doctor, and smoke-test scripts.
+
 
 
 

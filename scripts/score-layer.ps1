@@ -78,6 +78,28 @@ function Get-RiskFindings {
   @($findings.ToArray())
 }
 
+function Get-SkillSupportAssets {
+  param([System.IO.DirectoryInfo]$Directory)
+  $references = Test-Path -LiteralPath (Join-Path $Directory.FullName 'references')
+  $examples = Test-Path -LiteralPath (Join-Path $Directory.FullName 'examples')
+  $scripts = Test-Path -LiteralPath (Join-Path $Directory.FullName 'scripts')
+  $tests = Test-Path -LiteralPath (Join-Path $Directory.FullName 'tests')
+  [ordered]@{
+    references = $references
+    examples = $examples
+    scripts = $scripts
+    tests = $tests
+    has_any = ($references -or $examples -or $scripts -or $tests)
+  }
+}
+function Get-SkillMaturity {
+  param([int]$Score, [object]$SupportAssets, [bool]$HasVerification, [bool]$HasSafety)
+  if ($Score -ge 90 -and $SupportAssets.references -and $SupportAssets.tests) { return 'certified' }
+  if ($Score -ge 80 -and $SupportAssets.has_any) { return 'hardened' }
+  if ($Score -ge 75 -and $HasVerification -and $HasSafety) { return 'ready' }
+  if ($Score -ge 65) { return 'baseline' }
+  'weak'
+}
 function Measure-Skill {
   param([System.IO.DirectoryInfo]$Directory, [object]$RiskSignals)
   $skillPath = Join-Path $Directory.FullName 'SKILL.md'
@@ -87,6 +109,7 @@ function Measure-Skill {
   $values = $frontmatter.values
   $description = if ($values.ContainsKey('description')) { [string]$values['description'] } else { '' }
   $dimensions = New-Object System.Collections.Generic.List[object]
+  $supportAssets = Get-SkillSupportAssets -Directory $Directory
 
   $metadata = 0
   if ($frontmatter.valid) { $metadata += 4 }
@@ -115,11 +138,13 @@ function Measure-Skill {
   if ($text -match '(?i)\b(safety|risk|approval|secret|credential|permission|destructive|rollback|do not|preserve|avoid)\b') { $safety += 15 }
   $dimensions.Add((New-Dimension 'safety' $safety 15 'risk and permission discipline')) | Out-Null
 
+  $hasVerification = $verification -gt 0
+  $hasSafety = $safety -gt 0
   $support = 0
-  if (Test-Path -LiteralPath (Join-Path $Directory.FullName 'references')) { $support += 4 }
-  if (Test-Path -LiteralPath (Join-Path $Directory.FullName 'scripts')) { $support += 3 }
-  if (Test-Path -LiteralPath (Join-Path $Directory.FullName 'tests')) { $support += 3 }
-  if ($text -match '(?i)\bexample\b') { $support += 2 }
+  if ($supportAssets.references) { $support += 4 }
+  if ($supportAssets.scripts) { $support += 3 }
+  if ($supportAssets.tests) { $support += 3 }
+  if ($supportAssets.examples -or $text -match '(?i)\bexample\b') { $support += 2 }
   $dimensions.Add((New-Dimension 'supporting-material' $support 10 'references, examples, scripts, or tests')) | Out-Null
 
   $portability = 10
@@ -130,9 +155,11 @@ function Measure-Skill {
   $score = 0
   foreach ($dimension in @($dimensions.ToArray())) { $score += [int]$dimension.score }
   $findings = Get-RiskFindings -Kind 'skill' -Name $Directory.Name -Path (Get-RelativePath $skillPath) -Text $text -Signals $RiskSignals
+  $maturity = Get-SkillMaturity -Score $score -SupportAssets $supportAssets -HasVerification $hasVerification -HasSafety $hasSafety
   [ordered]@{
     kind = 'skill'; name = $Directory.Name; path = Get-RelativePath $skillPath
-    score = $score; health = Get-HealthBand $score; risk = Get-RiskLabel $findings
+    score = $score; health = Get-HealthBand $score; risk = Get-RiskLabel $findings; maturity = $maturity
+    support_assets = $supportAssets
     dimensions = @($dimensions.ToArray()); findings = @($findings)
   }
 }
@@ -144,7 +171,6 @@ function Measure-Adapter {
   $instructionPath = Join-Path $Directory.FullName ([string]$adapter.instruction.src).Replace('/', '\')
   $text = if (Test-Path -LiteralPath $instructionPath) { Get-Content -LiteralPath $instructionPath -Raw } else { '' }
   $dimensions = New-Object System.Collections.Generic.List[object]
-
   $metadata = 0
   if ($adapter.name -eq $Directory.Name) { $metadata += 6 }
   if ($adapter.description) { $metadata += 5 }
@@ -190,7 +216,6 @@ function Measure-Profile {
   $profile = Read-JsonFile $File.FullName
   $text = Get-Content -LiteralPath $File.FullName -Raw
   $dimensions = New-Object System.Collections.Generic.List[object]
-
   $metadata = 0
   foreach ($field in @('profile', 'riskLevel', 'memoryMode', 'projectSize')) { if ($profile.PSObject.Properties.Name -contains $field) { $metadata += 5 } }
   $dimensions.Add((New-Dimension 'metadata' $metadata 20 'profile identity and operating envelope')) | Out-Null
@@ -229,6 +254,7 @@ function Measure-Profile {
 
 $rubric = Read-JsonFile (Join-Path $LayerRoot 'registry\quality-rubric.json')
 $riskSignals = Read-JsonFile (Join-Path $LayerRoot 'registry\risk-signals.json')
+$maturityLevels = Read-JsonFile (Join-Path $LayerRoot 'registry\maturity-levels.json')
 if ($MinScore -le 0) { $MinScore = [int]$rubric.minimumScore }
 
 $skills = New-Object System.Collections.Generic.List[object]
@@ -271,6 +297,12 @@ if ($allArtifacts.Count -gt 0) {
 }
 $criticalCount = @($allFindings.ToArray() | Where-Object { $_.severity -eq 'critical' }).Count
 $highCount = @($allFindings.ToArray() | Where-Object { $_.severity -eq 'high' }).Count
+$maturityCounts = [ordered]@{ certified = 0; hardened = 0; ready = 0; baseline = 0; weak = 0 }
+foreach ($skill in @($skills.ToArray())) {
+  $level = [string]$skill.maturity
+  if (-not $maturityCounts.Contains($level)) { $maturityCounts[$level] = 0 }
+  $maturityCounts[$level] = [int]$maturityCounts[$level] + 1
+}
 
 $report = [ordered]@{
   generated_at = (Get-Date).ToUniversalTime().ToString('o')
@@ -281,12 +313,14 @@ $report = [ordered]@{
   summary = [ordered]@{
     artifacts = $allArtifacts.Count; skills = $skills.Count; adapters = $adapters.Count; profiles = $profiles.Count
     average_score = $average; minimum_score = $minimum; critical_findings = $criticalCount; high_findings = $highCount
+    skill_maturity = $maturityCounts
   }
   gate_failures = @($gateFailures.ToArray())
   skills = @($skills.ToArray())
   adapters = @($adapters.ToArray())
   profiles = @($profiles.ToArray())
   findings = @($allFindings.ToArray())
+  maturity_levels = $maturityLevels
 }
 
 $jsonPath = Join-Path $OutputDir 'layer-quality-report.json'
@@ -310,13 +344,20 @@ $md.Add("- Average score: $($report.summary.average_score)") | Out-Null
 $md.Add("- Minimum artifact score: $($report.summary.minimum_score)") | Out-Null
 $md.Add("- Critical findings: $criticalCount") | Out-Null
 $md.Add("- High findings: $highCount") | Out-Null
+$md.Add("- Skill maturity: certified $($maturityCounts.certified), hardened $($maturityCounts.hardened), ready $($maturityCounts.ready), baseline $($maturityCounts.baseline), weak $($maturityCounts.weak)") | Out-Null
 $md.Add('') | Out-Null
 foreach ($section in @(@{title='Skills'; items=@($skills.ToArray())}, @{title='Adapters'; items=@($adapters.ToArray())}, @{title='Profiles'; items=@($profiles.ToArray())})) {
   $md.Add("## $($section.title)") | Out-Null
   $md.Add('') | Out-Null
-  $md.Add('| Name | Score | Health | Risk |') | Out-Null
-  $md.Add('| --- | ---: | --- | --- |') | Out-Null
-  foreach ($item in @($section.items)) { $md.Add("| $($item.name) | $($item.score) | $($item.health) | $($item.risk) |") | Out-Null }
+  if ($section.title -eq 'Skills') {
+    $md.Add('| Name | Score | Health | Maturity | Risk |') | Out-Null
+    $md.Add('| --- | ---: | --- | --- | --- |') | Out-Null
+    foreach ($item in @($section.items)) { $md.Add("| $($item.name) | $($item.score) | $($item.health) | $($item.maturity) | $($item.risk) |") | Out-Null }
+  } else {
+    $md.Add('| Name | Score | Health | Risk |') | Out-Null
+    $md.Add('| --- | ---: | --- | --- |') | Out-Null
+    foreach ($item in @($section.items)) { $md.Add("| $($item.name) | $($item.score) | $($item.health) | $($item.risk) |") | Out-Null }
+  }
   $md.Add('') | Out-Null
 }
 if ($gateFailures.Count -gt 0) {
@@ -343,4 +384,9 @@ if ($Strict -and $gateFailures.Count -gt 0) {
   foreach ($failure in @($gateFailures.ToArray())) { Write-Host "FAIL $failure" }
   exit 1
 }
+
+
+
+
+
 

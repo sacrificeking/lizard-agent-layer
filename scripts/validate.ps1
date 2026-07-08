@@ -101,7 +101,9 @@ $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\lizard-agent-layer.schema.j
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\adapter.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-profile.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\quality-registry.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\maturity-levels.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\quality-rubric.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'registry\maturity-levels.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\risk-signals.json')
 
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory | ForEach-Object {
@@ -156,4 +158,6 @@ if ($Failures.Count -gt 0) {
 }
 
 Write-Host 'lizard-agent-layer validation passed.'
+
+
 
