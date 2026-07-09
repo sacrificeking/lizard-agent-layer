@@ -1,0 +1,25 @@
+﻿{
+  "name": "release-readiness",
+  "description": "Report-only release readiness loop for version, changelog, quality gates, drift, and human release decisions.",
+  "readinessLevel": "L1",
+  "riskLevel": "medium",
+  "cadence": {
+    "recommended": "before release or daily during release week",
+    "minimum": "6h",
+    "notes": "Run before version commits and during release windows. Do not auto-release."
+  },
+  "stateFile": ".agent/loops/release-readiness-state.md",
+  "budgetFile": ".agent/loops/loop-budget.md",
+  "runLogFile": ".agent/loops/loop-run-log.md",
+  "constraintsFile": ".agent/loops/loop-constraints.md",
+  "skills": ["release-readiness", "loop-verifier", "loop-budget", "loop-constraints"],
+  "allowedActions": ["inspect version files", "inspect changelog", "inspect CI and quality reports", "write readiness report", "append run log"],
+  "deniedActions": ["bump versions", "create tags", "push commits", "publish releases", "edit migrations"],
+  "humanGates": ["human_review_before_write", "human_review_before_release", "version bump", "git tag", "release publish", "failed gate override", "database or auth changes"],
+  "modelStrategy": {
+    "cheap": ["inventory release files", "summarize gate output"],
+    "strong": ["final readiness verdict", "risk acceptance", "security or finance impact"]
+  },
+  "successMetrics": ["release blockers found before version commit", "no release without human approval", "clear evidence for every readiness verdict"],
+  "notes": "Use this loop to produce a release decision packet, not to make the release decision itself."
+}

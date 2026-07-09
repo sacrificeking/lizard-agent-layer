@@ -1,5 +1,15 @@
 ﻿# Changelog
 
+## 1.3.0 - 2026-07-09
+
+### Added
+
+- L1/report-only loop engineering with pattern registry, runtime templates, and built-in `daily-triage`, `release-readiness`, and `layer-update-watch` patterns.
+- `loop-engineering` pack with loop triage, verifier, budget, state sync, constraints, CI triage, minimal fix, and release readiness skills.
+- `loop-init.ps1`, `loop-audit.ps1`, `loop-report.ps1`, `loop-sync.ps1`, and `loop-cost.ps1` for target loop lifecycle management.
+- Loop schemas, validator checks, analyzer recommendations, dedicated documentation, and smoke coverage for init/audit/report/sync/cost workflows.
+- Model-routing guidance that keeps older and cheaper models useful for bounded scan/report loops while reserving stronger models for high-risk synthesis.
+
 ## 1.2.0 - 2026-07-08
 
 ### Added

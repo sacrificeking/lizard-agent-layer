@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-07-08T18:09:12.4826781Z",
-    "layer_version":  "1.2.0",
-    "artifact_count":  50,
-    "total_bytes":  38273,
-    "token_estimate":  9564,
+    "generated_at":  "2026-07-09T15:00:40.5130557Z",
+    "layer_version":  "1.3.0",
+    "artifact_count":  77,
+    "total_bytes":  69407,
+    "token_estimate":  17338,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -107,6 +107,15 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/ci-triage/SKILL.md",
+                          "sha256":  "71d851bef808b18e898f7d4864c09d0dc851403a8da1f7cddfcb6dd08fb0918d",
+                          "bytes":  1002,
+                          "lines":  41,
+                          "words":  148,
+                          "token_estimate":  250
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/data-quality/SKILL.md",
                           "sha256":  "37ed963687420f56639ebf2ec3caf59ac1fd55b39ec4c4d68ce21950f7c68342",
                           "bytes":  584,
@@ -161,12 +170,75 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/loop-budget/SKILL.md",
+                          "sha256":  "9b0818bb90413cf60337cc931ba2dc5e5ac7b24c243caf433c205b5ca6230263",
+                          "bytes":  2464,
+                          "lines":  61,
+                          "words":  376,
+                          "token_estimate":  616
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/loop-constraints/SKILL.md",
+                          "sha256":  "34aae3850ee4fd549de1a633f0d62c13829cb3b0bb2d5e17996370ea3f7350da",
+                          "bytes":  2603,
+                          "lines":  65,
+                          "words":  366,
+                          "token_estimate":  650
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/loop-state-sync/SKILL.md",
+                          "sha256":  "1cc0f726771b88c5c34d1525890595221d9540ef6db6adeba8928a07b755f1ad",
+                          "bytes":  2121,
+                          "lines":  57,
+                          "words":  352,
+                          "token_estimate":  530
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/loop-triage/SKILL.md",
+                          "sha256":  "f4cf8253415abcbf1146bc91445dae9faf105217d7586cc1d1f3e0d5d0584ccf",
+                          "bytes":  1731,
+                          "lines":  56,
+                          "words":  257,
+                          "token_estimate":  432
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/loop-verifier/SKILL.md",
+                          "sha256":  "c640eb83a235c4cea1e3593a07f77e3c09f55e309f396f6b89f961f841e66d70",
+                          "bytes":  1310,
+                          "lines":  42,
+                          "words":  189,
+                          "token_estimate":  327
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/minimal-fix/SKILL.md",
+                          "sha256":  "ee191e8bb5ce7268b17901f0eb7714c99f4257ba7e7d7502100154595f837bb6",
+                          "bytes":  2805,
+                          "lines":  66,
+                          "words":  437,
+                          "token_estimate":  701
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/release/SKILL.md",
                           "sha256":  "b45e3e9ffcbfd31f1bcbdd7966e95562884fce645db1fbd5e804c29683bed97d",
                           "bytes":  722,
                           "lines":  22,
                           "words":  105,
                           "token_estimate":  180
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/release-readiness/SKILL.md",
+                          "sha256":  "183ef7c9284e3d01316f503b180bab5a24d214388d64ea514ab680c9e109be0a",
+                          "bytes":  1252,
+                          "lines":  44,
+                          "words":  177,
+                          "token_estimate":  313
                       },
                       {
                           "kind":  "skill",
@@ -359,6 +431,15 @@
                       },
                       {
                           "kind":  "pack",
+                          "path":  "packs/loop-engineering.json",
+                          "sha256":  "611d2f2e2a0f41a9b6961eb9b6aeb78dfceba00bc05d81d95fcc2aebe93d3748",
+                          "bytes":  936,
+                          "lines":  13,
+                          "words":  91,
+                          "token_estimate":  234
+                      },
+                      {
+                          "kind":  "pack",
                           "path":  "packs/security-hardening.json",
                           "sha256":  "eeeb579d0678bcb75de5907fca3d6b556eb22335a63dfe38aec38b3b9d3f5c2b",
                           "bytes":  745,
@@ -374,6 +455,132 @@
                           "lines":  13,
                           "words":  76,
                           "token_estimate":  201
+                      },
+                      {
+                          "kind":  "loop",
+                          "path":  "loops/daily-triage.json",
+                          "sha256":  "bc914c2039578da9092216ed3efadd30528ca1d45f4b8d8374dac4d05e5efcda",
+                          "bytes":  1508,
+                          "lines":  26,
+                          "words":  149,
+                          "token_estimate":  377
+                      },
+                      {
+                          "kind":  "loop",
+                          "path":  "loops/layer-update-watch.json",
+                          "sha256":  "6202abf78d7fdd231f3da7e3c2f213006a914cf10026ed2ab93edae85b4ff32c",
+                          "bytes":  1622,
+                          "lines":  26,
+                          "words":  149,
+                          "token_estimate":  405
+                      },
+                      {
+                          "kind":  "loop",
+                          "path":  "loops/registry.json",
+                          "sha256":  "3f73b362f43dc233ae7276ec66cc5134501fef52a109df5fb2c0d6e7056e93e7",
+                          "bytes":  913,
+                          "lines":  27,
+                          "words":  85,
+                          "token_estimate":  228
+                      },
+                      {
+                          "kind":  "loop",
+                          "path":  "loops/release-readiness.json",
+                          "sha256":  "4c8f8159452f88cdf587f55413a1ef0428af7053e708865d4e27f28eb98a0e0d",
+                          "bytes":  1587,
+                          "lines":  26,
+                          "words":  160,
+                          "token_estimate":  396
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/agent-gitignore",
+                          "sha256":  "d661f61217de386acdd8e6ba378fd131ad2d664580c5fd64eb40ccb19d7f450d",
+                          "bytes":  157,
+                          "lines":  11,
+                          "words":  14,
+                          "token_estimate":  39
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/loops/LOOP.md",
+                          "sha256":  "576790519ba0becfe416fe34603fbc4db6dcdc5f3889544f3d26e6cf82981965",
+                          "bytes":  1468,
+                          "lines":  38,
+                          "words":  206,
+                          "token_estimate":  367
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/loops/loop-budget.md",
+                          "sha256":  "333bb399411640d2be74ec255c5273f89384e6bd41000b019e57041f412b7e97",
+                          "bytes":  647,
+                          "lines":  35,
+                          "words":  111,
+                          "token_estimate":  161
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/loops/loop-constraints.md",
+                          "sha256":  "a4a5281a9c18310fdb10aa227b2d54ff0bdead5064983fc3a66efa836d94fd75",
+                          "bytes":  1017,
+                          "lines":  48,
+                          "words":  141,
+                          "token_estimate":  254
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/loops/loop-run-log.md",
+                          "sha256":  "d59f6c7e9eec67887177fbcd7b782a2abb6b535ab67e79cfb677d5db5ca1f6e5",
+                          "bytes":  208,
+                          "lines":  8,
+                          "words":  39,
+                          "token_estimate":  52
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/loops/loop-state.md",
+                          "sha256":  "fcd1f1b1c0f7d7dadb4eb14567120a82d077e472eed95352168c9ab9031367a0",
+                          "bytes":  473,
+                          "lines":  30,
+                          "words":  83,
+                          "token_estimate":  118
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/memory/personal/PREFERENCES.md",
+                          "sha256":  "11eed31505cc0b4df1f0c2704b0fec10b5465723a0c8a9ee658194c324f1d40d",
+                          "bytes":  145,
+                          "lines":  10,
+                          "words":  23,
+                          "token_estimate":  36
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/memory/semantic/DECISIONS.md",
+                          "sha256":  "537d6bf17a8253c72eda07eff605bac56838e93f07353d1a2cf3e6228b67a1c0",
+                          "bytes":  81,
+                          "lines":  4,
+                          "words":  10,
+                          "token_estimate":  20
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/memory/semantic/LESSONS.md",
+                          "sha256":  "f0912e80d84bb1dd9faaf4f194f7e2dd8ea3d1dffe6c0dd6930b97faed8506a2",
+                          "bytes":  118,
+                          "lines":  6,
+                          "words":  18,
+                          "token_estimate":  29
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/memory/working/WORKSPACE.md",
+                          "sha256":  "f97be20da625b9345e32a4035cf8482cc271cf90dbe8cf8a3eac1d39c13f0204",
+                          "bytes":  291,
+                          "lines":  27,
+                          "words":  44,
+                          "token_estimate":  72
                       },
                       {
                           "kind":  "registry",
@@ -419,6 +626,42 @@
                           "lines":  25,
                           "words":  109,
                           "token_estimate":  257
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/loop.schema.json",
+                          "sha256":  "352bfbcd12b2da811cf1180b9369dda86e7535f4e05d9be313ffa3b41336b9ea",
+                          "bytes":  1763,
+                          "lines":  43,
+                          "words":  192,
+                          "token_estimate":  440
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/loop-budget.schema.json",
+                          "sha256":  "a491a0cd14800aeaae355763872f76fa8bc6423ac9cfb32e6f35d6e0027e3669",
+                          "bytes":  910,
+                          "lines":  19,
+                          "words":  85,
+                          "token_estimate":  227
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/loop-constraints.schema.json",
+                          "sha256":  "193848b72df2ca9b917dd191ba10f25dcc89b764cd036310d0b4c61539755477",
+                          "bytes":  866,
+                          "lines":  19,
+                          "words":  84,
+                          "token_estimate":  216
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/loop-state.schema.json",
+                          "sha256":  "14d571bc2b5dcc7b2a0291a9aee57a2f12e11169a053401bb2be01d108aa42f4",
+                          "bytes":  1136,
+                          "lines":  32,
+                          "words":  109,
+                          "token_estimate":  284
                       },
                       {
                           "kind":  "schema",

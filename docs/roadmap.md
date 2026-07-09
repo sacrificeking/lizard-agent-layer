@@ -16,17 +16,19 @@
 - Drift intelligence with artifact hashes, token estimates, baseline reports, and CI gate.
 - Bundle pack system with curated project-shape manifests, analyzer recommendations, installer merge support, and CI validation.
 - Target pack overlays, pack-preserving upgrades, manifest diff checks, plan-first target updates, update history, and stronger analyzer coverage for monorepos/non-Node/security/agent-runtime signals.
+- L1/report-only loop engineering with pattern registry, loop runtime templates, skills, analyzer recommendations, audit/report/sync/cost scripts, and smoke coverage.
 
 ## Next
 
 - Additional harness adapters when they have stable local instruction conventions.
 - Richer target analyzer scoring for monorepos and non-Node stacks.
 - Pack authoring lifecycle for external teams and richer external pack distribution.
-- Optional manifest comparison command for layer upgrades in installed target projects.
+- L2 controlled apply-loop design for narrow generated artifacts after test and ownership gates exist.
 - Optional workflow templates for target repositories after installation.
 
 ## Later
 
+- Loop run history summarization and trend reports.
 - Local agent activity summaries.
 - Release-readiness dashboard.
 - Skill usage reports.

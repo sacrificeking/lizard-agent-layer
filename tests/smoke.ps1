@@ -11,6 +11,7 @@ $overlayTarget = Join-Path $tmpRoot 'overlay-target'
 $cursorTarget = Join-Path $tmpRoot 'cursor-target'
 $sidecarTarget = Join-Path $tmpRoot 'sidecar-target'
 $analysisTarget = Join-Path $tmpRoot 'analysis-target'
+$loopTarget = Join-Path $tmpRoot 'loop-target'
 $sidecarPlanPath = Join-Path $tmpRoot 'sidecar-install-plan.md'
 $packPlanPath = Join-Path $tmpRoot 'pack-install-plan.md'
 $overlayUpdatePlanPath = Join-Path $tmpRoot 'overlay-update-plan.md'
@@ -18,8 +19,13 @@ $overlayUpdateOutputDir = Join-Path $tmpRoot 'overlay-update-output'
 $overlayUpdateApplyOutputDir = Join-Path $tmpRoot 'overlay-update-apply-output'
 $sidecarUpdateForceOutputDir = Join-Path $tmpRoot 'sidecar-update-force-output'
 $mergeSuggestionDir = Join-Path $tmpRoot 'merge-suggestions'
+$loopPlanPath = Join-Path $tmpRoot 'loop-init-plan.md'
+$loopOutputDir = Join-Path $tmpRoot 'loop-init-output'
+$loopAuditOutputDir = Join-Path $tmpRoot 'loop-audit-output'
+$loopReportOutputDir = Join-Path $tmpRoot 'loop-report-output'
+$loopSyncOutputDir = Join-Path $tmpRoot 'loop-sync-output'
 
-foreach ($target in @($standardTarget, $packTarget, $overlayTarget, $cursorTarget, $sidecarTarget, $analysisTarget)) {
+foreach ($target in @($standardTarget, $packTarget, $overlayTarget, $cursorTarget, $sidecarTarget, $analysisTarget, $loopTarget)) {
   New-Item -ItemType Directory -Path $target -Force | Out-Null
 }
 New-Item -ItemType Directory -Path (Join-Path $overlayTarget '.lizard-agent-layer\packs') -Force | Out-Null
@@ -37,6 +43,7 @@ Set-Content -LiteralPath (Join-Path $cursorTarget 'README.md') -Value '# cursor 
 Set-Content -LiteralPath (Join-Path $sidecarTarget 'README.md') -Value '# sidecar smoke target' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $sidecarTarget 'AGENTS.md') -Value '# Existing Project Instructions' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'README.md') -Value '# analysis smoke target' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $loopTarget 'README.md') -Value '# loop smoke target' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'package.json') -Value '{"dependencies":{"@supabase/supabase-js":"latest","react":"latest","openai":"latest"},"devDependencies":{"typescript":"latest","vite":"latest","tailwindcss":"latest"},"workspaces":["apps/*"]}' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'vite.config.ts') -Value 'export default {}' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'tsconfig.json') -Value '{}' -Encoding UTF8
@@ -80,7 +87,7 @@ Run-Step 'analyze target recommendation' {
   foreach ($expectedSignal in @('finance', 'monorepo', 'agent-runtime', 'security')) {
     if (@($analysis.signals) -notcontains $expectedSignal) { throw "Expected signal: $expectedSignal" }
   }
-  foreach ($expectedPack in @('frontend-product', 'design-system', 'supabase-react', 'finance-app', 'security-hardening', 'agent-runtime')) {
+  foreach ($expectedPack in @('frontend-product', 'design-system', 'supabase-react', 'finance-app', 'security-hardening', 'agent-runtime', 'loop-engineering')) {
     if (@($analysis.recommendedPacks) -notcontains $expectedPack) { throw "Expected pack recommendation: $expectedPack" }
   }
   if (-not $analysis.projectShape.monorepo) { throw 'Expected monorepo project shape.' }
@@ -109,6 +116,39 @@ Run-Step 'install apply pack merge' {
 
 Run-Step 'manifest diff pack target strict' {
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\manifest-diff.ps1') -TargetPath $packTarget -Strict | Out-String | Write-Host
+}
+
+Run-Step 'install apply loop engineering pack' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $loopTarget -Profile minimal -Packs loop-engineering -Apply | Out-String | Write-Host
+  $manifest = Get-Content -LiteralPath (Join-Path $loopTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  if (@($manifest.requested_packs) -notcontains 'loop-engineering') { throw 'Expected requested loop-engineering pack.' }
+  foreach ($expectedSkill in @('loop-triage', 'loop-verifier', 'loop-budget', 'loop-state-sync', 'loop-constraints', 'ci-triage', 'minimal-fix', 'release-readiness')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $loopTarget ".agent\skills\$expectedSkill\SKILL.md"))) { throw "Expected installed loop skill: $expectedSkill" }
+  }
+}
+
+Run-Step 'loop init preview plan' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-init.ps1') -TargetPath $loopTarget -Pattern daily-triage -WritePlan -PlanPath $loopPlanPath -OutputDir $loopOutputDir | Out-String | Write-Host
+  if (-not (Test-Path -LiteralPath $loopPlanPath)) { throw 'Expected loop init preview plan.' }
+  if (Test-Path -LiteralPath (Join-Path $loopTarget '.agent\loops')) { throw 'Loop init preview wrote .agent/loops into target.' }
+  $plan = Get-Content -LiteralPath $loopPlanPath -Raw
+  foreach ($expected in @('# lizard-agent-layer loop init plan', 'Mode: `PREVIEW`', 'daily-triage', 'report-only')) {
+    if ($plan -notmatch [regex]::Escape($expected)) { throw "Expected loop init plan to contain: $expected" }
+  }
+}
+
+Run-Step 'loop init apply and gates' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-init.ps1') -TargetPath $loopTarget -Pattern daily-triage -OutputDir $loopOutputDir -Apply | Out-String | Write-Host
+  foreach ($expectedPath in @('.agent\loops\LOOP.md', '.agent\loops\loop-budget.md', '.agent\loops\loop-run-log.md', '.agent\loops\loop-constraints.md', '.agent\loops\daily-triage-state.md', '.agent\loops\lizard-agent-layer.loop-install.json')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $loopTarget $expectedPath))) { throw "Expected loop runtime artifact: $expectedPath" }
+  }
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-audit.ps1') -TargetPath $loopTarget -OutputDir $loopAuditOutputDir -Strict | Out-String | Write-Host
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-report.ps1') -TargetPath $loopTarget -OutputDir $loopReportOutputDir -Strict | Out-String | Write-Host
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-sync.ps1') -TargetPath $loopTarget -OutputDir $loopSyncOutputDir -Strict | Out-String | Write-Host
+  $costJson = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-cost.ps1') -Pattern daily-triage -Level L1 -Cadence 1d -Json | Out-String
+  $cost = $costJson | ConvertFrom-Json
+  if ($cost.pattern -ne 'daily-triage') { throw "Expected daily-triage cost pattern, got $($cost.pattern)." }
+  if ($cost.estimated_tokens_daily -le 0 -or $cost.estimated_tokens_daily -gt 10000) { throw "Unexpected daily loop token estimate: $($cost.estimated_tokens_daily)." }
 }
 
 Run-Step 'install apply target pack overlay' {

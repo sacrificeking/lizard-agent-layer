@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [switch]$SkipSmoke,
   [switch]$SkipMatrix,
@@ -23,6 +23,7 @@ function Invoke-CiStep {
   Write-Host "== $Name =="
   $stepStart = Get-Date
   try {
+    $global:LASTEXITCODE = 0
     & $Block
     $exitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
     if ($exitCode -ne 0) { throw "$Name exited with code $exitCode." }

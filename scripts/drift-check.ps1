@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [string]$BaselinePath,
   [string]$OutputDir,
@@ -28,6 +28,8 @@ function Get-ArtifactKind {
     'profiles' { 'profile' }
     'model-profiles' { 'model-profile' }
     'packs' { 'pack' }
+    'loops' { 'loop' }
+    'templates' { 'template' }
     'registry' { 'registry' }
     'schemas' { 'schema' }
     default { 'other' }
@@ -60,7 +62,7 @@ function New-ArtifactRecord {
 }
 
 function Get-TrackedFiles {
-  $roots = @('adapters', 'skills', 'protocols', 'profiles', 'model-profiles', 'packs', 'registry', 'schemas')
+  $roots = @('adapters', 'skills', 'protocols', 'profiles', 'model-profiles', 'packs', 'loops', 'templates', 'registry', 'schemas')
   $files = New-Object System.Collections.Generic.List[System.IO.FileInfo]
   foreach ($root in $roots) {
     $path = Join-Path $LayerRoot $root

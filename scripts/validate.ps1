@@ -130,12 +130,70 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'packs') -Filter '*.json' -File
     }
   }
 }
+$loopRegistryPath = Join-Path $LayerRoot 'loops\registry.json'
+$loopRegistry = Read-JsonFile $loopRegistryPath
+$loopNames = New-Object System.Collections.Generic.HashSet[string]
+if ($null -ne $loopRegistry) {
+  if (-not ($loopRegistry.PSObject.Properties.Name -contains 'schema_version')) { Fail 'Loop registry missing schema_version.' }
+  if (-not ($loopRegistry.PSObject.Properties.Name -contains 'patterns')) { Fail 'Loop registry missing patterns.' }
+  foreach ($entry in @($loopRegistry.patterns)) {
+    foreach ($field in @('name', 'file', 'readinessLevel', 'riskLevel', 'description')) {
+      if (-not ($entry.PSObject.Properties.Name -contains $field)) { Fail "Loop registry entry missing '$field'." }
+    }
+    if ($entry.name -and -not (Is-HyphenName ([string]$entry.name))) { Fail "Loop registry has invalid pattern name '$($entry.name)'." }
+    if ($entry.readinessLevel -and $entry.readinessLevel -notin @('L0', 'L1', 'L2', 'L3')) { Fail "Loop registry entry $($entry.name) has invalid readinessLevel '$($entry.readinessLevel)'." }
+    if ($entry.riskLevel -and $entry.riskLevel -notin @('low', 'medium', 'high')) { Fail "Loop registry entry $($entry.name) has invalid riskLevel '$($entry.riskLevel)'." }
+    if ($entry.file -and -not (Is-SafeRelativePath ([string]$entry.file))) { Fail "Loop registry entry $($entry.name) has unsafe file path '$($entry.file)'." }
+    elseif ($entry.file -and -not (Test-Path -LiteralPath (Join-Path $LayerRoot ([string]$entry.file).Replace('/', '\')))) { Fail "Loop registry entry $($entry.name) references missing file '$($entry.file)'." }
+    if ($entry.name) { $loopNames.Add([string]$entry.name) | Out-Null }
+  }
+}
+
+Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'loops') -Filter '*.json' -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne 'registry.json' } | ForEach-Object {
+  $loop = Read-JsonFile $_.FullName
+  if ($null -eq $loop) { return }
+  $expectedName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
+  foreach ($field in @('name', 'description', 'readinessLevel', 'riskLevel', 'cadence', 'stateFile', 'budgetFile', 'runLogFile', 'constraintsFile', 'skills', 'allowedActions', 'humanGates')) {
+    if (-not ($loop.PSObject.Properties.Name -contains $field)) { Fail "Loop $($_.Name) missing '$field'." }
+  }
+  if ($loop.name -ne $expectedName) { Fail "Loop $($_.Name) manifest name '$($loop.name)' does not match filename." }
+  if ($loop.name -and -not (Is-HyphenName $loop.name)) { Fail "Loop $($_.Name) has invalid name '$($loop.name)'." }
+  if ($loop.readinessLevel -and $loop.readinessLevel -notin @('L0', 'L1', 'L2', 'L3')) { Fail "Loop $($_.Name) has invalid readinessLevel '$($loop.readinessLevel)'." }
+  if ($loop.riskLevel -and $loop.riskLevel -notin @('low', 'medium', 'high')) { Fail "Loop $($_.Name) has invalid riskLevel '$($loop.riskLevel)'." }
+  if (-not $loopNames.Contains([string]$loop.name)) { Fail "Loop $($_.Name) is not listed in loops/registry.json." }
+  if ($loop.cadence) {
+    foreach ($field in @('recommended', 'minimum', 'notes')) {
+      if (-not ($loop.cadence.PSObject.Properties.Name -contains $field)) { Fail "Loop $($_.Name) cadence missing '$field'." }
+    }
+  }
+  foreach ($pathField in @('stateFile', 'budgetFile', 'runLogFile', 'constraintsFile')) {
+    $pathValue = [string]$loop.$pathField
+    if (-not (Is-SafeRelativePath $pathValue)) { Fail "Loop $($_.Name) $pathField is unsafe: $pathValue" }
+    elseif ($pathValue.Replace('/', '\') -notmatch '^\.agent\\loops\\') { Warn "Loop $($_.Name) $pathField is outside .agent/loops: $pathValue" }
+  }
+  foreach ($skill in @($loop.skills)) {
+    if (-not (Is-HyphenName ([string]$skill))) { Fail "Loop $($_.Name) references invalid skill name '$skill'."; continue }
+    $skillPath = Join-Path $LayerRoot "skills\$skill\SKILL.md"
+    if (-not (Test-Path -LiteralPath $skillPath)) { Fail "Loop $($_.Name) references missing skill '$skill'." }
+  }
+  if (@($loop.allowedActions).Count -lt 1) { Fail "Loop $($_.Name) has no allowedActions." }
+  if (@($loop.humanGates).Count -lt 1) { Fail "Loop $($_.Name) has no humanGates." }
+  if ($loop.modelStrategy) {
+    foreach ($bucket in @('cheap', 'strong')) {
+      if (-not ($loop.modelStrategy.PSObject.Properties.Name -contains $bucket)) { Warn "Loop $($_.Name) modelStrategy missing '$bucket' bucket." }
+    }
+  }
+}
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\lizard-agent-layer.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\adapter.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-profile.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\quality-registry.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\maturity-levels.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\pack.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop-state.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop-budget.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop-constraints.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\quality-rubric.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\maturity-levels.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\risk-signals.json')
@@ -173,7 +231,7 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory | ForEach-
   if ([string]::IsNullOrWhiteSpace($values['description'])) { Fail "Skill '$folderName' has empty description." }
 }
 
-foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1', 'manifest-diff.ps1', 'update-target.ps1')) {
+foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1', 'manifest-diff.ps1', 'update-target.ps1', 'loop-init.ps1', 'loop-audit.ps1', 'loop-report.ps1', 'loop-sync.ps1', 'loop-cost.ps1')) {
   $path = Join-Path $LayerRoot "scripts\$script"
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing script $script."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }

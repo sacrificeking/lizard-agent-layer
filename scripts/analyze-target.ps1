@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$TargetPath = (Get-Location).Path,
   [switch]$Json,
   [int]$MaxFiles = 20000
@@ -93,6 +93,8 @@ if (Has-Path 'go.mod') { Add-Signal 'go'; Add-Reason 'Go module marker exists.' 
 if (Has-Path 'pom.xml' -or Has-Path 'build.gradle' -or Has-Path 'build.gradle.kts') { Add-Signal 'java'; Add-Reason 'Java build marker exists.' }
 if ((Get-ChildItem -LiteralPath $TargetRoot -Filter '*.csproj' -File -ErrorAction SilentlyContinue | Select-Object -First 1)) { Add-Signal 'dotnet'; Add-Reason '.NET project marker exists.' }
 if (Has-Path '.github\workflows') { Add-Signal 'ci'; Add-Reason 'GitHub Actions workflows exist.' }
+if (Has-Path '.agent\loops') { Add-Signal 'loop-runtime'; Add-Reason '.agent/loops directory exists.' }
+if (Has-Path '.agent\loops\lizard-agent-layer.loop-install.json') { Add-Signal 'loop-runtime'; Add-Reason 'lizard-agent-layer loop manifest exists.' }
 if (Has-Path '.env.example' -or Has-Path 'Dockerfile' -or Has-Path 'docker-compose.yml') { Add-Signal 'security'; Add-Reason 'Environment, container, or deployment markers exist.' }
 
 $repoFiles = Get-RepositoryFiles -Root $TargetRoot -Limit $MaxFiles
@@ -155,6 +157,7 @@ if ($signals.Contains('design-system') -or $signals.Contains('design-ui')) { Add
 if ($signals.Contains('supabase') -or $signals.Contains('edge-functions') -or $signals.Contains('database-migrations')) { Add-Pack 'supabase-react' }
 if ($signals.Contains('finance')) { Add-Pack 'finance-app' }
 if ($signals.Contains('agent-runtime')) { Add-Pack 'agent-runtime' }
+if ($signals.Contains('agent-runtime') -or $signals.Contains('loop-runtime') -or ($signals.Contains('ci') -and ($signals.Contains('monorepo') -or $signals.Contains('security') -or $signals.Contains('supabase')))) { Add-Pack 'loop-engineering' }
 if ($risk -eq 'high' -or $signals.Contains('database-migrations') -or $signals.Contains('edge-functions') -or $signals.Contains('security') -or $signals.Contains('ci')) { Add-Pack 'security-hardening' }
 
 $previewCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath `"$TargetRoot`" -Profile $profile -Harnesses $($harnesses -join ',')"

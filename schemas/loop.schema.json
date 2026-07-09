@@ -1,0 +1,42 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/loop.schema.json",
+  "title": "lizard-agent-layer loop pattern",
+  "type": "object",
+  "required": ["name", "description", "readinessLevel", "riskLevel", "cadence", "stateFile", "skills", "allowedActions", "humanGates"],
+  "properties": {
+    "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "description": { "type": "string", "minLength": 10 },
+    "readinessLevel": { "enum": ["L0", "L1", "L2", "L3"] },
+    "riskLevel": { "enum": ["low", "medium", "high"] },
+    "cadence": {
+      "type": "object",
+      "required": ["recommended", "minimum", "notes"],
+      "properties": {
+        "recommended": { "type": "string" },
+        "minimum": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "stateFile": { "type": "string" },
+    "budgetFile": { "type": "string" },
+    "runLogFile": { "type": "string" },
+    "constraintsFile": { "type": "string" },
+    "skills": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "allowedActions": { "type": "array", "items": { "type": "string" } },
+    "deniedActions": { "type": "array", "items": { "type": "string" } },
+    "humanGates": { "type": "array", "items": { "type": "string" } },
+    "modelStrategy": {
+      "type": "object",
+      "properties": {
+        "cheap": { "type": "array", "items": { "type": "string" } },
+        "strong": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "successMetrics": { "type": "array", "items": { "type": "string" } },
+    "notes": { "type": "string" }
+  },
+  "additionalProperties": true
+}

@@ -7,7 +7,7 @@ Portable agent infrastructure for projects that need consistent AI-assisted deve
 ## What it provides
 
 - Project profiles for different sizes, stacks, risk levels, harnesses, and model roles.
-- Curated packs for frontend products, Supabase React apps, finance workflows, agent runtimes, design systems, and security hardening.
+- Curated packs for frontend products, Supabase React apps, finance workflows, agent runtimes, design systems, security hardening, and loop engineering.
 - Codex, Claude Code, Gemini, Cursor, and generic adapters.
 - Codex-friendly skills under `.agents/skills/` and harness-specific mirrors where useful.
 - Local project memory under `.agent/memory/`.
@@ -15,6 +15,7 @@ Portable agent infrastructure for projects that need consistent AI-assisted deve
 - Preview-first installers that avoid clobbering target files.
 - Optional install plan reports with merge suggestions for existing instruction files.
 - Plan-first target updates with version comparison, manifest diff, apply mode, force-managed refresh, and update history.
+- L1/report-only loop engineering runtime with patterns, state, budget, run-log, constraints, audit, sync, and cost tooling.
 - Standalone merge suggestion reports with patch and copy-block artifacts.
 - Target analyzer for profile, harness, skill, pack, monorepo, non-Node, and risk recommendations.
 - Adapter matrix tests for every profile/harness combination.
@@ -149,6 +150,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\matrix.ps1
 - [Merge suggestions](docs/merge-suggestions.md)
 - [Manifest diff](docs/manifest-diff.md)
 - [Update targets](docs/update-target.md)
+- [Loop engineering](docs/loop-engineering.md)
 - [Target analysis](docs/target-analysis.md)
 - [Adapter matrix](docs/adapter-matrix.md)
 - [CI](docs/ci.md)

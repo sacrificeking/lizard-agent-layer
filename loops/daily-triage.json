@@ -1,0 +1,25 @@
+﻿{
+  "name": "daily-triage",
+  "description": "Report-only daily project triage loop for risks, stale work, open decisions, and next suggested actions.",
+  "readinessLevel": "L1",
+  "riskLevel": "low",
+  "cadence": {
+    "recommended": "1d",
+    "minimum": "2h",
+    "notes": "Start once per day. Increase only when the report has proven useful and low-noise."
+  },
+  "stateFile": ".agent/loops/daily-triage-state.md",
+  "budgetFile": ".agent/loops/loop-budget.md",
+  "runLogFile": ".agent/loops/loop-run-log.md",
+  "constraintsFile": ".agent/loops/loop-constraints.md",
+  "skills": ["loop-triage", "loop-budget", "loop-state-sync", "loop-constraints"],
+  "allowedActions": ["read repository state", "summarize actionable findings", "update loop state", "append run log"],
+  "deniedActions": ["modify source code", "open pull requests", "change dependencies", "edit secrets or migrations"],
+  "humanGates": ["human_review_before_write", "human_review_before_release", "any source code change", "any dependency change", "any security/auth/finance/supabase finding", "unclear ownership"],
+  "modelStrategy": {
+    "cheap": ["triage", "state pruning", "run log summary"],
+    "strong": ["risk synthesis", "cross-cutting architecture concern", "security-sensitive interpretation"]
+  },
+  "successMetrics": ["low false-positive rate", "clear human-next-action items", "state pruned every run"],
+  "notes": "This is the safest first loop for most target projects. Keep it L1 until the team trusts the signal."
+}

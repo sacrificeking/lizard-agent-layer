@@ -1,0 +1,25 @@
+﻿{
+  "name": "layer-update-watch",
+  "description": "Report-only loop for comparing installed target projects against the current lizard-agent-layer version and producing update plans.",
+  "readinessLevel": "L1",
+  "riskLevel": "medium",
+  "cadence": {
+    "recommended": "weekly or before adapting a target project",
+    "minimum": "1d",
+    "notes": "Use after lizard-agent-layer releases. Keep apply behind human review."
+  },
+  "stateFile": ".agent/loops/layer-update-watch-state.md",
+  "budgetFile": ".agent/loops/loop-budget.md",
+  "runLogFile": ".agent/loops/loop-run-log.md",
+  "constraintsFile": ".agent/loops/loop-constraints.md",
+  "skills": ["loop-triage", "loop-verifier", "loop-budget", "loop-constraints"],
+  "allowedActions": ["read install manifest", "run manifest diff", "generate update plan", "append run log"],
+  "deniedActions": ["apply update without explicit approval", "force managed refresh without review", "edit target instructions silently"],
+  "humanGates": ["human_review_before_write", "human_review_before_release", "any update apply", "ForceManaged refresh", "adapter instruction changes", "high-risk project profile changes"],
+  "modelStrategy": {
+    "cheap": ["version comparison", "manifest summary", "plan inventory"],
+    "strong": ["update risk assessment", "profile or pack adaptation", "high-risk target recommendation"]
+  },
+  "successMetrics": ["stale integrations detected", "update plans are actionable", "target-specific constraints preserved"],
+  "notes": "This pattern complements scripts/update-target.ps1 and keeps integrated projects minimally invasive to update."
+}

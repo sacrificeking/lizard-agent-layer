@@ -1,0 +1,138 @@
+﻿param(
+  [string]$TargetPath = (Get-Location).Path,
+  [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
+  [string]$Pattern,
+  [switch]$Apply,
+  [switch]$ForceTemplates,
+  [switch]$Strict,
+  [switch]$Json,
+  [string]$OutputDir
+)
+
+$ErrorActionPreference = 'Stop'
+$LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
+$TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
+$stamp = Get-Date -Format 'yyyyMMddHHmmss'
+$EffectiveOutputDir = if ([string]::IsNullOrWhiteSpace($OutputDir)) { Join-Path $LayerRoot ".tmp\loops\sync-$stamp" } elseif ([System.IO.Path]::IsPathRooted($OutputDir)) { $OutputDir } else { Join-Path (Get-Location).Path $OutputDir }
+function Is-UnderPath {
+  param([string]$Path, [string]$Root)
+  $full = [System.IO.Path]::GetFullPath($Path).TrimEnd([char[]]@('\', '/'))
+  $rootFull = [System.IO.Path]::GetFullPath($Root).TrimEnd([char[]]@('\', '/'))
+  if ($full.Equals($rootFull, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+  return $full.StartsWith(($rootFull + [System.IO.Path]::DirectorySeparatorChar), [System.StringComparison]::OrdinalIgnoreCase)
+}
+if (-not $Apply -and (Is-UnderPath -Path $EffectiveOutputDir -Root $TargetRoot)) { throw 'OutputDir would write inside the target during preview. Choose a path outside the target or use -Apply.' }
+New-Item -ItemType Directory -Path $EffectiveOutputDir -Force | Out-Null
+
+$Failures = New-Object System.Collections.Generic.List[string]
+$Warnings = New-Object System.Collections.Generic.List[string]
+$Planned = New-Object System.Collections.Generic.List[string]
+$Written = New-Object System.Collections.Generic.List[string]
+$Skipped = New-Object System.Collections.Generic.List[string]
+function Add-Unique { param($List, [string]$Value) if ($Value -and -not $List.Contains($Value)) { $List.Add($Value) | Out-Null } }
+function Add-Failure { param([string]$Message) $Failures.Add($Message) | Out-Null }
+function Add-Warning { param([string]$Message) $Warnings.Add($Message) | Out-Null }
+function Assert-SafeRelativeTargetPath {
+  param([string]$Path, [string]$Label)
+  if ([string]::IsNullOrWhiteSpace($Path)) { throw "$Label is empty." }
+  if ([System.IO.Path]::IsPathRooted($Path) -or $Path -match '^[A-Za-z]:') { throw "$Label must be a relative target path: $Path" }
+  $normalized = $Path.Replace('/', '\')
+  if ($normalized -match '(^|\\)\.\.($|\\)') { throw "$Label must not traverse upward: $Path" }
+  return $normalized
+}
+function Copy-Template {
+  param([string]$Template, [string]$DestRel, [bool]$CanOverwrite)
+  $source = Join-Path $LayerRoot $Template
+  $dest = Join-Path $TargetRoot $DestRel
+  if (-not (Test-Path -LiteralPath $source)) { Add-Failure "Template missing: $Template"; return }
+  if ((Test-Path -LiteralPath $dest) -and -not $CanOverwrite) { Add-Unique $Skipped $DestRel; return }
+  Add-Unique $Planned $DestRel
+  if ($Apply) {
+    $parent = Split-Path -Parent $dest
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+    Copy-Item -LiteralPath $source -Destination $dest -Force:$CanOverwrite
+    Add-Unique $Written $DestRel
+  }
+}
+
+$versionPath = Join-Path $LayerRoot 'VERSION'
+$currentVersion = if (Test-Path -LiteralPath $versionPath) { (Get-Content -LiteralPath $versionPath -Raw).Trim() } else { '0.0.0-dev' }
+$manifestPath = Join-Path $TargetRoot '.agent\loops\lizard-agent-layer.loop-install.json'
+if (-not (Test-Path -LiteralPath $manifestPath)) { throw 'Missing loop install manifest. Run loop-init.ps1 first.' }
+$manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$patternName = if (-not [string]::IsNullOrWhiteSpace($Pattern)) { $Pattern } elseif ($manifest.pattern) { [string]$manifest.pattern } else { 'daily-triage' }
+$patternPath = Join-Path $LayerRoot ("loops\{0}.json" -f $patternName)
+if (-not (Test-Path -LiteralPath $patternPath)) { throw "Unknown loop pattern '$patternName'." }
+$patternDoc = Get-Content -LiteralPath $patternPath -Raw | ConvertFrom-Json
+
+if ($manifest.layer_version -ne $currentVersion) { Add-Warning "Layer version drift: installed $($manifest.layer_version), current $currentVersion." }
+if ($manifest.pattern -ne $patternDoc.name) { Add-Warning "Pattern drift: manifest $($manifest.pattern), current $($patternDoc.name)." }
+
+$stateRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.stateFile) 'stateFile'
+$budgetRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.budgetFile) 'budgetFile'
+$runLogRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.runLogFile) 'runLogFile'
+$constraintsRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.constraintsFile) 'constraintsFile'
+Copy-Template 'templates\loops\LOOP.md' '.agent\loops\LOOP.md' ([bool]$ForceTemplates)
+Copy-Template 'templates\loops\loop-budget.md' $budgetRel ([bool]$ForceTemplates)
+Copy-Template 'templates\loops\loop-run-log.md' $runLogRel ([bool]$ForceTemplates)
+Copy-Template 'templates\loops\loop-constraints.md' $constraintsRel ([bool]$ForceTemplates)
+Copy-Template 'templates\loops\loop-state.md' $stateRel $false
+Copy-Template 'templates\loops\loop-state.md' '.agent\loops\loop-state.md' $false
+
+$updatedManifest = [ordered]@{
+  schema_version = 1
+  layer = 'lizard-agent-layer'
+  layer_version = $currentVersion
+  installed_at = if ($manifest.installed_at) { [string]$manifest.installed_at } else { (Get-Date).ToUniversalTime().ToString('o') }
+  synced_at = (Get-Date).ToUniversalTime().ToString('o')
+  pattern = [string]$patternDoc.name
+  readiness_level = [string]$patternDoc.readinessLevel
+  risk_level = [string]$patternDoc.riskLevel
+  state_file = [string]$patternDoc.stateFile
+  budget_file = [string]$patternDoc.budgetFile
+  run_log_file = [string]$patternDoc.runLogFile
+  constraints_file = [string]$patternDoc.constraintsFile
+  skills = @($patternDoc.skills)
+  allowed_actions = @($patternDoc.allowedActions)
+  denied_actions = @($patternDoc.deniedActions)
+  human_gates = @($patternDoc.humanGates)
+  managed_paths = @('.agent\loops\LOOP.md', $stateRel, $budgetRel, $runLogRel, $constraintsRel, '.agent\loops\loop-state.md', '.agent\loops\lizard-agent-layer.loop-install.json')
+}
+Add-Unique $Planned '.agent\loops\lizard-agent-layer.loop-install.json'
+if ($Apply) {
+  $updatedManifest | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+  Add-Unique $Written '.agent\loops\lizard-agent-layer.loop-install.json'
+}
+
+$report = [ordered]@{
+  generated_at = (Get-Date).ToUniversalTime().ToString('o')
+  mode = if ($Apply) { 'APPLY' } else { 'PREVIEW' }
+  target = $TargetRoot
+  pattern = [string]$patternDoc.name
+  current_layer_version = $currentVersion
+  installed_layer_version = [string]$manifest.layer_version
+  force_templates = $ForceTemplates.IsPresent
+  planned = @($Planned.ToArray())
+  written = @($Written.ToArray())
+  skipped = @($Skipped.ToArray())
+  warnings = @($Warnings.ToArray())
+  failures = @($Failures.ToArray())
+}
+$reportPath = Join-Path $EffectiveOutputDir 'loop-sync-report.json'
+$report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+
+if ($Json) {
+  $report | ConvertTo-Json -Depth 10
+} else {
+  Write-Host 'lizard-agent-layer loop sync'
+  Write-Host "Mode: $($report.mode)"
+  Write-Host "Target: $TargetRoot"
+  Write-Host "Pattern: $($patternDoc.name)"
+  Write-Host "Planned: $($Planned.Count)"
+  Write-Host "Written: $($Written.Count)"
+  Write-Host "Skipped: $($Skipped.Count)"
+  Write-Host "Warnings: $($Warnings.Count)"
+  Write-Host "Report: $reportPath"
+  if (-not $Apply) { Write-Host 'Preview only. Re-run with -Apply to update loop metadata or create missing files.' }
+}
+if ($Failures.Count -gt 0 -or ($Strict -and $Warnings.Count -gt 0)) { exit 1 }

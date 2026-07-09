@@ -106,7 +106,28 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.
 
 Use `-Apply -ForceManaged` only when the plan shows generated layer artifacts should be replaced from the current layer.
 
-## 12. Validate this layer before changing it
+## 12. Add report-only loop engineering when useful
+
+Install loop skills through the pack, then initialize a pattern-specific runtime after reviewing the plan:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs loop-engineering -Apply
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern daily-triage -WritePlan
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern daily-triage -Apply
+```
+
+Audit, report, sync, or estimate budget with:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-audit.ps1 -TargetPath D:\path\to\project -Strict
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-report.ps1 -TargetPath D:\path\to\project
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-sync.ps1 -TargetPath D:\path\to\project
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-cost.ps1 -Pattern daily-triage -Level L1 -Cadence 1d
+```
+
+See [Loop engineering](loop-engineering.md) for the readiness model and safety rules.
+
+## 13. Validate this layer before changing it
 
 Run the full local CI gate:
 

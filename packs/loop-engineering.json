@@ -1,0 +1,12 @@
+﻿{
+  "name": "loop-engineering",
+  "description": "Report-first loop engineering pack with triage, verifier, budget, state sync, constraints, CI triage, minimal-fix planning, and release readiness skills.",
+  "riskLevel": "medium",
+  "projectSize": "medium",
+  "stack": ["loop-engineering", "automation", "state", "budget", "verification"],
+  "harnesses": ["codex", "claude-code", "gemini"],
+  "skills": ["loop-triage", "loop-verifier", "loop-budget", "loop-state-sync", "loop-constraints", "ci-triage", "minimal-fix", "release-readiness"],
+  "verification": ["run loop-audit", "verify loop constraints", "confirm report-only default", "confirm human gates for high-risk actions"],
+  "recommendedForSignals": ["automation", "loop", "ci", "release", "multi-agent", "agent-runtime"],
+  "notes": "Start at L1 report-only. Move to L2 assisted only after loop signal quality, constraints, budget, state, and verifier checks are proven."
+}
