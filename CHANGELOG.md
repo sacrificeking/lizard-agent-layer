@@ -1,4 +1,15 @@
-# Changelog
+﻿# Changelog
+
+## 1.2.0 - 2026-07-08
+
+### Added
+
+- `update-target.ps1` as the plan-first workflow for installed target projects, including version comparison, manifest diff preview, conservative apply mode, and optional safe `-ForceManaged` refresh.
+- Target update reports under `.tmp/updates/` with `update-plan.md`, `update-report.json`, and pre/post manifest diff artifacts.
+- Applied update history in `.agent/lizard-agent-layer.update-history.jsonl` for future audits and repeatable integration upgrades.
+- Installer `-ForceManaged` support that refreshes layer-generated artifacts without overwriting unowned root instruction files.
+- Smoke coverage for update preview, update apply, requested pack preservation, update history, and strict post-update manifest diff.
+- Update target documentation and quick-start integration.
 
 ## 1.1.0 - 2026-07-08
 

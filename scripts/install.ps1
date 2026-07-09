@@ -1,10 +1,11 @@
-param(
+﻿param(
   [string]$TargetPath = (Get-Location).Path,
   [string]$Profile = "standard",
   [string[]]$Harnesses,
   [string[]]$Packs,
   [switch]$Apply,
   [switch]$Force,
+  [switch]$ForceManaged,
   [switch]$WritePlan,
   [string]$PlanPath
 )
@@ -240,6 +241,39 @@ function To-RelativeDisplay {
   return $Path
 }
 
+$ExistingLayerPathSet = New-Object System.Collections.Generic.HashSet[string]
+function Add-ExistingLayerPath {
+  param($Path)
+  $value = [string]$Path
+  if (-not [string]::IsNullOrWhiteSpace($value)) { $ExistingLayerPathSet.Add((Normalize-RelPath $value)) | Out-Null }
+}
+$ExistingInstallManifestPath = Join-Path $TargetRoot ".agent\lizard-agent-layer.install.json"
+if (Test-Path -LiteralPath $ExistingInstallManifestPath) {
+  $existingInstallManifest = Get-Content -LiteralPath $ExistingInstallManifestPath -Raw | ConvertFrom-Json
+  foreach ($path in @($existingInstallManifest.managed_paths)) { Add-ExistingLayerPath $path }
+  foreach ($path in @($existingInstallManifest.owned_paths)) { Add-ExistingLayerPath $path }
+}
+
+function Test-LayerGeneratedPath {
+  param([string]$RelativePath)
+  $rel = Normalize-RelPath $RelativePath
+  if ($ExistingLayerPathSet.Contains($rel)) { return $true }
+  foreach ($prefix in @('.agent\', '.agents\', '.claude\skills\', '.gemini\skills\', '.cursor\skills\')) {
+    if ($rel.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+  }
+  foreach ($exact in @('.agent', '.agents', '.claude\skills', '.gemini\skills', '.cursor\skills', '.cursor\rules\lizard-agent-layer.mdc')) {
+    if ($rel.Equals($exact, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+  }
+  if ($rel.EndsWith('.lizard-agent-layer.md', [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+  return $false
+}
+
+function Should-ReplacePath {
+  param([string]$Dest)
+  if ($Force) { return $true }
+  if (-not $ForceManaged) { return $false }
+  return (Test-LayerGeneratedPath (To-RelativeDisplay $Dest))
+}
 function New-MergeSuggestion {
   param([string]$Harness, [string]$InstructionPath, [string]$SidecarPath)
   $snippet = @(
@@ -379,13 +413,14 @@ function Copy-IfMissing {
   if (-not (Test-Path -LiteralPath $parent)) {
     if ($Apply) { New-Item -ItemType Directory -Path $parent | Out-Null }
   }
-  if ((Test-Path -LiteralPath $Dest) -and -not $Force) {
+  $shouldReplace = Should-ReplacePath $Dest
+  if ((Test-Path -LiteralPath $Dest) -and -not $shouldReplace) {
     Add-UniqueListItem $Skipped $label
     return
   }
   Add-UniqueListItem $Planned $label
   if ($Apply) {
-    Copy-Item -LiteralPath $Source -Destination $Dest -Force:$Force
+    Copy-Item -LiteralPath $Source -Destination $Dest -Force:$shouldReplace
     Add-UniqueListItem $Created $label
     Add-UniqueListItem $OwnedPaths $label
   }
@@ -412,7 +447,8 @@ function Write-IfMissing {
   if (-not (Test-Path -LiteralPath $parent)) {
     if ($Apply) { New-Item -ItemType Directory -Path $parent | Out-Null }
   }
-  if ((Test-Path -LiteralPath $Dest) -and -not $Force) {
+  $shouldReplace = Should-ReplacePath $Dest
+  if ((Test-Path -LiteralPath $Dest) -and -not $shouldReplace) {
     Add-UniqueListItem $Skipped $label
     return
   }
@@ -433,7 +469,8 @@ function Copy-InstructionFile {
   $dst = Join-Path $TargetRoot $dstRel
   $policy = if ($instruction.mergePolicy) { $instruction.mergePolicy } else { 'sidecar-if-exists' }
 
-  if ((Test-Path -LiteralPath $dst) -and -not $Force -and $policy -ne 'overwrite') {
+  $shouldReplaceInstruction = Should-ReplacePath $dst
+  if ((Test-Path -LiteralPath $dst) -and -not $shouldReplaceInstruction -and $policy -ne 'overwrite') {
     $existing = Get-Content -LiteralPath $dst -Raw -ErrorAction SilentlyContinue
     if ($existing -match 'lizard-agent-layer') {
       Add-UniqueListItem $Skipped $dstRel

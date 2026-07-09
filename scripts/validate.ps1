@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
 )
 
@@ -173,7 +173,7 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory | ForEach-
   if ([string]::IsNullOrWhiteSpace($values['description'])) { Fail "Skill '$folderName' has empty description." }
 }
 
-foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1', 'manifest-diff.ps1')) {
+foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1', 'manifest-diff.ps1', 'update-target.ps1')) {
   $path = Join-Path $LayerRoot "scripts\$script"
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing script $script."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }

@@ -1,4 +1,4 @@
-# CI
+﻿# CI
 
 `lizard-agent-layer` has one canonical local gate runner and one GitHub Actions workflow.
 
@@ -66,4 +66,4 @@ CI runs `scripts/pack-report.ps1 -Strict` after structural validation. This writ
 
 ## Smoke hardening
 
-The smoke test includes pack install checks, target pack overlay checks, `manifest-diff.ps1 -Strict`, and upgrade verification that requested packs are preserved.
+The smoke test includes pack install checks, target pack overlay checks, `manifest-diff.ps1 -Strict`, upgrade verification that requested packs are preserved, and `update-target.ps1` preview/apply coverage with update-history validation.

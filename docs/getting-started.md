@@ -1,4 +1,4 @@
-# Getting Started
+﻿# Getting Started
 
 ## 1. Analyze the target
 
@@ -90,7 +90,23 @@ After installing or upgrading a target, compare the install manifest against the
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project -Strict
 ```
 
-## 11. Validate this layer before changing it
+## 11. Update an installed target
+
+After this layer repository has a newer release, generate a reviewable update plan for the integrated project:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project
+```
+
+Review `update-plan.md`. If the selected profile, packs, harnesses, and manifest differences look correct, apply conservatively:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply
+```
+
+Use `-Apply -ForceManaged` only when the plan shows generated layer artifacts should be replaced from the current layer.
+
+## 12. Validate this layer before changing it
 
 Run the full local CI gate:
 

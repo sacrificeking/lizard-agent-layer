@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$TargetPath = (Get-Location).Path,
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [string]$OutputDir,
@@ -162,7 +162,11 @@ if ($differences.Count -eq 0) { $md.Add('- None') | Out-Null }
 else { foreach ($diff in @($differences.ToArray())) { $md.Add("- $($diff.kind): `$($diff.value)` - $($diff.details)") | Out-Null } }
 $md | Set-Content -LiteralPath $mdPath -Encoding UTF8
 
-if ($Json) { $report | ConvertTo-Json -Depth 10; exit 0 }
+if ($Json) {
+  $report | ConvertTo-Json -Depth 10
+  if ($Strict -and $differences.Count -gt 0) { exit 1 }
+  exit 0
+}
 Write-Host "Manifest diff: $status"
 Write-Host "Differences: $($differences.Count)"
 Write-Host "Report: $jsonPath"

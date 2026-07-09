@@ -1,4 +1,4 @@
-# Roadmap
+﻿# Roadmap
 
 ## Completed
 
@@ -15,7 +15,7 @@
 - Skill maturity levels with scoring, package support, and a certified example skill.
 - Drift intelligence with artifact hashes, token estimates, baseline reports, and CI gate.
 - Bundle pack system with curated project-shape manifests, analyzer recommendations, installer merge support, and CI validation.
-- Target pack overlays, pack-preserving upgrades, manifest diff checks, and stronger analyzer coverage for monorepos/non-Node/security/agent-runtime signals.
+- Target pack overlays, pack-preserving upgrades, manifest diff checks, plan-first target updates, update history, and stronger analyzer coverage for monorepos/non-Node/security/agent-runtime signals.
 
 ## Next
 

@@ -1,4 +1,4 @@
-# Manifest Diff
+﻿# Manifest Diff
 
 `manifest-diff.ps1` compares an installed target project against the current `lizard-agent-layer` source.
 
@@ -39,3 +39,7 @@ Reports are written under `.tmp/manifest-diff/`:
 ## Pack Overlays
 
 When a target uses `.lizard-agent-layer/packs/<name>.json`, manifest diff resolves it the same way the installer does. Overlay packs may use `extends` to include built-in packs before applying project-specific additions.
+
+## Relationship to Updates
+
+`update-target.ps1` uses manifest diff before every preview/apply and again after apply in strict mode. Use `manifest-diff.ps1` directly when you only need an audit. Use `update-target.ps1` when you want the plan-first update workflow with preserved profile, packs, harnesses, apply mode, and update history.

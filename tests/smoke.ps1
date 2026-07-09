@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$LayerRoot = (Split-Path -Parent $PSScriptRoot)
 )
 
@@ -13,6 +13,10 @@ $sidecarTarget = Join-Path $tmpRoot 'sidecar-target'
 $analysisTarget = Join-Path $tmpRoot 'analysis-target'
 $sidecarPlanPath = Join-Path $tmpRoot 'sidecar-install-plan.md'
 $packPlanPath = Join-Path $tmpRoot 'pack-install-plan.md'
+$overlayUpdatePlanPath = Join-Path $tmpRoot 'overlay-update-plan.md'
+$overlayUpdateOutputDir = Join-Path $tmpRoot 'overlay-update-output'
+$overlayUpdateApplyOutputDir = Join-Path $tmpRoot 'overlay-update-apply-output'
+$sidecarUpdateForceOutputDir = Join-Path $tmpRoot 'sidecar-update-force-output'
 $mergeSuggestionDir = Join-Path $tmpRoot 'merge-suggestions'
 
 foreach ($target in @($standardTarget, $packTarget, $overlayTarget, $cursorTarget, $sidecarTarget, $analysisTarget)) {
@@ -132,6 +136,38 @@ Run-Step 'upgrade preserves requested packs' {
   if (@($manifest.packs) -notcontains 'finance-app') { throw 'Upgrade did not preserve expanded base pack.' }
 }
 
+Run-Step 'update target preview plan' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\update-target.ps1') -TargetPath $overlayTarget -PlanPath $overlayUpdatePlanPath -OutputDir $overlayUpdateOutputDir | Out-String | Write-Host
+  if (-not (Test-Path -LiteralPath $overlayUpdatePlanPath)) { throw 'Expected update plan report.' }
+  $plan = Get-Content -LiteralPath $overlayUpdatePlanPath -Raw
+  foreach ($expected in @('# lizard-agent-layer update plan', 'Installed layer version', 'Current layer version', 'Requested packs: `project-overlay`', 'Preview only', 'Apply preserving existing files', 'Manifest differences')) {
+    if ($plan -notmatch [regex]::Escape($expected)) { throw "Expected update plan to contain: $expected" }
+  }
+  if (Test-Path -LiteralPath (Join-Path $overlayTarget '.agent\lizard-agent-layer.update-history.jsonl')) { throw 'Preview update wrote update history.' }
+  $reportPath = Join-Path $overlayUpdateOutputDir 'update-report.json'
+  if (-not (Test-Path -LiteralPath $reportPath)) { throw 'Expected update report JSON.' }
+  $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
+  if ($report.mode -ne 'PREVIEW') { throw "Expected PREVIEW update report, got $($report.mode)." }
+  if ($report.profile -ne 'minimal') { throw "Expected minimal update profile, got $($report.profile)." }
+  if (@($report.requested_packs) -notcontains 'project-overlay') { throw 'Update preview did not preserve requested overlay pack.' }
+}
+
+Run-Step 'update target apply preserves packs' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\update-target.ps1') -TargetPath $overlayTarget -OutputDir $overlayUpdateApplyOutputDir -Apply | Out-String | Write-Host
+  $manifest = Get-Content -LiteralPath (Join-Path $overlayTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  if (@($manifest.requested_packs) -notcontains 'project-overlay') { throw 'Update apply did not preserve requested overlay pack.' }
+  if (@($manifest.packs) -notcontains 'finance-app') { throw 'Update apply did not preserve expanded base pack.' }
+  $historyPath = Join-Path $overlayTarget '.agent\lizard-agent-layer.update-history.jsonl'
+  if (-not (Test-Path -LiteralPath $historyPath)) { throw 'Expected update history JSONL.' }
+  $history = @(Get-Content -LiteralPath $historyPath)
+  if ($history.Count -lt 1) { throw 'Expected at least one update history entry.' }
+  $last = $history[-1] | ConvertFrom-Json
+  $currentVersion = (Get-Content -LiteralPath (Join-Path $LayerRoot 'VERSION') -Raw).Trim()
+  if ($last.to_version -ne $currentVersion) { throw "Expected update history to_version $currentVersion, got $($last.to_version)." }
+  if (@($last.requested_packs) -notcontains 'project-overlay') { throw 'Update history did not preserve requested overlay pack.' }
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\manifest-diff.ps1') -TargetPath $overlayTarget -Strict | Out-String | Write-Host
+}
+
 Run-Step 'install preview standard multi-harness' {
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $standardTarget -Profile standard | Out-String | Write-Host
 }
@@ -204,6 +240,15 @@ Run-Step 'install apply sidecar target' {
   if (-not (Test-Path -LiteralPath (Join-Path $sidecarTarget 'AGENTS.lizard-agent-layer.md'))) { throw 'Expected sidecar AGENTS.lizard-agent-layer.md.' }
   $manifest = Get-Content -LiteralPath (Join-Path $sidecarTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
   if (@($manifest.merge_suggestions).Count -lt 1) { throw 'Expected merge suggestions in install manifest.' }
+}
+
+Run-Step 'update force managed preserves unowned instruction' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\update-target.ps1') -TargetPath $sidecarTarget -OutputDir $sidecarUpdateForceOutputDir -Apply -ForceManaged | Out-String | Write-Host
+  $agents = Get-Content -LiteralPath (Join-Path $sidecarTarget 'AGENTS.md') -Raw
+  if ($agents -match 'lizard-agent-layer') { throw 'ForceManaged update overwrote or modified unowned AGENTS.md.' }
+  if ($agents -notmatch '# Existing Project Instructions') { throw 'ForceManaged update changed existing AGENTS.md content.' }
+  $historyPath = Join-Path $sidecarTarget '.agent\lizard-agent-layer.update-history.jsonl'
+  if (-not (Test-Path -LiteralPath $historyPath)) { throw 'Expected sidecar update history JSONL.' }
 }
 
 Run-Step 'doctor sidecar non-strict' {

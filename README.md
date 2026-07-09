@@ -1,4 +1,4 @@
-# lizard-agent-layer
+﻿# lizard-agent-layer
 
 Portable agent infrastructure for projects that need consistent AI-assisted development across Codex, Claude, Gemini, Cursor, and generic AGENTS.md-compatible tools.
 
@@ -14,12 +14,13 @@ Portable agent infrastructure for projects that need consistent AI-assisted deve
 - Permission, memory, secret, handoff, and release protocols.
 - Preview-first installers that avoid clobbering target files.
 - Optional install plan reports with merge suggestions for existing instruction files.
+- Plan-first target updates with version comparison, manifest diff, apply mode, force-managed refresh, and update history.
 - Standalone merge suggestion reports with patch and copy-block artifacts.
 - Target analyzer for profile, harness, skill, pack, monorepo, non-Node, and risk recommendations.
 - Adapter matrix tests for every profile/harness combination.
 - Local CI runner plus GitHub Actions workflow for validate, packs, drift, quality, smoke, and matrix gates.
 - Quality registry with scoring, risk labels, maturity levels, drift detection, and Markdown/JSON reports.
-- Doctor, validation, upgrade, manifest-sync, manifest diff, scoring, and smoke-test scripts.
+- Doctor, validation, upgrade, manifest-sync, manifest diff, update-target, scoring, and smoke-test scripts.
 
 ## Profiles
 
@@ -95,6 +96,18 @@ Run an installed-target manifest diff:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project -Strict
 ```
 
+Generate a reviewable update plan for an installed target:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project
+```
+
+Apply the reviewed update conservatively:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply
+```
+
 Run a local quality report:
 
 ```powershell
@@ -135,6 +148,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\matrix.ps1
 - [Install plans](docs/install-plans.md)
 - [Merge suggestions](docs/merge-suggestions.md)
 - [Manifest diff](docs/manifest-diff.md)
+- [Update targets](docs/update-target.md)
 - [Target analysis](docs/target-analysis.md)
 - [Adapter matrix](docs/adapter-matrix.md)
 - [CI](docs/ci.md)
