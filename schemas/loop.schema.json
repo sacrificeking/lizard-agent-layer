@@ -1,4 +1,4 @@
-﻿{
+{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lizard-agent-layer.local/schemas/loop.schema.json",
   "title": "lizard-agent-layer loop pattern",
@@ -23,6 +23,9 @@
     "budgetFile": { "type": "string" },
     "runLogFile": { "type": "string" },
     "constraintsFile": { "type": "string" },
+    "worktreePolicyFile": { "type": "string" },
+    "assistedPlanFile": { "type": "string" },
+    "verifierFile": { "type": "string" },
     "skills": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
     "allowedActions": { "type": "array", "items": { "type": "string" } },
     "deniedActions": { "type": "array", "items": { "type": "string" } },

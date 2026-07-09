@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
 )
 
@@ -171,6 +171,13 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'loops') -Filter '*.json' -File
     if (-not (Is-SafeRelativePath $pathValue)) { Fail "Loop $($_.Name) $pathField is unsafe: $pathValue" }
     elseif ($pathValue.Replace('/', '\') -notmatch '^\.agent\\loops\\') { Warn "Loop $($_.Name) $pathField is outside .agent/loops: $pathValue" }
   }
+  foreach ($pathField in @('worktreePolicyFile', 'assistedPlanFile', 'verifierFile')) {
+    if ($loop.PSObject.Properties.Name -contains $pathField) {
+      $pathValue = [string]$loop.$pathField
+      if (-not (Is-SafeRelativePath $pathValue)) { Fail "Loop $($_.Name) $pathField is unsafe: $pathValue" }
+      elseif ($pathValue.Replace('/', '\') -notmatch '^\.agent\\loops\\') { Warn "Loop $($_.Name) $pathField is outside .agent/loops: $pathValue" }
+    }
+  }
   foreach ($skill in @($loop.skills)) {
     if (-not (Is-HyphenName ([string]$skill))) { Fail "Loop $($_.Name) references invalid skill name '$skill'."; continue }
     $skillPath = Join-Path $LayerRoot "skills\$skill\SKILL.md"
@@ -178,6 +185,18 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'loops') -Filter '*.json' -File
   }
   if (@($loop.allowedActions).Count -lt 1) { Fail "Loop $($_.Name) has no allowedActions." }
   if (@($loop.humanGates).Count -lt 1) { Fail "Loop $($_.Name) has no humanGates." }
+  if ($loop.readinessLevel -eq 'L2') {
+    foreach ($field in @('worktreePolicyFile', 'assistedPlanFile', 'verifierFile')) {
+      if (-not ($loop.PSObject.Properties.Name -contains $field)) { Fail "L2 loop $($_.Name) missing '$field'." }
+    }
+    foreach ($requiredSkill in @('worktree-isolation', 'minimal-fix', 'loop-verifier')) {
+      if (@($loop.skills) -notcontains $requiredSkill) { Fail "L2 loop $($_.Name) missing required skill '$requiredSkill'." }
+    }
+    foreach ($requiredGate in @('human_approval_before_worktree_apply', 'human_review_before_merge', 'verifier_required_before_done')) {
+      if (@($loop.humanGates) -notcontains $requiredGate) { Fail "L2 loop $($_.Name) missing required gate '$requiredGate'." }
+    }
+    if (@($loop.deniedActions) -notcontains 'auto-merge') { Fail "L2 loop $($_.Name) must deny auto-merge." }
+  }
   if ($loop.modelStrategy) {
     foreach ($bucket in @('cheap', 'strong')) {
       if (-not ($loop.modelStrategy.PSObject.Properties.Name -contains $bucket)) { Warn "Loop $($_.Name) modelStrategy missing '$bucket' bucket." }
@@ -231,7 +250,7 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory | ForEach-
   if ([string]::IsNullOrWhiteSpace($values['description'])) { Fail "Skill '$folderName' has empty description." }
 }
 
-foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1', 'manifest-diff.ps1', 'update-target.ps1', 'loop-init.ps1', 'loop-audit.ps1', 'loop-report.ps1', 'loop-sync.ps1', 'loop-cost.ps1')) {
+foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1', 'manifest-diff.ps1', 'update-target.ps1', 'loop-init.ps1', 'loop-audit.ps1', 'loop-report.ps1', 'loop-sync.ps1', 'loop-cost.ps1', 'loop-worktree.ps1', 'loop-verify.ps1')) {
   $path = Join-Path $LayerRoot "scripts\$script"
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing script $script."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }

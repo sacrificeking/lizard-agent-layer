@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$TargetPath = (Get-Location).Path,
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [string]$Pattern,
@@ -72,12 +72,26 @@ $stateRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.stateFile) 'state
 $budgetRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.budgetFile) 'budgetFile'
 $runLogRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.runLogFile) 'runLogFile'
 $constraintsRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.constraintsFile) 'constraintsFile'
+$worktreePolicyRel = $null
+$assistedPlanRel = $null
+$verifierRel = $null
+if (($patternDoc.PSObject.Properties.Name -contains 'worktreePolicyFile') -and -not [string]::IsNullOrWhiteSpace([string]$patternDoc.worktreePolicyFile)) { $worktreePolicyRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.worktreePolicyFile) 'worktreePolicyFile' }
+if (($patternDoc.PSObject.Properties.Name -contains 'assistedPlanFile') -and -not [string]::IsNullOrWhiteSpace([string]$patternDoc.assistedPlanFile)) { $assistedPlanRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.assistedPlanFile) 'assistedPlanFile' }
+if (($patternDoc.PSObject.Properties.Name -contains 'verifierFile') -and -not [string]::IsNullOrWhiteSpace([string]$patternDoc.verifierFile)) { $verifierRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.verifierFile) 'verifierFile' }
 Copy-Template 'templates\loops\LOOP.md' '.agent\loops\LOOP.md' ([bool]$ForceTemplates)
 Copy-Template 'templates\loops\loop-budget.md' $budgetRel ([bool]$ForceTemplates)
 Copy-Template 'templates\loops\loop-run-log.md' $runLogRel ([bool]$ForceTemplates)
 Copy-Template 'templates\loops\loop-constraints.md' $constraintsRel ([bool]$ForceTemplates)
 Copy-Template 'templates\loops\loop-state.md' $stateRel $false
 Copy-Template 'templates\loops\loop-state.md' '.agent\loops\loop-state.md' $false
+if ($worktreePolicyRel) { Copy-Template 'templates\loops\worktree-policy.md' $worktreePolicyRel ([bool]$ForceTemplates) }
+if ($assistedPlanRel) { Copy-Template 'templates\loops\assisted-fix-plan.md' $assistedPlanRel $false }
+if ($verifierRel) { Copy-Template 'templates\loops\loop-verifier-report.md' $verifierRel $false }
+
+$managedPaths = @('.agent\loops\LOOP.md', $stateRel, $budgetRel, $runLogRel, $constraintsRel, '.agent\loops\loop-state.md', '.agent\loops\lizard-agent-layer.loop-install.json')
+if ($worktreePolicyRel) { $managedPaths += $worktreePolicyRel }
+if ($assistedPlanRel) { $managedPaths += $assistedPlanRel }
+if ($verifierRel) { $managedPaths += $verifierRel }
 
 $updatedManifest = [ordered]@{
   schema_version = 1
@@ -92,11 +106,14 @@ $updatedManifest = [ordered]@{
   budget_file = [string]$patternDoc.budgetFile
   run_log_file = [string]$patternDoc.runLogFile
   constraints_file = [string]$patternDoc.constraintsFile
+  worktree_policy_file = if ($worktreePolicyRel) { [string]$patternDoc.worktreePolicyFile } else { $null }
+  assisted_plan_file = if ($assistedPlanRel) { [string]$patternDoc.assistedPlanFile } else { $null }
+  verifier_file = if ($verifierRel) { [string]$patternDoc.verifierFile } else { $null }
   skills = @($patternDoc.skills)
   allowed_actions = @($patternDoc.allowedActions)
   denied_actions = @($patternDoc.deniedActions)
   human_gates = @($patternDoc.humanGates)
-  managed_paths = @('.agent\loops\LOOP.md', $stateRel, $budgetRel, $runLogRel, $constraintsRel, '.agent\loops\loop-state.md', '.agent\loops\lizard-agent-layer.loop-install.json')
+  managed_paths = @($managedPaths)
 }
 Add-Unique $Planned '.agent\loops\lizard-agent-layer.loop-install.json'
 if ($Apply) {

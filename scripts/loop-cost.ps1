@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$Pattern = 'daily-triage',
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [ValidateSet('L0', 'L1', 'L2', 'L3')]
@@ -27,7 +27,7 @@ $perRun = [Math]::Round($baseTokens[$effectiveLevel] * $riskMultiplier[$risk] * 
 function Get-RunsPerDay {
   param([string]$Value)
   switch -Regex ($Value.ToLowerInvariant()) {
-    '^(manual|on-demand|ad-hoc)$' { return 0 }
+    '^(manual|manual only|on-demand|ad-hoc)$' { return 0 }
     '^daily$|^1d$' { return 1 }
     '^twice-daily$|^2d$' { return 2 }
     '^weekly$|^1w$' { return [double](1 / 7) }

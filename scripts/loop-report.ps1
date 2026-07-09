@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$TargetPath = (Get-Location).Path,
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [switch]$Strict,
@@ -56,6 +56,9 @@ if ($null -ne $manifest) {
   Add-FileStatus 'Budget' ([string]$manifest.budget_file)
   Add-FileStatus 'Run log' ([string]$manifest.run_log_file)
   Add-FileStatus 'Constraints' ([string]$manifest.constraints_file)
+  if (($manifest.PSObject.Properties.Name -contains 'worktree_policy_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.worktree_policy_file)) { Add-FileStatus 'Worktree policy' ([string]$manifest.worktree_policy_file) }
+  if (($manifest.PSObject.Properties.Name -contains 'assisted_plan_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.assisted_plan_file)) { Add-FileStatus 'Assisted fix plan' ([string]$manifest.assisted_plan_file) }
+  if (($manifest.PSObject.Properties.Name -contains 'verifier_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.verifier_file)) { Add-FileStatus 'Verifier report' ([string]$manifest.verifier_file) }
 }
 
 $report = [pscustomobject]@{
@@ -65,6 +68,9 @@ $report = [pscustomobject]@{
   installed_layer_version = if ($null -ne $manifest) { [string]$manifest.layer_version } else { $null }
   readiness_level = if ($null -ne $manifest) { [string]$manifest.readiness_level } else { $null }
   risk_level = if ($null -ne $manifest) { [string]$manifest.risk_level } else { $null }
+  worktree_policy_file = if ($null -ne $manifest -and ($manifest.PSObject.Properties.Name -contains 'worktree_policy_file')) { [string]$manifest.worktree_policy_file } else { $null }
+  assisted_plan_file = if ($null -ne $manifest -and ($manifest.PSObject.Properties.Name -contains 'assisted_plan_file')) { [string]$manifest.assisted_plan_file } else { $null }
+  verifier_file = if ($null -ne $manifest -and ($manifest.PSObject.Properties.Name -contains 'verifier_file')) { [string]$manifest.verifier_file } else { $null }
   skills = if ($null -ne $manifest) { @($manifest.skills) } else { @() }
   human_gates = if ($null -ne $manifest) { @($manifest.human_gates) } else { @() }
   files = @($fileRows | ForEach-Object { [pscustomobject]@{ label = [string]$_.label; path = [string]$_.path; exists = [bool]$_.exists; heading = if ($null -ne $_.heading) { [string]$_.heading } else { $null } } })

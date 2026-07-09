@@ -1,0 +1,28 @@
+{
+  "name": "minimal-fix-assist",
+  "description": "Human-approved L2 assisted loop for smallest-scope fixes in an isolated worktree with mandatory verifier review and no auto-merge.",
+  "readinessLevel": "L2",
+  "riskLevel": "medium",
+  "cadence": {
+    "recommended": "manual only",
+    "minimum": "on-demand",
+    "notes": "Run only after an L1 loop finding has proven useful and a human approves the specific item. Never schedule unattended."
+  },
+  "stateFile": ".agent/loops/minimal-fix-assist-state.md",
+  "budgetFile": ".agent/loops/loop-budget.md",
+  "runLogFile": ".agent/loops/loop-run-log.md",
+  "constraintsFile": ".agent/loops/loop-constraints.md",
+  "worktreePolicyFile": ".agent/loops/worktree-policy.md",
+  "assistedPlanFile": ".agent/loops/assisted-fix-plan.md",
+  "verifierFile": ".agent/loops/loop-verifier-report.md",
+  "skills": ["loop-triage", "loop-constraints", "loop-budget", "loop-state-sync", "worktree-isolation", "minimal-fix", "loop-verifier"],
+  "allowedActions": ["read repository state", "create isolated git worktree after explicit approval", "prepare smallest approved diff in assisted worktree", "run approved verification commands", "write verifier report", "append run log", "update loop state"],
+  "deniedActions": ["auto-merge", "push commits", "publish releases", "deploy", "edit secrets", "edit migrations without separate approval", "change dependencies without separate approval", "modify main worktree", "mark done without verifier"],
+  "humanGates": ["human_review_before_write", "human_review_before_release", "human_approval_before_worktree_apply", "human_review_before_merge", "human_review_before_dependency_change", "human_review_before_migration_change", "verifier_required_before_done"],
+  "modelStrategy": {
+    "cheap": ["scope inventory", "worktree plan", "checklist expansion", "state update"],
+    "strong": ["minimal fix design", "failed verification diagnosis", "security/auth/finance impact", "release-sensitive verdict"]
+  },
+  "successMetrics": ["all writes isolated from main worktree", "smallest approved diff", "verifier report exists before completion", "no auto-merge or push", "rollback path recorded"],
+  "notes": "L2 is assisted, not autonomous. It may prepare a change only after explicit approval, in an isolated worktree, with mandatory verifier review before any merge decision."
+}

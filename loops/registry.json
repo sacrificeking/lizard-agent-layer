@@ -1,26 +1,33 @@
-﻿{
-  "schema_version": 1,
-  "patterns": [
-    {
-      "name": "daily-triage",
-      "file": "loops/daily-triage.json",
-      "readinessLevel": "L1",
-      "riskLevel": "low",
-      "description": "Report-only daily project triage loop for risks, stale work, open decisions, and next suggested actions."
-    },
-    {
-      "name": "release-readiness",
-      "file": "loops/release-readiness.json",
-      "readinessLevel": "L1",
-      "riskLevel": "medium",
-      "description": "Report-only release readiness loop for version, changelog, quality gates, drift, and human release decisions."
-    },
-    {
-      "name": "layer-update-watch",
-      "file": "loops/layer-update-watch.json",
-      "readinessLevel": "L1",
-      "riskLevel": "medium",
-      "description": "Report-only loop for comparing installed target projects against the current lizard-agent-layer version and producing update plans."
-    }
-  ]
+{
+    "schema_version":  1,
+    "patterns":  [
+                     {
+                         "name":  "daily-triage",
+                         "file":  "loops/daily-triage.json",
+                         "readinessLevel":  "L1",
+                         "riskLevel":  "low",
+                         "description":  "Report-only daily project triage loop for risks, stale work, open decisions, and next suggested actions."
+                     },
+                     {
+                         "name":  "release-readiness",
+                         "file":  "loops/release-readiness.json",
+                         "readinessLevel":  "L1",
+                         "riskLevel":  "medium",
+                         "description":  "Report-only release readiness loop for version, changelog, quality gates, drift, and human release decisions."
+                     },
+                     {
+                         "name":  "layer-update-watch",
+                         "file":  "loops/layer-update-watch.json",
+                         "readinessLevel":  "L1",
+                         "riskLevel":  "medium",
+                         "description":  "Report-only loop for comparing installed target projects against the current lizard-agent-layer version and producing update plans."
+                     },
+                     {
+                         "name":  "minimal-fix-assist",
+                         "file":  "loops/minimal-fix-assist.json",
+                         "readinessLevel":  "L2",
+                         "riskLevel":  "medium",
+                         "description":  "Human-approved L2 assisted loop for smallest-scope fixes in an isolated worktree with mandatory verifier review and no auto-merge."
+                     }
+                 ]
 }

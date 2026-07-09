@@ -1,4 +1,4 @@
-﻿# Packs
+# Packs
 
 Packs are reusable bundle manifests for common project shapes. A profile sets the base posture; packs add stack-specific skills, harnesses, verification notes, model preferences, risk level, project size, and install-plan context.
 
@@ -13,7 +13,7 @@ Use packs when a project needs more precision than `minimal`, `standard`, or `su
 | `supabase-react` | React plus Supabase database, auth, edge functions, generated types | high | Supabase, edge functions, data quality, security hardening |
 | `finance-app` | Finance, crypto, DeFi, stocks, market data, DCA, portfolio workflows | high | Data provenance, stale-data checks, release and dependency discipline |
 | `agent-runtime` | Applications that run agents, model routing, tools, memory, evals | high | Runtime-agent boundaries, fallback, permission and evaluation checks |
-| `loop-engineering` | Report-only recurring agent workflows, update watches, release readiness loops | medium | Loop triage, verifier, state sync, constraints, cost and CI triage skills |
+| `loop-engineering` | Report-only and assisted agent workflows, update watches, release readiness loops | medium | Loop triage, verifier, state sync, constraints, worktree isolation, cost and CI triage skills |
 | `security-hardening` | Secrets, auth, permissions, CI, dependencies, production risk | high | Security hardening, git safety, dependency upgrade, research audit |
 
 ## Usage
@@ -72,7 +72,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\ci.ps1
 - Add only skills and harnesses that should apply together most of the time.
 - Keep verification steps concrete enough to guide an agent but generic enough to adapt per repository.
 - Use high risk when incorrect behavior could affect secrets, auth, production data, user money, or runtime agent permissions.
-- Keep loop packs report-only by default and promote beyond L1 only after tests, ownership, and human gates are explicit.
+- Keep loop packs report-only by default. Promote to L2 only for human-approved assisted worktree fixes with verifier reports and no auto-merge.
 
 ## Target Pack Overlays
 

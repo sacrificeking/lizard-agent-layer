@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-07-09T15:00:40.5130557Z",
-    "layer_version":  "1.3.0",
-    "artifact_count":  77,
-    "total_bytes":  69407,
-    "token_estimate":  17338,
+    "generated_at":  "2026-07-09T15:33:32.2976837Z",
+    "layer_version":  "1.4.0",
+    "artifact_count":  82,
+    "total_bytes":  78489,
+    "token_estimate":  19613,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -286,6 +286,15 @@
                           "token_estimate":  168
                       },
                       {
+                          "kind":  "skill",
+                          "path":  "skills/worktree-isolation/SKILL.md",
+                          "sha256":  "33e1146ceaa11f1100d3a0f6bb7ebf105c57928a9c87c80202c360c05c910ba0",
+                          "bytes":  2329,
+                          "lines":  61,
+                          "words":  355,
+                          "token_estimate":  583
+                      },
+                      {
                           "kind":  "protocol",
                           "path":  "protocols/handoff.md",
                           "sha256":  "48af0a902b07f9176b4169b996137e24e323d595accbe360d0f35937b7aa71cf",
@@ -432,11 +441,11 @@
                       {
                           "kind":  "pack",
                           "path":  "packs/loop-engineering.json",
-                          "sha256":  "611d2f2e2a0f41a9b6961eb9b6aeb78dfceba00bc05d81d95fcc2aebe93d3748",
-                          "bytes":  936,
-                          "lines":  13,
-                          "words":  91,
-                          "token_estimate":  234
+                          "sha256":  "96e561060bb06427ecbf76aef4cca6a4bd1a9301b151b9080f4a8a7ffc2bd600",
+                          "bytes":  1979,
+                          "lines":  47,
+                          "words":  123,
+                          "token_estimate":  495
                       },
                       {
                           "kind":  "pack",
@@ -476,12 +485,21 @@
                       },
                       {
                           "kind":  "loop",
+                          "path":  "loops/minimal-fix-assist.json",
+                          "sha256":  "f7b5714b04f5c328caf91928a2a2c6afcb36b2f497a5f20e5fb68d83be36b765",
+                          "bytes":  2359,
+                          "lines":  29,
+                          "words":  215,
+                          "token_estimate":  590
+                      },
+                      {
+                          "kind":  "loop",
                           "path":  "loops/registry.json",
-                          "sha256":  "3f73b362f43dc233ae7276ec66cc5134501fef52a109df5fb2c0d6e7056e93e7",
-                          "bytes":  913,
-                          "lines":  27,
-                          "words":  85,
-                          "token_estimate":  228
+                          "sha256":  "c6920b93a6815325c84ed70e6de43f0a250f94794f5d96ec435fbd34431e7d17",
+                          "bytes":  1809,
+                          "lines":  34,
+                          "words":  114,
+                          "token_estimate":  453
                       },
                       {
                           "kind":  "loop",
@@ -500,6 +518,15 @@
                           "lines":  11,
                           "words":  14,
                           "token_estimate":  39
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/loops/assisted-fix-plan.md",
+                          "sha256":  "0e7ec0c3db8bbb831d5c0fb81c0612d5ab6dc1011d3d8aded9785a102945eb85",
+                          "bytes":  631,
+                          "lines":  40,
+                          "words":  87,
+                          "token_estimate":  158
                       },
                       {
                           "kind":  "template",
@@ -545,6 +572,24 @@
                           "lines":  30,
                           "words":  83,
                           "token_estimate":  118
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/loops/loop-verifier-report.md",
+                          "sha256":  "0ec049c07752ff53d1f5c2fc0e1e2793fc402014a9f33694d768c7f44668ce95",
+                          "bytes":  406,
+                          "lines":  32,
+                          "words":  54,
+                          "token_estimate":  102
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/loops/worktree-policy.md",
+                          "sha256":  "00552a1e9d6eec94c485489d718e6d5e412fb0f8c9b8910e888708c571826c0c",
+                          "bytes":  1281,
+                          "lines":  26,
+                          "words":  188,
+                          "token_estimate":  321
                       },
                       {
                           "kind":  "template",
@@ -630,11 +675,11 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/loop.schema.json",
-                          "sha256":  "352bfbcd12b2da811cf1180b9369dda86e7535f4e05d9be313ffa3b41336b9ea",
-                          "bytes":  1763,
-                          "lines":  43,
-                          "words":  192,
-                          "token_estimate":  440
+                          "sha256":  "318c7e8709c11d66440d92b71772298cd6468430d1ecfd6033d9bbf3e9cdc8b8",
+                          "bytes":  1900,
+                          "lines":  46,
+                          "words":  207,
+                          "token_estimate":  475
                       },
                       {
                           "kind":  "schema",

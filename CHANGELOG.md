@@ -1,5 +1,13 @@
-﻿# Changelog
+# Changelog
 
+## 1.4.0 - 2026-07-09
+
+### Added
+
+- L2 assisted loop support with `minimal-fix-assist`, isolated git worktree creation, mandatory verifier reporting, and explicit no-auto-merge posture.
+- `worktree-isolation` skill plus `worktree-policy.md`, `assisted-fix-plan.md`, and `loop-verifier-report.md` runtime templates.
+- `loop-worktree.ps1` for preview-first, human-approved worktree creation and `loop-verify.ps1` for verifier decision packets.
+- L2 validation, audit, sync, report, pack, and smoke coverage to enforce worktree isolation, verifier requirements, and human merge review gates.
 ## 1.3.0 - 2026-07-09
 
 ### Added

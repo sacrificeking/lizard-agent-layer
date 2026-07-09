@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$TargetPath = (Get-Location).Path,
   [string]$Pattern = 'daily-triage',
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
@@ -125,6 +125,18 @@ $stateFileRel = Assert-SafeRelativeTargetPath -Path ([string]$PatternDoc.stateFi
 $budgetFileRel = Assert-SafeRelativeTargetPath -Path ([string]$PatternDoc.budgetFile) -Label 'budgetFile'
 $runLogFileRel = Assert-SafeRelativeTargetPath -Path ([string]$PatternDoc.runLogFile) -Label 'runLogFile'
 $constraintsFileRel = Assert-SafeRelativeTargetPath -Path ([string]$PatternDoc.constraintsFile) -Label 'constraintsFile'
+$worktreePolicyRel = $null
+$assistedPlanRel = $null
+$verifierRel = $null
+if (($PatternDoc.PSObject.Properties.Name -contains 'worktreePolicyFile') -and -not [string]::IsNullOrWhiteSpace([string]$PatternDoc.worktreePolicyFile)) {
+  $worktreePolicyRel = Assert-SafeRelativeTargetPath -Path ([string]$PatternDoc.worktreePolicyFile) -Label 'worktreePolicyFile'
+}
+if (($PatternDoc.PSObject.Properties.Name -contains 'assistedPlanFile') -and -not [string]::IsNullOrWhiteSpace([string]$PatternDoc.assistedPlanFile)) {
+  $assistedPlanRel = Assert-SafeRelativeTargetPath -Path ([string]$PatternDoc.assistedPlanFile) -Label 'assistedPlanFile'
+}
+if (($PatternDoc.PSObject.Properties.Name -contains 'verifierFile') -and -not [string]::IsNullOrWhiteSpace([string]$PatternDoc.verifierFile)) {
+  $verifierRel = Assert-SafeRelativeTargetPath -Path ([string]$PatternDoc.verifierFile) -Label 'verifierFile'
+}
 
 Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\LOOP.md') (Join-Path $loopsRoot 'LOOP.md')
 Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\loop-budget.md') (Join-Path $TargetRoot $budgetFileRel)
@@ -132,6 +144,9 @@ Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\loop-run-log.md') (Join-Path
 Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\loop-constraints.md') (Join-Path $TargetRoot $constraintsFileRel)
 Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\loop-state.md') (Join-Path $TargetRoot $stateFileRel)
 Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\loop-state.md') (Join-Path $loopsRoot 'loop-state.md')
+if ($worktreePolicyRel) { Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\worktree-policy.md') (Join-Path $TargetRoot $worktreePolicyRel) }
+if ($assistedPlanRel) { Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\assisted-fix-plan.md') (Join-Path $TargetRoot $assistedPlanRel) }
+if ($verifierRel) { Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\loop-verifier-report.md') (Join-Path $TargetRoot $verifierRel) }
 
 $manifestPath = Join-Path $loopsRoot 'lizard-agent-layer.loop-install.json'
 $manifestRel = To-TargetRel $manifestPath
@@ -150,6 +165,9 @@ $manifest = [ordered]@{
   budget_file = [string]$PatternDoc.budgetFile
   run_log_file = [string]$PatternDoc.runLogFile
   constraints_file = [string]$PatternDoc.constraintsFile
+  worktree_policy_file = if ($worktreePolicyRel) { [string]$PatternDoc.worktreePolicyFile } else { $null }
+  assisted_plan_file = if ($assistedPlanRel) { [string]$PatternDoc.assistedPlanFile } else { $null }
+  verifier_file = if ($verifierRel) { [string]$PatternDoc.verifierFile } else { $null }
   skills = @($PatternDoc.skills)
   allowed_actions = @($PatternDoc.allowedActions)
   denied_actions = @($PatternDoc.deniedActions)
@@ -167,7 +185,8 @@ $planLines.Add(('- Pattern: `{0}`' -f $PatternDoc.name)) | Out-Null
 $planLines.Add(('- Readiness: `{0}`' -f $PatternDoc.readinessLevel)) | Out-Null
 $planLines.Add(('- Risk: `{0}`' -f $PatternDoc.riskLevel)) | Out-Null
 $planLines.Add(('- Layer version: `{0}`' -f $LayerVersion)) | Out-Null
-$planLines.Add('- Default action: report-only') | Out-Null
+$defaultAction = if ([string]$PatternDoc.readinessLevel -eq 'L2') { 'assisted worktree only; no auto-merge' } else { 'report-only' }
+$planLines.Add(('- Default action: {0}' -f $defaultAction)) | Out-Null
 $planLines.Add('- Existing files: skipped unless `-Force` is supplied') | Out-Null
 $planLines.Add('') | Out-Null
 $planLines.Add('## Planned paths') | Out-Null
@@ -196,6 +215,7 @@ $report = [ordered]@{
   written = @($Written.ToArray())
   skipped = @($Skipped.ToArray())
   managed_paths = @($manifestManaged.ToArray())
+  default_action = $defaultAction
   plan_path = $EffectivePlanPath
 }
 $report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $EffectiveOutputDir 'loop-init-report.json') -Encoding UTF8

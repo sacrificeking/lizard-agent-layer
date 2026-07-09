@@ -1,4 +1,4 @@
-﻿# Getting Started
+# Getting Started
 
 ## 1. Analyze the target
 
@@ -106,7 +106,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.
 
 Use `-Apply -ForceManaged` only when the plan shows generated layer artifacts should be replaced from the current layer.
 
-## 12. Add report-only loop engineering when useful
+## 12. Add loop engineering when useful
 
 Install loop skills through the pack, then initialize a pattern-specific runtime after reviewing the plan:
 
@@ -123,6 +123,15 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-audit.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-report.ps1 -TargetPath D:\path\to\project
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-sync.ps1 -TargetPath D:\path\to\project
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-cost.ps1 -Pattern daily-triage -Level L1 -Cadence 1d
+```
+
+For L2 assisted fixes, initialize `minimal-fix-assist`, preview the worktree, and require `-Apply -HumanApproved` before any worktree is created:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern minimal-fix-assist -WritePlan
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123 -Apply -HumanApproved
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-verify.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -Verifier reviewer-name -Status NEEDS_REVIEW -Apply
 ```
 
 See [Loop engineering](loop-engineering.md) for the readiness model and safety rules.

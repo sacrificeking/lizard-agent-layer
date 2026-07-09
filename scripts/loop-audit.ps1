@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$TargetPath = (Get-Location).Path,
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [string]$Pattern,
@@ -69,6 +69,9 @@ if ($manifest) {
   Test-RelativeFile ([string]$manifest.budget_file) 'Loop budget file' | Out-Null
   Test-RelativeFile ([string]$manifest.run_log_file) 'Loop run log file' | Out-Null
   Test-RelativeFile ([string]$manifest.constraints_file) 'Loop constraints file' | Out-Null
+  if (($manifest.PSObject.Properties.Name -contains 'worktree_policy_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.worktree_policy_file)) { Test-RelativeFile ([string]$manifest.worktree_policy_file) 'Loop worktree policy file' | Out-Null }
+  if (($manifest.PSObject.Properties.Name -contains 'assisted_plan_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.assisted_plan_file)) { Test-RelativeFile ([string]$manifest.assisted_plan_file) 'Loop assisted fix plan file' | Out-Null }
+  if (($manifest.PSObject.Properties.Name -contains 'verifier_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.verifier_file)) { Test-RelativeFile ([string]$manifest.verifier_file) 'Loop verifier report file' | Out-Null }
   foreach ($skill in @($manifest.skills)) {
     $skillName = [string]$skill
     $candidates = @(
@@ -87,8 +90,19 @@ if ($manifest) {
 }
 
 if ($patternDoc) {
-  if ($patternDoc.readinessLevel -ne 'L1') { Add-Warning "Pattern $patternName is $($patternDoc.readinessLevel); current hardening expects L1/report-only unless explicitly reviewed." }
-  if (@($patternDoc.allowedActions) -contains 'write') { Add-Warning "Pattern $patternName allows write actions; verify human gates before use." }
+  if ($patternDoc.readinessLevel -eq 'L2') {
+    Add-Pass "Pattern $patternName is L2 assisted; strict audit checks worktree and verifier gates."
+    foreach ($requiredGate in @('human_review_before_write', 'human_approval_before_worktree_apply', 'human_review_before_merge', 'verifier_required_before_done')) {
+      if (@($patternDoc.humanGates) -notcontains $requiredGate) { Add-Failure "L2 pattern $patternName does not declare gate: $requiredGate" }
+    }
+    foreach ($requiredSkill in @('worktree-isolation', 'minimal-fix', 'loop-verifier')) {
+      if (@($patternDoc.skills) -notcontains $requiredSkill) { Add-Failure "L2 pattern $patternName does not include required skill: $requiredSkill" }
+    }
+    if (@($patternDoc.deniedActions) -notcontains 'auto-merge') { Add-Failure "L2 pattern $patternName must deny auto-merge." }
+  } elseif ($patternDoc.readinessLevel -ne 'L1') {
+    Add-Warning "Pattern $patternName is $($patternDoc.readinessLevel); current hardening expects L1 or reviewed L2 only."
+  }
+  if (@($patternDoc.allowedActions) -contains 'write') { Add-Warning "Pattern $patternName allows broad write action; use specific assisted actions and verify human gates." }
   foreach ($requiredGate in @('human_review_before_write', 'human_review_before_release')) {
     if (@($patternDoc.humanGates) -notcontains $requiredGate) { Add-Warning "Pattern $patternName does not declare gate: $requiredGate" }
   }

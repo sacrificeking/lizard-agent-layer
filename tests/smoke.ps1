@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$LayerRoot = (Split-Path -Parent $PSScriptRoot)
 )
 
@@ -12,6 +12,7 @@ $cursorTarget = Join-Path $tmpRoot 'cursor-target'
 $sidecarTarget = Join-Path $tmpRoot 'sidecar-target'
 $analysisTarget = Join-Path $tmpRoot 'analysis-target'
 $loopTarget = Join-Path $tmpRoot 'loop-target'
+$l2Target = Join-Path $tmpRoot 'l2-target'
 $sidecarPlanPath = Join-Path $tmpRoot 'sidecar-install-plan.md'
 $packPlanPath = Join-Path $tmpRoot 'pack-install-plan.md'
 $overlayUpdatePlanPath = Join-Path $tmpRoot 'overlay-update-plan.md'
@@ -24,8 +25,14 @@ $loopOutputDir = Join-Path $tmpRoot 'loop-init-output'
 $loopAuditOutputDir = Join-Path $tmpRoot 'loop-audit-output'
 $loopReportOutputDir = Join-Path $tmpRoot 'loop-report-output'
 $loopSyncOutputDir = Join-Path $tmpRoot 'loop-sync-output'
+$l2PlanPath = Join-Path $tmpRoot 'l2-loop-init-plan.md'
+$l2InitOutputDir = Join-Path $tmpRoot 'l2-loop-init-output'
+$l2AuditOutputDir = Join-Path $tmpRoot 'l2-loop-audit-output'
+$l2WorktreeOutputDir = Join-Path $tmpRoot 'l2-worktree-output'
+$l2VerifyOutputDir = Join-Path $tmpRoot 'l2-verify-output'
+$l2WorktreePath = Join-Path $tmpRoot 'l2-assisted-worktree'
 
-foreach ($target in @($standardTarget, $packTarget, $overlayTarget, $cursorTarget, $sidecarTarget, $analysisTarget, $loopTarget)) {
+foreach ($target in @($standardTarget, $packTarget, $overlayTarget, $cursorTarget, $sidecarTarget, $analysisTarget, $loopTarget, $l2Target)) {
   New-Item -ItemType Directory -Path $target -Force | Out-Null
 }
 New-Item -ItemType Directory -Path (Join-Path $overlayTarget '.lizard-agent-layer\packs') -Force | Out-Null
@@ -44,6 +51,7 @@ Set-Content -LiteralPath (Join-Path $sidecarTarget 'README.md') -Value '# sideca
 Set-Content -LiteralPath (Join-Path $sidecarTarget 'AGENTS.md') -Value '# Existing Project Instructions' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'README.md') -Value '# analysis smoke target' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $loopTarget 'README.md') -Value '# loop smoke target' -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $l2Target 'README.md') -Value '# l2 loop smoke target' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'package.json') -Value '{"dependencies":{"@supabase/supabase-js":"latest","react":"latest","openai":"latest"},"devDependencies":{"typescript":"latest","vite":"latest","tailwindcss":"latest"},"workspaces":["apps/*"]}' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'vite.config.ts') -Value 'export default {}' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'tsconfig.json') -Value '{}' -Encoding UTF8
@@ -53,6 +61,13 @@ Set-Content -LiteralPath (Join-Path $analysisTarget '.github\workflows\ci.yml') 
 Set-Content -LiteralPath (Join-Path $analysisTarget 'src\pages\finance\dca\stocks-dca.ts') -Value 'export const marker = true;' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'src\agents\openai\rag\agent.ts') -Value 'export const agent = true;' -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $analysisTarget 'src\lib\auth\token\jwt.ts') -Value 'export const token = true;' -Encoding UTF8
+& git -C $l2Target init | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'Failed to initialize L2 smoke git repository.' }
+& git -C $l2Target config user.email 'smoke@example.invalid'
+& git -C $l2Target config user.name 'Smoke Test'
+& git -C $l2Target add README.md
+& git -C $l2Target commit -m 'init l2 smoke target' | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'Failed to commit L2 smoke repository.' }
 
 $overlayPack = @{
   name = 'project-overlay'
@@ -122,7 +137,7 @@ Run-Step 'install apply loop engineering pack' {
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $loopTarget -Profile minimal -Packs loop-engineering -Apply | Out-String | Write-Host
   $manifest = Get-Content -LiteralPath (Join-Path $loopTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
   if (@($manifest.requested_packs) -notcontains 'loop-engineering') { throw 'Expected requested loop-engineering pack.' }
-  foreach ($expectedSkill in @('loop-triage', 'loop-verifier', 'loop-budget', 'loop-state-sync', 'loop-constraints', 'ci-triage', 'minimal-fix', 'release-readiness')) {
+  foreach ($expectedSkill in @('loop-triage', 'loop-verifier', 'loop-budget', 'loop-state-sync', 'loop-constraints', 'worktree-isolation', 'ci-triage', 'minimal-fix', 'release-readiness')) {
     if (-not (Test-Path -LiteralPath (Join-Path $loopTarget ".agent\skills\$expectedSkill\SKILL.md"))) { throw "Expected installed loop skill: $expectedSkill" }
   }
 }
@@ -149,6 +164,35 @@ Run-Step 'loop init apply and gates' {
   $cost = $costJson | ConvertFrom-Json
   if ($cost.pattern -ne 'daily-triage') { throw "Expected daily-triage cost pattern, got $($cost.pattern)." }
   if ($cost.estimated_tokens_daily -le 0 -or $cost.estimated_tokens_daily -gt 10000) { throw "Unexpected daily loop token estimate: $($cost.estimated_tokens_daily)." }
+}
+
+Run-Step 'L2 assisted loop init' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $l2Target -Profile minimal -Packs loop-engineering -Apply | Out-String | Write-Host
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-init.ps1') -TargetPath $l2Target -Pattern minimal-fix-assist -WritePlan -PlanPath $l2PlanPath -OutputDir $l2InitOutputDir | Out-String | Write-Host
+  if (-not (Test-Path -LiteralPath $l2PlanPath)) { throw 'Expected L2 loop init preview plan.' }
+  if (Test-Path -LiteralPath (Join-Path $l2Target '.agent\loops')) { throw 'L2 loop init preview wrote .agent/loops into target.' }
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-init.ps1') -TargetPath $l2Target -Pattern minimal-fix-assist -OutputDir $l2InitOutputDir -Apply | Out-String | Write-Host
+  foreach ($expectedPath in @('.agent\loops\worktree-policy.md', '.agent\loops\assisted-fix-plan.md', '.agent\loops\loop-verifier-report.md', '.agent\loops\minimal-fix-assist-state.md')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $l2Target $expectedPath))) { throw "Expected L2 runtime artifact: $expectedPath" }
+  }
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-audit.ps1') -TargetPath $l2Target -OutputDir $l2AuditOutputDir -Strict | Out-String | Write-Host
+}
+
+Run-Step 'L2 worktree and verifier gates' {
+  $branch = 'lizard/l2/smoke-fix'
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-worktree.ps1') -TargetPath $l2Target -ItemId smoke-fix -Branch $branch -WorktreePath $l2WorktreePath -OutputDir $l2WorktreeOutputDir | Out-String | Write-Host
+  if (Test-Path -LiteralPath $l2WorktreePath) { throw 'L2 worktree preview created a worktree.' }
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-worktree.ps1') -TargetPath $l2Target -ItemId smoke-fix -Branch $branch -WorktreePath $l2WorktreePath -OutputDir $l2WorktreeOutputDir -Apply -HumanApproved | Out-String | Write-Host
+  if (-not (Test-Path -LiteralPath $l2WorktreePath)) { throw 'Expected L2 assisted worktree to exist after approved apply.' }
+  $worktreeReport = Get-Content -LiteralPath (Join-Path $l2WorktreeOutputDir 'loop-worktree-report.json') -Raw | ConvertFrom-Json
+  if ($worktreeReport.auto_merge -ne $false) { throw 'L2 worktree report must keep auto_merge false.' }
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -WorktreePath $l2WorktreePath -Branch $branch -Verifier smoke-verifier -Status NEEDS_REVIEW -Summary 'Smoke verifier packet generated.' -OutputDir $l2VerifyOutputDir -Apply | Out-String | Write-Host
+  $targetVerifier = Join-Path $l2Target '.agent\loops\loop-verifier-report.md'
+  if (-not (Test-Path -LiteralPath $targetVerifier)) { throw 'Expected target verifier report.' }
+  $verifierText = Get-Content -LiteralPath $targetVerifier -Raw
+  foreach ($expected in @('Auto-merge: forbidden', 'Human merge review required: true', 'Merge allowed automatically: false')) {
+    if ($verifierText -notmatch [regex]::Escape($expected)) { throw "Expected verifier report to contain: $expected" }
+  }
 }
 
 Run-Step 'install apply target pack overlay' {
