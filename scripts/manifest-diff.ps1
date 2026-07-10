@@ -3,14 +3,19 @@
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [string]$OutputDir,
   [switch]$Json,
-  [switch]$Strict
+  [switch]$Strict,
+  [switch]$AllowTargetReportWrite
 )
 
 $ErrorActionPreference = "Stop"
-$TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
+$TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp\manifest-diff' }
-New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+if (-not $AllowTargetReportWrite) { Assert-PathOutsideRoot -Path $OutputDir -ExcludedRoot $TargetRoot -Label 'OutputDir' }
+$OutputDir = Initialize-SafeDirectory -Path $OutputDir
 
 $manifestPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.install.json'
 $profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
@@ -146,7 +151,7 @@ $report = [ordered]@{
 
 $jsonPath = Join-Path $OutputDir 'manifest-diff.json'
 $mdPath = Join-Path $OutputDir 'manifest-diff.md'
-$report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $OutputDir -Path $jsonPath -Value ($report | ConvertTo-Json -Depth 10)
 $md = New-Object System.Collections.Generic.List[string]
 $md.Add('# lizard-agent-layer manifest diff') | Out-Null
 $md.Add('') | Out-Null
@@ -160,7 +165,7 @@ $md.Add('## Differences') | Out-Null
 $md.Add('') | Out-Null
 if ($differences.Count -eq 0) { $md.Add('- None') | Out-Null }
 else { foreach ($diff in @($differences.ToArray())) { $md.Add("- $($diff.kind): `$($diff.value)` - $($diff.details)") | Out-Null } }
-$md | Set-Content -LiteralPath $mdPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $OutputDir -Path $mdPath -Value $md
 
 if ($Json) {
   $report | ConvertTo-Json -Depth 10

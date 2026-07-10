@@ -11,7 +11,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-$TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 $EffectiveOutputDir = if ([string]::IsNullOrWhiteSpace($OutputDir)) { Join-Path $LayerRoot ".tmp\loops\sync-$stamp" } elseif ([System.IO.Path]::IsPathRooted($OutputDir)) { $OutputDir } else { Join-Path (Get-Location).Path $OutputDir }
 function Is-UnderPath {
@@ -22,7 +24,7 @@ function Is-UnderPath {
   return $full.StartsWith(($rootFull + [System.IO.Path]::DirectorySeparatorChar), [System.StringComparison]::OrdinalIgnoreCase)
 }
 if (-not $Apply -and (Is-UnderPath -Path $EffectiveOutputDir -Root $TargetRoot)) { throw 'OutputDir would write inside the target during preview. Choose a path outside the target or use -Apply.' }
-New-Item -ItemType Directory -Path $EffectiveOutputDir -Force | Out-Null
+$EffectiveOutputDir = Initialize-SafeDirectory -Path $EffectiveOutputDir
 
 $Failures = New-Object System.Collections.Generic.List[string]
 $Warnings = New-Object System.Collections.Generic.List[string]
@@ -43,14 +45,14 @@ function Assert-SafeRelativeTargetPath {
 function Copy-Template {
   param([string]$Template, [string]$DestRel, [bool]$CanOverwrite)
   $source = Join-Path $LayerRoot $Template
-  $dest = Join-Path $TargetRoot $DestRel
+  $dest = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $DestRel)
   if (-not (Test-Path -LiteralPath $source)) { Add-Failure "Template missing: $Template"; return }
   if ((Test-Path -LiteralPath $dest) -and -not $CanOverwrite) { Add-Unique $Skipped $DestRel; return }
   Add-Unique $Planned $DestRel
   if ($Apply) {
     $parent = Split-Path -Parent $dest
-    if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
-    Copy-Item -LiteralPath $source -Destination $dest -Force:$CanOverwrite
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $parent | Out-Null }
+    Copy-SafeItem -AuthorizedRoot $TargetRoot -Source $source -Destination $dest -Force:$CanOverwrite
     Add-Unique $Written $DestRel
   }
 }
@@ -117,7 +119,7 @@ $updatedManifest = [ordered]@{
 }
 Add-Unique $Planned '.agent\loops\lizard-agent-layer.loop-install.json'
 if ($Apply) {
-  $updatedManifest | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+  Set-SafeContent -AuthorizedRoot $TargetRoot -Path $manifestPath -Value ($updatedManifest | ConvertTo-Json -Depth 10)
   Add-Unique $Written '.agent\loops\lizard-agent-layer.loop-install.json'
 }
 
@@ -136,7 +138,7 @@ $report = [ordered]@{
   failures = @($Failures.ToArray())
 }
 $reportPath = Join-Path $EffectiveOutputDir 'loop-sync-report.json'
-$report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $EffectiveOutputDir -Path $reportPath -Value ($report | ConvertTo-Json -Depth 10)
 
 if ($Json) {
   $report | ConvertTo-Json -Depth 10

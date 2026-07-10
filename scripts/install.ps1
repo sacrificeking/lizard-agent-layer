@@ -7,13 +7,15 @@
   [switch]$Force,
   [switch]$ForceManaged,
   [switch]$WritePlan,
-  [string]$PlanPath
+  [string]$PlanPath,
+  [switch]$AllowTargetReportWrite
 )
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LayerRoot = Split-Path -Parent $ScriptDir
-$TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $ProfilePath = Join-Path $LayerRoot "profiles\$Profile.json"
 $VersionPath = Join-Path $LayerRoot "VERSION"
 $LayerVersion = if (Test-Path -LiteralPath $VersionPath) { (Get-Content -LiteralPath $VersionPath -Raw).Trim() } else { "0.0.0-dev" }
@@ -200,8 +202,9 @@ function Resolve-PlanReportPath {
 
 if ($ShouldWritePlan) {
   $EffectivePlanPath = Resolve-PlanReportPath
+  if (-not $AllowTargetReportWrite) { Assert-PathOutsideRoot -Path $EffectivePlanPath -ExcludedRoot $TargetRoot -Label 'PlanPath' }
   $planParent = Split-Path -Parent $EffectivePlanPath
-  if ($planParent -and -not (Test-Path -LiteralPath $planParent)) { New-Item -ItemType Directory -Path $planParent -Force | Out-Null }
+  if ($planParent) { $planParent = Initialize-SafeDirectory -Path $planParent }
 }
 $Mode = if ($Apply) { "APPLY" } else { "PREVIEW" }
 $Planned = New-Object System.Collections.Generic.List[string]
@@ -385,11 +388,12 @@ function New-InstallPlanMarkdown {
 function Write-PlanReport {
   if (-not $ShouldWritePlan) { return }
   $markdown = New-InstallPlanMarkdown
-  Set-Content -LiteralPath $EffectivePlanPath -Value $markdown -Encoding UTF8
+  Set-SafeContent -AuthorizedRoot $planParent -Path $EffectivePlanPath -Value $markdown
 }
 
 function Ensure-Dir {
   param([string]$Path)
+  $Path = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $Path
   $label = To-RelativeDisplay $Path
   Add-UniqueListItem $ManagedPaths $label
   if (Test-Path -LiteralPath $Path) {
@@ -398,7 +402,7 @@ function Ensure-Dir {
   }
   Add-UniqueListItem $Planned $label
   if ($Apply) {
-    New-Item -ItemType Directory -Path $Path | Out-Null
+    New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $Path | Out-Null
     Add-UniqueListItem $Created $label
     Add-UniqueListItem $OwnedPaths $label
   }
@@ -407,11 +411,12 @@ function Ensure-Dir {
 function Copy-IfMissing {
   param([string]$Source, [string]$Dest)
   if (-not (Test-Path -LiteralPath $Source)) { throw "Missing source file: $Source" }
+  $Dest = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $Dest
   $label = To-RelativeDisplay $Dest
   Add-UniqueListItem $ManagedPaths $label
   $parent = Split-Path -Parent $Dest
   if (-not (Test-Path -LiteralPath $parent)) {
-    if ($Apply) { New-Item -ItemType Directory -Path $parent | Out-Null }
+    if ($Apply) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $parent | Out-Null }
   }
   $shouldReplace = Should-ReplacePath $Dest
   if ((Test-Path -LiteralPath $Dest) -and -not $shouldReplace) {
@@ -420,7 +425,7 @@ function Copy-IfMissing {
   }
   Add-UniqueListItem $Planned $label
   if ($Apply) {
-    Copy-Item -LiteralPath $Source -Destination $Dest -Force:$shouldReplace
+    Copy-SafeItem -AuthorizedRoot $TargetRoot -Source $Source -Destination $Dest -Force:$shouldReplace
     Add-UniqueListItem $Created $label
     Add-UniqueListItem $OwnedPaths $label
   }
@@ -441,11 +446,12 @@ function Copy-SkillPackage {
 }
 function Write-IfMissing {
   param([string]$Dest, [string]$Content)
+  $Dest = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $Dest
   $label = To-RelativeDisplay $Dest
   Add-UniqueListItem $ManagedPaths $label
   $parent = Split-Path -Parent $Dest
   if (-not (Test-Path -LiteralPath $parent)) {
-    if ($Apply) { New-Item -ItemType Directory -Path $parent | Out-Null }
+    if ($Apply) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $parent | Out-Null }
   }
   $shouldReplace = Should-ReplacePath $Dest
   if ((Test-Path -LiteralPath $Dest) -and -not $shouldReplace) {
@@ -454,7 +460,7 @@ function Write-IfMissing {
   }
   Add-UniqueListItem $Planned $label
   if ($Apply) {
-    Set-Content -LiteralPath $Dest -Value $Content -Encoding UTF8
+    Set-SafeContent -AuthorizedRoot $TargetRoot -Path $Dest -Value $Content
     Add-UniqueListItem $Created $label
     Add-UniqueListItem $OwnedPaths $label
   }
@@ -537,7 +543,7 @@ function Write-InstallManifest {
   $doc['merge_needed'] = @($MergeNeeded.ToArray())
   $doc['merge_suggestions'] = @($MergeSuggestions.ToArray())
   if ($Apply) {
-    $doc | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+    Set-SafeContent -AuthorizedRoot $TargetRoot -Path $manifestPath -Value ($doc | ConvertTo-Json -Depth 10)
     Add-UniqueListItem $Created $label
     Add-UniqueListItem $OwnedPaths $label
   } else {

@@ -13,7 +13,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-$TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 
 function Sanitize-Name {
@@ -46,7 +48,10 @@ $defaultWorktree = Join-Path $LayerRoot (".tmp\loops\worktrees\{0}-{1}-{2}" -f $
 $EffectiveWorktreePath = Resolve-UserPath -Path $WorktreePath -Fallback $defaultWorktree
 $EffectiveOutputDir = Resolve-UserPath -Path $OutputDir -Fallback (Join-Path $LayerRoot ".tmp\loops\worktree-$stamp")
 if (-not $Apply -and (Is-UnderPath -Path $EffectiveOutputDir -Root $TargetRoot)) { throw 'OutputDir would write inside the target during preview. Choose a path outside the target or use -Apply.' }
-New-Item -ItemType Directory -Path $EffectiveOutputDir -Force | Out-Null
+if (Is-UnderPath -Path $EffectiveWorktreePath -Root $TargetRoot) { throw 'WorktreePath must stay outside TargetPath.' }
+$worktreeParent = Split-Path -Parent $EffectiveWorktreePath
+$EffectiveWorktreePath = Resolve-SafeTargetDestination -AuthorizedRoot $worktreeParent -DestinationPath $EffectiveWorktreePath
+$EffectiveOutputDir = Initialize-SafeDirectory -Path $EffectiveOutputDir
 
 $failures = @()
 $warnings = @()
@@ -82,7 +87,8 @@ $mode = if ($Apply) { 'APPLY' } else { 'PREVIEW' }
 $created = $false
 if ($Apply -and $failures.Count -eq 0) {
   $parent = Split-Path -Parent $EffectiveWorktreePath
-  if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+  if ($parent -and -not (Test-Path -LiteralPath $parent)) { Initialize-SafeDirectory -Path $parent | Out-Null }
+  $EffectiveWorktreePath = Resolve-SafeTargetDestination -AuthorizedRoot $parent -DestinationPath $EffectiveWorktreePath
   $worktreeOutput = & git -C $TargetRoot worktree add --quiet -b $Branch $EffectiveWorktreePath $BaseRef 2>&1
   if ($LASTEXITCODE -ne 0) { $failures = Add-Item $failures "git worktree add failed: $worktreeOutput" }
   else { $created = $true }
@@ -112,7 +118,7 @@ $report = [pscustomobject]@{
 }
 $jsonPath = Join-Path $EffectiveOutputDir 'loop-worktree-report.json'
 $mdPath = Join-Path $EffectiveOutputDir 'loop-worktree-plan.md'
-$report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $EffectiveOutputDir -Path $jsonPath -Value ($report | ConvertTo-Json -Depth 8)
 
 $lines = @()
 $lines += '# lizard-agent-layer L2 worktree plan'
@@ -140,7 +146,7 @@ $lines += ''
 $lines += '## Failures'
 $lines += ''
 if ($failures.Count -eq 0) { $lines += '- None' } else { foreach ($failure in $failures) { $lines += ('- {0}' -f $failure) } }
-$lines | Set-Content -LiteralPath $mdPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $EffectiveOutputDir -Path $mdPath -Value $lines
 
 if ($Json) {
   $report | ConvertTo-Json -Depth 8

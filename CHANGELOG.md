@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Shared `scripts/Lizard.SafeFs.psm1` guard for canonical destination containment, linked-ancestor rejection, safe directory creation, and guarded copy/content writes.
+- Focused unit and adversarial safety suites covering ordinary paths, root equality, traversal, Windows junctions or Unix symlinks, force modes, harness mirrors, and preview report boundaries.
+- Machine-readable focused-test reports under `.tmp/tests/` and a mandatory focused-safety CI step.
+
+### Changed
+
+- Routed installer, updater, manifest, loop lifecycle, report, matrix, drift, quality, and CI writes through explicit authorized roots with immediate pre-mutation rechecks.
+- Report-producing commands now reject target-local output by default where preview/no-op behavior applies; `-AllowTargetReportWrite` is an explicit compatibility escape hatch on supported commands.
+- Worktree creation now rejects target-equal or target-contained destinations before invoking Git.
+
 ## 1.4.1 - 2026-07-10
 
 ### Added

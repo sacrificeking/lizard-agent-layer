@@ -41,4 +41,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\merge-suggesti
 
 ## Safety behavior
 
-Preview plus `-WritePlan` writes only the requested report file. It does not create `.agent/`, harness instruction files, skill mirrors, or sidecars in the target. Apply mode can also write a plan, but the plan is a report artifact and is not tracked as a layer-owned target path.
+Preview plus `-WritePlan` writes only the requested report file. It does not create `.agent/`, harness instruction files, skill mirrors, or sidecars in the target. The plan path must remain outside the target by default and is protected by the same linked-ancestor checks as target writes.
+
+For a deliberate compatibility case, `-AllowTargetReportWrite` permits a target-local plan after explicit opt-in. Such a plan is a report artifact and is not tracked as a layer-owned target path.

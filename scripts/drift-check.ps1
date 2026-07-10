@@ -8,9 +8,12 @@
 
 $ErrorActionPreference = "Stop"
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 if ([string]::IsNullOrWhiteSpace($BaselinePath)) { $BaselinePath = Join-Path $LayerRoot 'registry\drift-baseline.json' }
 if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp\drift' }
-New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+$OutputDir = Initialize-SafeDirectory -Path $OutputDir
 
 function Get-RelativePath {
   param([string]$Path)
@@ -177,9 +180,10 @@ if ($baselineExists) {
 }
 
 if ($UpdateBaseline) {
+  $BaselinePath = ConvertTo-LizardFullPath -Path $BaselinePath
   $parent = Split-Path -Parent $BaselinePath
-  if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
-  $current | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $BaselinePath -Encoding UTF8
+  if ($parent) { $parent = Initialize-SafeDirectory -Path $parent }
+  Set-SafeContent -AuthorizedRoot $parent -Path $BaselinePath -Value ($current | ConvertTo-Json -Depth 8)
   $baseline = $current
   $baselineExists = $true
   $comparison = [ordered]@{ status = 'updated'; added = @(); changed = @(); removed = @(); added_count = 0; changed_count = 0; removed_count = 0; token_delta = 0 }
@@ -213,7 +217,7 @@ $report = [ordered]@{
 
 $jsonPath = Join-Path $OutputDir 'drift-report.json'
 $mdPath = Join-Path $OutputDir 'drift-report.md'
-$report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $OutputDir -Path $jsonPath -Value ($report | ConvertTo-Json -Depth 10)
 
 $md = New-Object System.Collections.Generic.List[string]
 $md.Add('# Lizard Agent Layer Drift Report') | Out-Null
@@ -240,7 +244,7 @@ $md.Add('') | Out-Null
 Add-MarkdownTable $md 'Added Artifacts' @($comparison.added) 'artifact'
 Add-MarkdownTable $md 'Changed Artifacts' @($comparison.changed) 'changed'
 Add-MarkdownTable $md 'Removed Artifacts' @($comparison.removed) 'artifact'
-$md | Set-Content -LiteralPath $mdPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $OutputDir -Path $mdPath -Value $md
 
 Write-Host "Drift status: $($report.status)"
 Write-Host "Artifacts: $($current.artifact_count), token estimate: $($current.token_estimate)"

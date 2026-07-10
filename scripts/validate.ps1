@@ -257,6 +257,13 @@ foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifes
   catch { Fail "PowerShell parse failure in ${script}: $($_.Exception.Message)" }
 }
 
+foreach ($relative in @('scripts\Lizard.SafeFs.psm1', 'tests\TestHelpers.psm1', 'tests\run-focused.ps1', 'tests\unit\safe-fs.tests.ps1', 'tests\adversarial\install-containment.tests.ps1')) {
+  $path = Join-Path $LayerRoot $relative
+  if (-not (Test-Path -LiteralPath $path)) { Fail "Missing safety artifact $relative."; continue }
+  try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }
+  catch { Fail "PowerShell parse failure in ${relative}: $($_.Exception.Message)" }
+}
+
 if ($Warnings.Count -gt 0) {
   Write-Host 'Warnings:'
   foreach ($warning in $Warnings) { Write-Host "  WARN $warning" }

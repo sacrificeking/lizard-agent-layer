@@ -8,13 +8,15 @@
   [switch]$ForceManaged,
   [switch]$Json,
   [string]$PlanPath,
-  [string]$OutputDir
+  [string]$OutputDir,
+  [switch]$AllowTargetReportWrite
 )
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-$TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $manifestPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.install.json'
 $profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
 $versionPath = Join-Path $LayerRoot 'VERSION'
@@ -215,10 +217,14 @@ $Mode = if ($Apply) { 'APPLY' } else { 'PREVIEW' }
 
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 $effectiveOutputDir = Resolve-UserPath -Path $OutputDir -Fallback (Join-Path $LayerRoot ".tmp\updates\$stamp")
-New-Item -ItemType Directory -Path $effectiveOutputDir -Force | Out-Null
 $effectivePlanPath = Resolve-UserPath -Path $PlanPath -Fallback (Join-Path $effectiveOutputDir 'update-plan.md')
+if (-not $AllowTargetReportWrite) {
+  Assert-PathOutsideRoot -Path $effectiveOutputDir -ExcludedRoot $TargetRoot -Label 'OutputDir'
+  Assert-PathOutsideRoot -Path $effectivePlanPath -ExcludedRoot $TargetRoot -Label 'PlanPath'
+}
+$effectiveOutputDir = Initialize-SafeDirectory -Path $effectiveOutputDir
 $planParent = Split-Path -Parent $effectivePlanPath
-if ($planParent -and -not (Test-Path -LiteralPath $planParent)) { New-Item -ItemType Directory -Path $planParent -Force | Out-Null }
+if ($planParent) { $planParent = Initialize-SafeDirectory -Path $planParent }
 $preDiffDir = Join-Path $effectiveOutputDir 'pre-manifest-diff'
 $postDiffDir = Join-Path $effectiveOutputDir 'post-manifest-diff'
 $installPlanPath = Join-Path $effectiveOutputDir 'install-plan.md'
@@ -226,7 +232,7 @@ $reportPath = Join-Path $effectiveOutputDir 'update-report.json'
 
 $preDiff = Invoke-ManifestDiff -DiffOutputDir $preDiffDir
 $updatePlan = New-UpdatePlanMarkdown -DiffReport $preDiff
-Set-Content -LiteralPath $effectivePlanPath -Value $updatePlan -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $planParent -Path $effectivePlanPath -Value $updatePlan
 
 $postDiff = $null
 $installOutput = $null
@@ -267,7 +273,7 @@ if ($Apply) {
     post_manifest_status = [string]$postDiff.status
     post_manifest_differences = [int]$postDiff.summary.differences
   }
-  ($historyEntry | ConvertTo-Json -Depth 10 -Compress) | Add-Content -LiteralPath $historyPath -Encoding UTF8
+  Add-SafeContent -AuthorizedRoot $TargetRoot -Path $historyPath -Value ($historyEntry | ConvertTo-Json -Depth 10 -Compress)
 }
 
 $report = [ordered]@{
@@ -289,7 +295,7 @@ $report = [ordered]@{
   pre_manifest_diff = [ordered]@{ status = [string]$preDiff.status; differences = [int]$preDiff.summary.differences; report_dir = $preDiffDir }
   post_manifest_diff = if ($postDiff) { [ordered]@{ status = [string]$postDiff.status; differences = [int]$postDiff.summary.differences; report_dir = $postDiffDir } } else { $null }
 }
-$report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $effectiveOutputDir -Path $reportPath -Value ($report | ConvertTo-Json -Depth 10)
 
 if ($Json) {
   $report | ConvertTo-Json -Depth 10

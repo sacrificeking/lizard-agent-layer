@@ -11,7 +11,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-$TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $VersionPath = Join-Path $LayerRoot 'VERSION'
 $LayerVersion = if (Test-Path -LiteralPath $VersionPath) { (Get-Content -LiteralPath $VersionPath -Raw).Trim() } else { '0.0.0-dev' }
 $PatternPath = Join-Path $LayerRoot ("loops\{0}.json" -f $Pattern)
@@ -68,30 +70,30 @@ function Add-Unique {
 function Copy-Or-Skip {
   param([string]$Source, [string]$Dest)
   if (-not (Test-Path -LiteralPath $Source)) { throw "Missing source file: $Source" }
-  if (-not (Is-UnderPath -Path $Dest -Root $TargetRoot)) { throw "Refusing to write outside target: $Dest" }
+  $Dest = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $Dest
   $rel = To-TargetRel $Dest
   Add-Unique $Managed $rel
   if ((Test-Path -LiteralPath $Dest) -and -not $Force) { Add-Unique $Skipped $rel; return }
   Add-Unique $Planned $rel
   if ($Apply) {
     $parent = Split-Path -Parent $Dest
-    if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
-    Copy-Item -LiteralPath $Source -Destination $Dest -Force:$Force
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $parent | Out-Null }
+    Copy-SafeItem -AuthorizedRoot $TargetRoot -Source $Source -Destination $Dest -Force:$Force
     Add-Unique $Written $rel
   }
 }
 
 function Write-Or-Skip {
   param([string]$Dest, [string]$Content)
-  if (-not (Is-UnderPath -Path $Dest -Root $TargetRoot)) { throw "Refusing to write outside target: $Dest" }
+  $Dest = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $Dest
   $rel = To-TargetRel $Dest
   Add-Unique $Managed $rel
   if ((Test-Path -LiteralPath $Dest) -and -not $Force) { Add-Unique $Skipped $rel; return }
   Add-Unique $Planned $rel
   if ($Apply) {
     $parent = Split-Path -Parent $Dest
-    if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
-    Set-Content -LiteralPath $Dest -Value $Content -Encoding UTF8
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $parent | Out-Null }
+    Set-SafeContent -AuthorizedRoot $TargetRoot -Path $Dest -Value $Content
     Add-Unique $Written $rel
   }
 }
@@ -102,10 +104,10 @@ $ShouldWritePlan = $WritePlan.IsPresent -or -not [string]::IsNullOrWhiteSpace($P
 $EffectivePlanPath = if ($ShouldWritePlan) { Resolve-UserPath -Path $PlanPath -Fallback (Join-Path $EffectiveOutputDir 'loop-init-plan.md') } else { $null }
 Assert-PreviewOutputOutsideTarget -Path $EffectiveOutputDir -Label 'OutputDir'
 Assert-PreviewOutputOutsideTarget -Path $EffectivePlanPath -Label 'PlanPath'
-New-Item -ItemType Directory -Path $EffectiveOutputDir -Force | Out-Null
+$EffectiveOutputDir = Initialize-SafeDirectory -Path $EffectiveOutputDir
 if ($EffectivePlanPath) {
   $planParent = Split-Path -Parent $EffectivePlanPath
-  if ($planParent -and -not (Test-Path -LiteralPath $planParent)) { New-Item -ItemType Directory -Path $planParent -Force | Out-Null }
+  if ($planParent) { $planParent = Initialize-SafeDirectory -Path $planParent }
 }
 
 $Mode = if ($Apply) { 'APPLY' } else { 'PREVIEW' }
@@ -116,7 +118,7 @@ $Managed = New-Object System.Collections.Generic.List[string]
 $loopsRoot = Join-Path $TargetRoot '.agent\loops'
 if (-not (Test-Path -LiteralPath $loopsRoot)) {
   Add-Unique $Planned '.agent\loops'
-  if ($Apply) { New-Item -ItemType Directory -Path $loopsRoot -Force | Out-Null; Add-Unique $Written '.agent\loops' }
+  if ($Apply) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $loopsRoot | Out-Null; Add-Unique $Written '.agent\loops' }
 } else {
   Add-Unique $Skipped '.agent\loops'
 }
@@ -200,7 +202,7 @@ $planLines.Add('') | Out-Null
 $planLines.Add('## Human gates') | Out-Null
 $planLines.Add('') | Out-Null
 foreach ($gate in @($PatternDoc.humanGates)) { $planLines.Add(('- {0}' -f $gate)) | Out-Null }
-if ($ShouldWritePlan) { $planLines | Set-Content -LiteralPath $EffectivePlanPath -Encoding UTF8 }
+if ($ShouldWritePlan) { Set-SafeContent -AuthorizedRoot $planParent -Path $EffectivePlanPath -Value $planLines }
 
 $report = [ordered]@{
   generated_at = (Get-Date).ToUniversalTime().ToString('o')
@@ -218,7 +220,7 @@ $report = [ordered]@{
   default_action = $defaultAction
   plan_path = $EffectivePlanPath
 }
-$report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $EffectiveOutputDir 'loop-init-report.json') -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $EffectiveOutputDir -Path (Join-Path $EffectiveOutputDir 'loop-init-report.json') -Value ($report | ConvertTo-Json -Depth 10)
 
 Write-Host "lizard-agent-layer loop init $Mode"
 Write-Host "Target: $TargetRoot"

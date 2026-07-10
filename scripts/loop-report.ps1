@@ -3,15 +3,20 @@ param(
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [switch]$Strict,
   [switch]$Json,
-  [string]$OutputDir
+  [string]$OutputDir,
+  [switch]$AllowTargetReportWrite
 )
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-$TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
+$TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 $EffectiveOutputDir = if ([string]::IsNullOrWhiteSpace($OutputDir)) { Join-Path $LayerRoot ".tmp\loops\report-$stamp" } elseif ([System.IO.Path]::IsPathRooted($OutputDir)) { $OutputDir } else { Join-Path (Get-Location).Path $OutputDir }
-New-Item -ItemType Directory -Path $EffectiveOutputDir -Force | Out-Null
+if (-not $AllowTargetReportWrite) { Assert-PathOutsideRoot -Path $EffectiveOutputDir -ExcludedRoot $TargetRoot -Label 'OutputDir' }
+$EffectiveOutputDir = Initialize-SafeDirectory -Path $EffectiveOutputDir
 
 $failures = @()
 $fileRows = @()
@@ -78,7 +83,7 @@ $report = [pscustomobject]@{
 }
 $jsonPath = Join-Path $EffectiveOutputDir 'loop-report.json'
 $mdPath = Join-Path $EffectiveOutputDir 'loop-report.md'
-$report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $EffectiveOutputDir -Path $jsonPath -Value ($report | ConvertTo-Json -Depth 10)
 
 $lines = @()
 $lines += '# lizard-agent-layer loop report'
@@ -103,7 +108,7 @@ $lines += ''
 $lines += '## Failures'
 $lines += ''
 if ($failures.Count -eq 0) { $lines += '- None' } else { foreach ($failure in $failures) { $lines += ('- {0}' -f $failure) } }
-$lines | Set-Content -LiteralPath $mdPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $EffectiveOutputDir -Path $mdPath -Value $lines
 
 if ($Json) {
   $report | ConvertTo-Json -Depth 10

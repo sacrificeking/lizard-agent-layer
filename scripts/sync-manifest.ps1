@@ -4,7 +4,9 @@
 )
 
 $ErrorActionPreference = "Stop"
-$TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $SkillsRoot = Join-Path $TargetRoot '.agent\skills'
 if (-not (Test-Path -LiteralPath $SkillsRoot)) { throw "Missing .agent\skills in target: $TargetRoot" }
 
@@ -28,8 +30,8 @@ $indexContent = $indexLines -join "`n"
 $manifestContent = $manifestLines -join "`n"
 
 if ($Apply) {
-  Set-Content -LiteralPath (Join-Path $SkillsRoot '_index.md') -Value $indexContent -Encoding UTF8
-  Set-Content -LiteralPath (Join-Path $SkillsRoot '_manifest.jsonl') -Value $manifestContent -Encoding UTF8
+  Set-SafeContent -AuthorizedRoot $TargetRoot -Path (Join-Path $SkillsRoot '_index.md') -Value $indexContent
+  Set-SafeContent -AuthorizedRoot $TargetRoot -Path (Join-Path $SkillsRoot '_manifest.jsonl') -Value $manifestContent
   Write-Host "Synced manifest in $SkillsRoot"
 } else {
   Write-Host 'Preview generated _index.md:'

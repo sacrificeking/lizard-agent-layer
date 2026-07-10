@@ -6,6 +6,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $profilesRoot = Join-Path $LayerRoot 'profiles'
 $adaptersRoot = Join-Path $LayerRoot 'adapters'
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
@@ -34,7 +38,7 @@ if ($selectedHarnesses.Count -eq 0) {
   $selectedHarnesses = @(Get-ChildItem -LiteralPath $adaptersRoot -Directory | ForEach-Object { $_.Name } | Sort-Object)
 }
 
-New-Item -ItemType Directory -Path $tmpRoot -Force | Out-Null
+$tmpRoot = Initialize-SafeDirectory -Path $tmpRoot
 
 Write-Host "lizard-agent-layer matrix"
 Write-Host "Layer: $LayerRoot"
@@ -51,8 +55,8 @@ foreach ($profile in $selectedProfiles) {
     if (-not (Test-Path -LiteralPath $adapterPath)) { throw "Unknown harness '$harness'." }
 
     $target = Join-Path $tmpRoot "$profile--$harness"
-    New-Item -ItemType Directory -Path $target -Force | Out-Null
-    Set-Content -LiteralPath (Join-Path $target 'README.md') -Value "# matrix $profile $harness" -Encoding UTF8
+    New-SafeDirectory -AuthorizedRoot $tmpRoot -Path $target | Out-Null
+    Set-SafeContent -AuthorizedRoot $target -Path (Join-Path $target 'README.md') -Value "# matrix $profile $harness"
 
     $status = 'pass'
     $message = ''
@@ -85,7 +89,7 @@ $report['profiles'] = @($selectedProfiles)
 $report['harnesses'] = @($selectedHarnesses)
 $report['results'] = @($results.ToArray())
 $reportPath = Join-Path $tmpRoot 'matrix-report.json'
-$report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $reportPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $tmpRoot -Path $reportPath -Value ($report | ConvertTo-Json -Depth 8)
 
 $failures = @($results | Where-Object { $_.status -ne 'pass' })
 Write-Host ""

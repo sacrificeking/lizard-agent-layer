@@ -10,6 +10,9 @@
 
 $ErrorActionPreference = "Stop"
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $StartedAt = Get-Date
 $Results = New-Object System.Collections.Generic.List[object]
 
@@ -50,6 +53,9 @@ Write-Host ""
 
 Invoke-CiStep 'validate' {
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\validate.ps1') -LayerRoot $LayerRoot
+}
+Invoke-CiStep 'focused safety' {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'tests\run-focused.ps1') -LayerRoot $LayerRoot
 }
 if (-not $SkipPacks) {
   Invoke-CiStep 'packs' {
@@ -102,7 +108,7 @@ $Report = [ordered]@{
   results = @($Results.ToArray())
 }
 $ReportDir = Join-Path $LayerRoot '.tmp\ci'
-New-Item -ItemType Directory -Path $ReportDir -Force | Out-Null
+$ReportDir = Initialize-SafeDirectory -Path $ReportDir
 $ReportPath = Join-Path $ReportDir ('ci-report-{0}.json' -f (Get-Date -Format 'yyyyMMddHHmmss'))
-$Report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $ReportPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $ReportDir -Path $ReportPath -Value ($Report | ConvertTo-Json -Depth 8)
 Write-Host "CI passed. Report: $ReportPath"

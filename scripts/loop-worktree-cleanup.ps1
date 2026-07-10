@@ -13,7 +13,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-$TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 
 function Resolve-UserPath {
@@ -46,7 +48,7 @@ function Add-Item { param([string[]]$Array, [string]$Value) if ($Value) { return
 
 $EffectiveOutputDir = Resolve-UserPath -Path $OutputDir -Fallback (Join-Path $LayerRoot ".tmp\loops\cleanup-$stamp")
 if (-not $Apply -and (Is-UnderPath -Path $EffectiveOutputDir -Root $TargetRoot)) { throw 'OutputDir would write inside the target during preview. Choose a path outside the target or use -Apply.' }
-New-Item -ItemType Directory -Path $EffectiveOutputDir -Force | Out-Null
+$EffectiveOutputDir = Initialize-SafeDirectory -Path $EffectiveOutputDir
 
 $failures = @()
 $warnings = @()
@@ -58,6 +60,10 @@ if ($EffectiveWorktreePath) {
   if (Same-Path $EffectiveWorktreePath $TargetRoot) { $failures = Add-Item $failures 'Refusing to clean up TargetPath as a worktree.' }
   if (Is-UnderPath -Path $EffectiveWorktreePath -Root $TargetRoot) { $failures = Add-Item $failures 'Refusing to clean up a worktree path inside TargetPath.' }
   if (-not (Test-Path -LiteralPath $EffectiveWorktreePath)) { $failures = Add-Item $failures "Worktree path does not exist: $EffectiveWorktreePath" }
+  else {
+    try { $EffectiveWorktreePath = Resolve-SafeRoot -Path $EffectiveWorktreePath -RequireExisting }
+    catch { $failures = Add-Item $failures "Worktree path rejected: $($_.Exception.Message)" }
+  }
 }
 
 $protectedBranches = @('main', 'master', 'develop', 'dev', 'trunk', 'release', 'prod', 'production')
@@ -116,6 +122,7 @@ $mode = if ($Apply) { 'APPLY' } else { 'PREVIEW' }
 $removed = $false
 $branchDeleted = $false
 if ($Apply -and $failures.Count -eq 0) {
+  $EffectiveWorktreePath = Resolve-SafeRoot -Path $EffectiveWorktreePath -RequireExisting
   $args = @('worktree', 'remove')
   if ($Force) { $args += '--force' }
   $args += $EffectiveWorktreePath
@@ -157,7 +164,7 @@ $report = [pscustomobject]@{
 }
 $jsonPath = Join-Path $EffectiveOutputDir 'loop-worktree-cleanup-report.json'
 $mdPath = Join-Path $EffectiveOutputDir 'loop-worktree-cleanup-plan.md'
-$report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $EffectiveOutputDir -Path $jsonPath -Value ($report | ConvertTo-Json -Depth 8)
 
 $lines = @()
 $lines += '# lizard-agent-layer L2 worktree cleanup plan'
@@ -180,7 +187,7 @@ $lines += ''
 $lines += '## Failures'
 $lines += ''
 if ($failures.Count -eq 0) { $lines += '- None' } else { foreach ($failure in $failures) { $lines += ('- {0}' -f $failure) } }
-$lines | Set-Content -LiteralPath $mdPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $EffectiveOutputDir -Path $mdPath -Value $lines
 
 if ($Json) {
   $report | ConvertTo-Json -Depth 8

@@ -6,8 +6,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp\packs' }
-New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+$OutputDir = Initialize-SafeDirectory -Path $OutputDir
 
 $Failures = New-Object System.Collections.Generic.List[string]
 $Warnings = New-Object System.Collections.Generic.List[string]
@@ -100,7 +103,7 @@ $report = [ordered]@{
 }
 $jsonPath = Join-Path $OutputDir 'pack-report.json'
 $mdPath = Join-Path $OutputDir 'pack-report.md'
-$report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $OutputDir -Path $jsonPath -Value ($report | ConvertTo-Json -Depth 10)
 
 $md = New-Object System.Collections.Generic.List[string]
 $md.Add('# Lizard Agent Layer Pack Report') | Out-Null
@@ -133,7 +136,7 @@ if ($Warnings.Count -gt 0) {
   foreach ($warning in @($Warnings.ToArray())) { $md.Add("- $warning") | Out-Null }
   $md.Add('') | Out-Null
 }
-$md | Set-Content -LiteralPath $mdPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $OutputDir -Path $mdPath -Value $md
 
 Write-Host "Pack report: $($report.status)"
 Write-Host "Packs: $($report.summary.packs), unique skills: $($report.summary.unique_skills), failures: $($report.summary.failures), warnings: $($report.summary.warnings)"

@@ -21,6 +21,8 @@ The preview writes reports under `.tmp/updates/<timestamp>/` in this layer repo 
 
 Preview mode does not write into the target project.
 
+Custom `-OutputDir` and `-PlanPath` values must remain outside the target by default. Use `-AllowTargetReportWrite` only for an intentional compatibility case; linked output ancestors remain rejected.
+
 ## Apply
 
 After reviewing the plan, apply the update while preserving existing target files:

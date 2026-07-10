@@ -7,8 +7,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp\quality' }
-New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+$OutputDir = Initialize-SafeDirectory -Path $OutputDir
 
 function Read-JsonFile { param([string]$Path) Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json }
 function Get-RelativePath {
@@ -325,7 +328,7 @@ $report = [ordered]@{
 
 $jsonPath = Join-Path $OutputDir 'layer-quality-report.json'
 $mdPath = Join-Path $OutputDir 'layer-quality-report.md'
-$report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $OutputDir -Path $jsonPath -Value ($report | ConvertTo-Json -Depth 10)
 
 $md = New-Object System.Collections.Generic.List[string]
 $md.Add('# Lizard Agent Layer Quality Report') | Out-Null
@@ -374,7 +377,7 @@ if ($allFindings.Count -gt 0) {
   foreach ($finding in @($allFindings.ToArray())) { $md.Add("| $($finding.severity) | $($finding.kind)/$($finding.name) | $($finding.id) | $($finding.message) |") | Out-Null }
   $md.Add('') | Out-Null
 }
-$md | Set-Content -LiteralPath $mdPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $OutputDir -Path $mdPath -Value $md
 
 Write-Host "Quality gate: $($report.gate)"
 Write-Host "Artifacts: $($report.summary.artifacts), average score: $average, minimum score: $minimum"

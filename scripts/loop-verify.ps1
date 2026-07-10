@@ -14,7 +14,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-$TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 
 function Resolve-UserPath {
@@ -56,7 +58,7 @@ function Add-Item { param([string[]]$Array, [string]$Value) if ($Value) { return
 
 $EffectiveOutputDir = Resolve-UserPath -Path $OutputDir -Fallback (Join-Path $LayerRoot ".tmp\loops\verify-$stamp")
 if (-not $Apply -and (Is-UnderPath -Path $EffectiveOutputDir -Root $TargetRoot)) { throw 'OutputDir would write inside the target during preview. Choose a path outside the target or use -Apply.' }
-New-Item -ItemType Directory -Path $EffectiveOutputDir -Force | Out-Null
+$EffectiveOutputDir = Initialize-SafeDirectory -Path $EffectiveOutputDir
 
 $failures = @()
 $warnings = @()
@@ -140,8 +142,12 @@ if (-not (Is-SafeRelativePath $verifierRel)) {
   $failures = Add-Item $failures "Verifier file must stay under .agent/loops: $verifierRel"
 } else {
   $reportPath = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot $normalizedVerifierRel))
-  if (-not (Is-UnderPath -Path $reportPath -Root $TargetRoot)) { $failures = Add-Item $failures "Verifier file resolves outside target: $verifierRel" }
-  else { $verifierFileSafe = $true }
+  try {
+    $reportPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $reportPath
+    $verifierFileSafe = $true
+  } catch {
+    $failures = Add-Item $failures "Verifier file path rejected: $($_.Exception.Message)"
+  }
 }
 
 $mdLines = @()
@@ -183,11 +189,11 @@ $mdLines += ''
 if ($failures.Count -eq 0) { $mdLines += '- None' } else { foreach ($failure in $failures) { $mdLines += ('- {0}' -f $failure) } }
 
 $outputMdPath = Join-Path $EffectiveOutputDir 'loop-verifier-report.md'
-$mdLines | Set-Content -LiteralPath $outputMdPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $EffectiveOutputDir -Path $outputMdPath -Value $mdLines
 if ($Apply -and $failures.Count -eq 0 -and $verifierFileSafe) {
   $parent = Split-Path -Parent $reportPath
-  if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
-  $mdLines | Set-Content -LiteralPath $reportPath -Encoding UTF8
+  if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $parent | Out-Null }
+  Set-SafeContent -AuthorizedRoot $TargetRoot -Path $reportPath -Value $mdLines
 }
 
 $report = [pscustomobject]@{
@@ -213,7 +219,7 @@ $report = [pscustomobject]@{
   failures = @($failures)
 }
 $jsonPath = Join-Path $EffectiveOutputDir 'loop-verify-report.json'
-$report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $EffectiveOutputDir -Path $jsonPath -Value ($report | ConvertTo-Json -Depth 8)
 
 if ($Json) {
   $report | ConvertTo-Json -Depth 8

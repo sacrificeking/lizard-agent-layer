@@ -33,6 +33,7 @@ The workflow executes the canonical local CI runner, which includes validate, pa
 The runner includes:
 
 - `scripts/validate.ps1`
+- `tests/run-focused.ps1`
 - `scripts/pack-report.ps1 -Strict`
 - `scripts/drift-check.ps1 -Strict`
 - `scripts/score-layer.ps1 -Strict`
@@ -67,3 +68,7 @@ CI runs `scripts/pack-report.ps1 -Strict` after structural validation. This writ
 ## Smoke hardening
 
 The smoke test includes pack install checks, target pack overlay checks, loop-engineering init/audit/report/sync/cost plus L2 worktree/verifier negative-gate and cleanup coverage, `manifest-diff.ps1 -Strict`, upgrade verification that requested packs are preserved, and `update-target.ps1` preview/apply coverage with update-history validation.
+
+## Focused safety gate
+
+`tests/run-focused.ps1` runs before the broader smoke suite and writes `.tmp/tests/focused-test-report.json`. Its unit and adversarial fixtures exercise path containment, root equality, traversal, linked ancestors, force modes, adapter mirrors, and preview target no-op behavior. Windows uses junction fixtures; PowerShell on Linux and macOS uses symbolic-link fixtures.

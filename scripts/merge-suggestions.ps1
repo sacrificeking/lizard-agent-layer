@@ -3,13 +3,16 @@ param(
   [string]$Profile = "standard",
   [string[]]$Harnesses,
   [string]$OutputDir,
-  [switch]$Json
+  [switch]$Json,
+  [switch]$AllowTargetReportWrite
 )
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LayerRoot = Split-Path -Parent $ScriptDir
-$TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
+$TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $ProfilePath = Join-Path $LayerRoot "profiles\$Profile.json"
 $VersionPath = Join-Path $LayerRoot "VERSION"
 $LayerVersion = if (Test-Path -LiteralPath $VersionPath) { (Get-Content -LiteralPath $VersionPath -Raw).Trim() } else { "0.0.0-dev" }
@@ -120,7 +123,8 @@ if ([string]::IsNullOrWhiteSpace($OutputDir)) {
   $OutputDir = Join-Path (Get-Location).Path $OutputDir
 }
 
-New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+if (-not $AllowTargetReportWrite) { Assert-PathOutsideRoot -Path $OutputDir -ExcludedRoot $TargetRoot -Label 'OutputDir' }
+$OutputDir = Initialize-SafeDirectory -Path $OutputDir
 $results = New-Object System.Collections.Generic.List[object]
 $patchFiles = New-Object System.Collections.Generic.List[string]
 $blockFiles = New-Object System.Collections.Generic.List[string]
@@ -153,8 +157,8 @@ foreach ($harness in $SelectedHarnesses) {
       $baseName = Convert-ToSafeFileName "$harness-$dstRel"
       $patchFile = Join-Path $OutputDir "$baseName.patch"
       $blockFile = Join-Path $OutputDir "$baseName.block.md"
-      New-AppendPatch -RelativePath $dstRel -ExistingContent $existing -Block $block | Set-Content -LiteralPath $patchFile -Encoding UTF8
-      Set-Content -LiteralPath $blockFile -Value $block -Encoding UTF8
+      Set-SafeContent -AuthorizedRoot $OutputDir -Path $patchFile -Value (New-AppendPatch -RelativePath $dstRel -ExistingContent $existing -Block $block)
+      Set-SafeContent -AuthorizedRoot $OutputDir -Path $blockFile -Value $block
       $patchFiles.Add($patchFile) | Out-Null
       $blockFiles.Add($blockFile) | Out-Null
     }
@@ -212,7 +216,7 @@ foreach ($result in @($results.ToArray())) {
 }
 Add-MarkdownList $lines 'Patch files' @($patchFiles.ToArray())
 Add-MarkdownList $lines 'Block files' @($blockFiles.ToArray())
-($lines -join "`n") | Set-Content -LiteralPath $reportPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $OutputDir -Path $reportPath -Value ($lines -join "`n")
 
 $jsonDoc = New-Object System.Collections.Specialized.OrderedDictionary
 $jsonDoc['generated_at'] = (Get-Date).ToUniversalTime().ToString('o')
@@ -225,7 +229,7 @@ $jsonDoc['report_path'] = $reportPath
 $jsonDoc['patch_files'] = @($patchFiles.ToArray())
 $jsonDoc['block_files'] = @($blockFiles.ToArray())
 $jsonDoc['results'] = @($results.ToArray())
-$jsonDoc | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
+Set-SafeContent -AuthorizedRoot $OutputDir -Path $jsonPath -Value ($jsonDoc | ConvertTo-Json -Depth 10)
 
 if ($Json) {
   $jsonDoc | ConvertTo-Json -Depth 10
