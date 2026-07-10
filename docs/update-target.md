@@ -47,7 +47,19 @@ Use this only after reviewing the generated update plan:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply -ForceManaged
 ```
 
-`-ForceManaged` allows generated layer artifacts to be refreshed from the current layer. This is useful when skills, protocols, adapter files, sidecars, or templates improved and the target should receive the new canonical version. Unowned root instruction files such as an existing project `AGENTS.md` stay on the merge-review path instead of being silently replaced.
+`-ForceManaged` refreshes only exact manifest-v3 entries whose current hash still matches their installed hash and whose ownership is `layer-owned`. User-owned, adopted, locally modified, legacy-ambiguous, missing-identity, or conflicting files remain untouched and are listed in the install plan and manifest conflicts.
+
+Schema v2 targets migrate conservatively on apply. Because v2 cannot prove per-file provenance, existing ambiguous files become `user-owned`; `-ForceManaged` does not adopt or replace them implicitly.
+
+## Version and schema gates
+
+Schemas newer than the current reader, unsupported old schemas, and malformed versions stop before report or target writes. A target created by a newer layer version can still produce a preview plan, but apply requires both explicit switches:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply -AllowDowngrade -HumanApproved
+```
+
+Applied update history records the old and new manifest schemas plus downgrade approval state. `upgrade.ps1` delegates installed targets to this same workflow.
 
 ## Adapt During Update
 

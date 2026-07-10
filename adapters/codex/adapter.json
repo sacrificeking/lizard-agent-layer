@@ -1,6 +1,10 @@
 ﻿{
   "name": "codex",
   "description": "OpenAI Codex adapter using AGENTS.md plus .agents/skills mirrors.",
+  "compatibility": {
+    "instructionGroup": "agents-md",
+    "precedence": 100
+  },
   "instruction": {
     "src": "AGENTS.lizard.md",
     "dst": "AGENTS.md",

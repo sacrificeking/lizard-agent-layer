@@ -3,6 +3,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
+Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Manifest.psm1') -Force
 $Failures = New-Object System.Collections.Generic.List[string]
 $Warnings = New-Object System.Collections.Generic.List[string]
 
@@ -30,6 +32,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $LayerRoot 'README.md'))) { Fail 'Mi
 if (-not (Test-Path -LiteralPath (Join-Path $LayerRoot 'LICENSE'))) { Warn 'Missing LICENSE file.' }
 
 $adapterNames = New-Object System.Collections.Generic.HashSet[string]
+$adapterEntries = New-Object System.Collections.Generic.List[object]
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'adapters') -Directory | ForEach-Object {
   $name = $_.Name
   if (-not (Is-HyphenName $name)) { Fail "Invalid adapter folder name '$name'." }
@@ -42,6 +45,11 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'adapters') -Directory | ForEac
     if (-not ($adapter.PSObject.Properties.Name -contains $field)) { Fail "Adapter $name missing '$field'." }
   }
   if ($adapter.name -ne $name) { Fail "Adapter $name manifest name '$($adapter.name)' does not match folder." }
+  if ($adapter.compatibility) {
+    if (-not (Is-HyphenName ([string]$adapter.compatibility.instructionGroup))) { Fail "Adapter $name has invalid compatibility instructionGroup." }
+    try { $precedence = [int]$adapter.compatibility.precedence; if ($precedence -lt 0) { throw 'negative' } }
+    catch { Fail "Adapter $name has invalid compatibility precedence '$($adapter.compatibility.precedence)'." }
+  }
   if (-not $adapter.instruction.src -or -not $adapter.instruction.dst) { Fail "Adapter $name instruction requires src and dst." }
   foreach ($pathField in @('src', 'dst', 'sidecar')) {
     if ($adapter.instruction.PSObject.Properties.Name -contains $pathField) {
@@ -55,7 +63,11 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'adapters') -Directory | ForEac
     if (-not $mirror.dst) { Fail "Adapter $name has skill mirror without dst." }
     elseif (-not (Is-SafeRelativePath $mirror.dst)) { Fail "Adapter $name skill mirror dst is unsafe: $($mirror.dst)" }
   }
+  $adapterEntries.Add([pscustomobject]@{ name = $name; manifest = $adapter; adapter_dir = $_.FullName }) | Out-Null
 }
+
+try { $null = Resolve-LizardAdapterComposition -Adapters @($adapterEntries.ToArray()) }
+catch { Fail $_.Exception.Message }
 
 $packNames = New-Object System.Collections.Generic.HashSet[string]
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'packs') -Filter '*.json' -File -ErrorAction SilentlyContinue | ForEach-Object { $packNames.Add([System.IO.Path]::GetFileNameWithoutExtension($_.Name)) | Out-Null }
@@ -205,6 +217,7 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'loops') -Filter '*.json' -File
 }
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\lizard-agent-layer.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\adapter.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\install-manifest.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-profile.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\quality-registry.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\maturity-levels.schema.json')
@@ -216,6 +229,13 @@ $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop-constraints.schema.jso
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\quality-rubric.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\maturity-levels.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\risk-signals.json')
+$migrationRegistry = Read-JsonFile (Join-Path $LayerRoot 'registry\manifest-migrations.json')
+if ($migrationRegistry) {
+  if ([int]$migrationRegistry.currentSchemaVersion -ne 3) { Fail 'Manifest migration registry currentSchemaVersion must be 3.' }
+  if ([int]$migrationRegistry.minimumReadableSchemaVersion -ne 2 -or [int]$migrationRegistry.maximumReadableSchemaVersion -ne 3) { Fail 'Manifest migration reader range must be 2 through 3.' }
+  $v2Migration = @($migrationRegistry.migrations | Where-Object { [int]$_.from -eq 2 -and [int]$_.to -eq 3 })
+  if ($v2Migration.Count -ne 1 -or [string]$v2Migration[0].ambiguousOwnership -ne 'user-owned') { Fail 'Manifest migration registry must define one conservative v2-to-v3 migration.' }
+}
 
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory | ForEach-Object {
   $folderName = $_.Name
@@ -257,7 +277,7 @@ foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifes
   catch { Fail "PowerShell parse failure in ${script}: $($_.Exception.Message)" }
 }
 
-foreach ($relative in @('scripts\Lizard.SafeFs.psm1', 'tests\TestHelpers.psm1', 'tests\run-focused.ps1', 'tests\unit\safe-fs.tests.ps1', 'tests\adversarial\install-containment.tests.ps1')) {
+foreach ($relative in @('scripts\Lizard.SafeFs.psm1', 'scripts\Lizard.Manifest.psm1', 'tests\TestHelpers.psm1', 'tests\run-focused.ps1', 'tests\unit\safe-fs.tests.ps1', 'tests\integration\manifest-v3.tests.ps1', 'tests\adversarial\install-containment.tests.ps1', 'tests\adversarial\version-gates.tests.ps1')) {
   $path = Join-Path $LayerRoot $relative
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing safety artifact $relative."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }

@@ -11,6 +11,7 @@ $ErrorActionPreference = "Stop"
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Manifest.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp\manifest-diff' }
@@ -90,6 +91,9 @@ function Add-PackWithExtends {
 }
 
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$manifestSchema = if ($null -ne $manifest.schema_version) { [int]$manifest.schema_version } else { 1 }
+if ($manifestSchema -gt 3) { throw "MANIFEST_READER_TOO_OLD: Target schema $manifestSchema is newer than supported schema 3." }
+$legacyIntegrityUnknown = $manifestSchema -lt 3
 $installedProfile = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
 $profileName = if ($manifest.profile) { [string]$manifest.profile } elseif ($installedProfile.profile) { [string]$installedProfile.profile } else { 'standard' }
 $baseProfilePath = Join-Path $LayerRoot "profiles\$profileName.json"
@@ -105,6 +109,7 @@ foreach ($packName in @($expectedPacks)) {
   $packSources.Add([ordered]@{ name = [string]$pack.name; source = [string]$pack._sourceKind; path = [string]$pack._sourcePath }) | Out-Null
   Merge-ArrayProperty $expectedProfile 'stack' @($pack.stack)
   Merge-ArrayProperty $expectedProfile 'skills' @($pack.skills)
+  Merge-ArrayProperty $expectedProfile 'harnesses' @($pack.harnesses)
   Merge-ArrayProperty $expectedProfile 'verification' @($pack.verification)
   Set-DocProperty $expectedProfile 'riskLevel' (Max-RiskLevel ([string]$expectedProfile.riskLevel) ([string]$pack.riskLevel))
   Set-DocProperty $expectedProfile 'projectSize' (Max-ProjectSize ([string]$expectedProfile.projectSize) ([string]$pack.projectSize))
@@ -124,7 +129,96 @@ if ([string]$manifest.risk_level -ne [string]$expectedProfile.riskLevel) { Add-D
 
 Compare-List -Kind 'pack' -Expected @($expectedPacks) -Actual @($manifest.packs)
 Compare-List -Kind 'skill' -Expected @($expectedProfile.skills) -Actual @($manifest.skills)
-Compare-List -Kind 'harness' -Expected @($manifest.harnesses) -Actual @($manifest.harnesses)
+if ($legacyIntegrityUnknown) { Add-Diff 'integrity-unknown' "schema-$manifestSchema" 'Legacy manifests do not contain per-artifact ownership and content identity.' }
+
+$effectiveAdapters = @($manifest.adapters)
+$adapterAliases = @($manifest.adapter_aliases)
+foreach ($harness in @($manifest.harnesses)) {
+  $covered = $effectiveAdapters -contains [string]$harness
+  if (-not $covered) {
+    $covered = @($adapterAliases | Where-Object { [string]$_.adapter -eq [string]$harness -and $effectiveAdapters -contains [string]$_.satisfied_by }).Count -gt 0
+  }
+  if (-not $covered) { Add-Diff 'missing-adapter-identity' ([string]$harness) 'Selected harness has no effective adapter or declared compatibility alias.' }
+}
+
+$mirrorHashes = @{}
+if (-not $legacyIntegrityUnknown) {
+  try { $artifactMap = Get-LizardArtifactMap -Manifest $manifest }
+  catch { Add-Diff 'invalid-artifact-index' 'artifacts' $_.Exception.Message; $artifactMap = $null }
+
+  if ($artifactMap) {
+    foreach ($managedPath in @($manifest.managed_paths)) {
+      $managedRelative = ConvertTo-LizardArtifactPath ([string]$managedPath)
+      if ([string]::IsNullOrWhiteSpace($managedRelative) -or $managedRelative -eq '.agent/lizard-agent-layer.install.json') { continue }
+      if (-not $artifactMap.ContainsKey($managedRelative)) { Add-Diff 'artifact-identity-missing' $managedRelative 'Managed path has no manifest v3 artifact identity.' }
+    }
+    foreach ($ownedPath in @($manifest.owned_paths)) {
+      $ownedRelative = ConvertTo-LizardArtifactPath ([string]$ownedPath)
+      if ([string]::IsNullOrWhiteSpace($ownedRelative) -or $ownedRelative -eq '.agent/lizard-agent-layer.install.json') { continue }
+      if (-not $artifactMap.ContainsKey($ownedRelative)) { Add-Diff 'owned-artifact-missing' $ownedRelative 'Owned path has no manifest v3 artifact identity.'; continue }
+      if ([string]$artifactMap[$ownedRelative].ownership -ne 'layer-owned') { Add-Diff 'ownership-index-mismatch' $ownedRelative ("owned_paths claims layer ownership, artifact records '{0}'." -f $artifactMap[$ownedRelative].ownership) }
+    }
+    foreach ($artifact in @($manifest.artifacts)) {
+      $relative = ConvertTo-LizardArtifactPath ([string]$artifact.path)
+      if ([string]::IsNullOrWhiteSpace($relative)) { Add-Diff 'invalid-artifact-path' '<empty>' 'Artifact path is empty.'; continue }
+      try { $targetArtifactPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', '\')) }
+      catch { Add-Diff 'unsafe-artifact-path' $relative $_.Exception.Message; continue }
+
+      $kind = [string]$artifact.kind
+      $exists = if ($kind -eq 'directory') { Test-Path -LiteralPath $targetArtifactPath -PathType Container } else { Test-Path -LiteralPath $targetArtifactPath -PathType Leaf }
+      if (-not $exists) { Add-Diff 'missing-artifact' $relative "Manifest v3 $kind is missing."; continue }
+      if ($kind -eq 'directory') { continue }
+      if ($kind -ne 'file') { Add-Diff 'invalid-artifact-kind' $relative "Unsupported kind '$kind'."; continue }
+
+      $currentHash = Get-LizardSha256 $targetArtifactPath
+      if ([string]$artifact.ownership -in @('layer-owned', 'adopted')) {
+        if ([string]::IsNullOrWhiteSpace([string]$artifact.installed_hash)) {
+          Add-Diff 'integrity-unknown' $relative 'Owned artifact has no installed hash.'
+        } elseif ($currentHash -ne [string]$artifact.installed_hash) {
+          Add-Diff 'content-modified' $relative ("Expected installed hash {0}, actual {1}." -f $artifact.installed_hash, $currentHash)
+        }
+      }
+
+      $sourcePathValue = [string]$artifact.source_path
+      if (-not [string]::IsNullOrWhiteSpace($sourcePathValue) -and -not $sourcePathValue.StartsWith('generated:', [System.StringComparison]::OrdinalIgnoreCase)) {
+        try {
+          if ($sourcePathValue.StartsWith('.lizard-agent-layer/', [System.StringComparison]::OrdinalIgnoreCase)) {
+            $sourceFullPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $sourcePathValue.Replace('/', '\'))
+          } else {
+            $sourceFullPath = Resolve-SafeTargetDestination -AuthorizedRoot $LayerRoot -DestinationPath (Join-Path $LayerRoot $sourcePathValue.Replace('/', '\'))
+          }
+          if (-not (Test-Path -LiteralPath $sourceFullPath -PathType Leaf)) { Add-Diff 'missing-source' $relative "Source file is missing: $sourcePathValue" }
+          else {
+            $currentSourceHash = Get-LizardSha256 $sourceFullPath
+            if ($currentSourceHash -ne [string]$artifact.source_hash) { Add-Diff 'source-drift' $relative ("Recorded source hash {0}, current source hash {1}." -f $artifact.source_hash, $currentSourceHash) }
+          }
+        } catch { Add-Diff 'unsafe-source-path' $relative $_.Exception.Message }
+      }
+
+      if (-not [string]::IsNullOrWhiteSpace([string]$artifact.mirror_group) -and [string]$artifact.ownership -eq 'layer-owned') {
+        $group = [string]$artifact.mirror_group
+        if (-not $mirrorHashes.ContainsKey($group)) { $mirrorHashes[$group] = New-Object System.Collections.Generic.List[object] }
+        $mirrorHashes[$group].Add([pscustomobject]@{ path = $relative; hash = $currentHash }) | Out-Null
+      }
+    }
+  }
+
+  foreach ($group in @($mirrorHashes.Keys)) {
+    $rows = @($mirrorHashes[$group].ToArray())
+    $hashes = @($rows | ForEach-Object { $_.hash } | Select-Object -Unique)
+    if ($hashes.Count -gt 1) { Add-Diff 'mirror-mismatch' $group ("Mirror paths differ: {0}" -f (($rows | ForEach-Object { $_.path }) -join ', ')) }
+  }
+
+  foreach ($adapterId in $effectiveAdapters) {
+    $identityArtifacts = @($manifest.artifacts | Where-Object { [string]$_.adapter_id -eq [string]$adapterId -and [string]$_.mirror_group -like 'adapter-instruction:*' })
+    $identityValid = $false
+    foreach ($identity in $identityArtifacts) {
+      $identityPath = Join-Path $TargetRoot ([string]$identity.path).Replace('/', '\')
+      if ((Test-Path -LiteralPath $identityPath -PathType Leaf) -and (Get-LizardSha256 $identityPath) -eq [string]$identity.source_hash) { $identityValid = $true; break }
+    }
+    if (-not $identityValid) { Add-Diff 'adapter-identity-mismatch' ([string]$adapterId) 'No installed instruction or sidecar matches the exact adapter source hash.' }
+  }
+}
 
 foreach ($skill in @($expectedProfile.skills)) {
   $skillPath = Join-Path $TargetRoot ".agent\skills\$skill\SKILL.md"
@@ -136,13 +230,14 @@ foreach ($managedPath in @($manifest.managed_paths)) {
   if (-not (Test-Path -LiteralPath $fullPath)) { Add-Diff 'missing-managed-path' ([string]$managedPath) 'Path is listed in install manifest but missing on disk.' }
 }
 
-$status = if ($differences.Count -eq 0) { 'pass' } else { 'drift' }
+$status = if ($differences.Count -eq 0) { 'pass' } elseif ($legacyIntegrityUnknown) { 'integrity-unknown' } else { 'drift' }
 $report = [ordered]@{
   generated_at = (Get-Date).ToUniversalTime().ToString('o')
   target = $TargetRoot
   layer_root = $LayerRoot
   status = $status
   strict = $Strict.IsPresent
+  manifest_schema_version = $manifestSchema
   installed = [ordered]@{ layer_version = [string]$manifest.layer_version; profile = $profileName; packs = @($manifest.packs); requested_packs = @($requestedPacks); risk_level = [string]$manifest.risk_level; skills = @($manifest.skills); harnesses = @($manifest.harnesses) }
   expected = [ordered]@{ layer_version = $currentLayerVersion; profile = $profileName; packs = @($expectedPacks); requested_packs = @($requestedPacks); risk_level = [string]$expectedProfile.riskLevel; skills = @($expectedProfile.skills); harnesses = @($manifest.harnesses); pack_sources = @($packSources.ToArray()) }
   summary = [ordered]@{ differences = $differences.Count }

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/install-manifest.schema.json",
+  "title": "lizard-agent-layer install manifest v3",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "layer",
+    "layer_version",
+    "minimum_reader_schema_version",
+    "writer_schema_version",
+    "profile",
+    "harnesses",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": { "const": 3 },
+    "layer": { "const": "lizard-agent-layer" },
+    "layer_version": { "type": "string" },
+    "minimum_reader_schema_version": { "type": "integer", "minimum": 2, "maximum": 3 },
+    "writer_schema_version": { "const": 3 },
+    "profile": { "type": "string" },
+    "harnesses": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "adapters": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "adapter_aliases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["adapter", "satisfied_by", "destination"],
+        "properties": {
+          "adapter": { "type": "string" },
+          "satisfied_by": { "type": "string" },
+          "destination": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "kind", "ownership", "state", "source_version", "adapter_aliases"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(^|/)\\.\\.(/|$)).+$" },
+          "kind": { "enum": ["file", "directory"] },
+          "ownership": { "enum": ["layer-owned", "user-owned", "adopted"] },
+          "state": { "enum": ["layer-owned", "user-owned", "adopted", "locally-modified", "stale-unmodified", "missing", "conflict", "integrity-unknown"] },
+          "source_path": { "type": ["string", "null"] },
+          "source_version": { "type": ["string", "null"] },
+          "source_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+          "installed_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+          "current_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+          "adapter_id": { "type": ["string", "null"] },
+          "adapter_aliases": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "mirror_group": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": true
+}

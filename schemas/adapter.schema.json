@@ -7,6 +7,15 @@
   "properties": {
     "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
     "description": { "type": "string" },
+    "compatibility": {
+      "type": "object",
+      "required": ["instructionGroup", "precedence"],
+      "properties": {
+        "instructionGroup": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+        "precedence": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
     "instruction": {
       "type": "object",
       "required": ["src", "dst"],

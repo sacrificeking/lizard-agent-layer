@@ -1,6 +1,10 @@
 ﻿{
   "name": "generic-agents-md",
   "description": "Generic AGENTS.md adapter for tools that read repository instructions but have no dedicated harness path.",
+  "compatibility": {
+    "instructionGroup": "agents-md",
+    "precedence": 10
+  },
   "instruction": {
     "src": "AGENTS.generic.lizard.md",
     "dst": "AGENTS.md",

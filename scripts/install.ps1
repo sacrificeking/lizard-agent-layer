@@ -15,6 +15,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LayerRoot = Split-Path -Parent $ScriptDir
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Manifest.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $ProfilePath = Join-Path $LayerRoot "profiles\$Profile.json"
 $VersionPath = Join-Path $LayerRoot "VERSION"
@@ -215,6 +216,8 @@ $MergeSuggestions = New-Object System.Collections.Generic.List[object]
 $ManagedPaths = New-Object System.Collections.Generic.List[string]
 $OwnedPaths = New-Object System.Collections.Generic.List[string]
 $InstalledAdapters = New-Object System.Collections.Generic.List[string]
+$Conflicts = New-Object System.Collections.Generic.List[string]
+$ArtifactRecords = New-Object 'System.Collections.Generic.Dictionary[string,object]' ([System.StringComparer]::OrdinalIgnoreCase)
 
 function Add-UniqueListItem {
   param($List, [string]$Value)
@@ -244,38 +247,82 @@ function To-RelativeDisplay {
   return $Path
 }
 
-$ExistingLayerPathSet = New-Object System.Collections.Generic.HashSet[string]
-function Add-ExistingLayerPath {
-  param($Path)
-  $value = [string]$Path
-  if (-not [string]::IsNullOrWhiteSpace($value)) { $ExistingLayerPathSet.Add((Normalize-RelPath $value)) | Out-Null }
-}
 $ExistingInstallManifestPath = Join-Path $TargetRoot ".agent\lizard-agent-layer.install.json"
+$existingInstallManifest = $null
+$ExistingManifestSchema = $null
 if (Test-Path -LiteralPath $ExistingInstallManifestPath) {
   $existingInstallManifest = Get-Content -LiteralPath $ExistingInstallManifestPath -Raw | ConvertFrom-Json
-  foreach ($path in @($existingInstallManifest.managed_paths)) { Add-ExistingLayerPath $path }
-  foreach ($path in @($existingInstallManifest.owned_paths)) { Add-ExistingLayerPath $path }
+  $ExistingManifestSchema = if ($null -ne $existingInstallManifest.schema_version) { [int]$existingInstallManifest.schema_version } else { 1 }
+  if ($ExistingManifestSchema -gt 3) { throw "MANIFEST_READER_TOO_OLD: Target schema $ExistingManifestSchema is newer than supported schema 3." }
+}
+$ExistingArtifactMap = Get-LizardArtifactMap -Manifest $existingInstallManifest
+
+function Get-ExistingArtifactRecord {
+  param([string]$RelativePath)
+  $key = ConvertTo-LizardArtifactPath $RelativePath
+  if ($ExistingArtifactMap.ContainsKey($key)) { return $ExistingArtifactMap[$key] }
+  return $null
 }
 
-function Test-LayerGeneratedPath {
-  param([string]$RelativePath)
-  $rel = Normalize-RelPath $RelativePath
-  if ($ExistingLayerPathSet.Contains($rel)) { return $true }
-  foreach ($prefix in @('.agent\', '.agents\', '.claude\skills\', '.gemini\skills\', '.cursor\skills\')) {
-    if ($rel.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+function Get-LayerSourcePath {
+  param([string]$Source)
+  $full = [System.IO.Path]::GetFullPath($Source)
+  $root = $LayerRoot.TrimEnd([char[]]@('\', '/'))
+  $prefix = $root + [System.IO.Path]::DirectorySeparatorChar
+  if ($full.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    return $full.Substring($prefix.Length).Replace('\', '/')
   }
-  foreach ($exact in @('.agent', '.agents', '.claude\skills', '.gemini\skills', '.cursor\skills', '.cursor\rules\lizard-agent-layer.mdc')) {
-    if ($rel.Equals($exact, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+  return $full
+}
+
+function Set-ArtifactRecord {
+  param($Record)
+  $key = ConvertTo-LizardArtifactPath ([string]$Record.path)
+  $ArtifactRecords[$key] = $Record
+  Add-UniqueListItem $ManagedPaths ([string]$Record.path).Replace('/', '\')
+  if ([string]$Record.ownership -eq 'layer-owned') { Add-UniqueListItem $OwnedPaths ([string]$Record.path).Replace('/', '\') }
+}
+
+function Register-Artifact {
+  param(
+    [string]$Dest,
+    [ValidateSet('file', 'directory')][string]$Kind,
+    [AllowNull()][string]$SourcePath,
+    [AllowNull()][string]$SourceHash,
+    [AllowNull()][string]$AdapterId,
+    [string[]]$AdapterAliases = @(),
+    [AllowNull()][string]$MirrorGroup,
+    [switch]$LayerWritten
+  )
+  $relative = ConvertTo-LizardArtifactPath (To-RelativeDisplay $Dest)
+  $existing = Get-ExistingArtifactRecord $relative
+  $currentHash = if ($Kind -eq 'file') { Get-LizardSha256 $Dest } else { $null }
+  if ($LayerWritten) {
+    $ownership = 'layer-owned'
+    $state = 'layer-owned'
+    $installedHash = $currentHash
+  } elseif ($null -ne $existing) {
+    $ownership = if ([string]$existing.ownership -in @('layer-owned', 'user-owned', 'adopted')) { [string]$existing.ownership } else { 'user-owned' }
+    $installedHash = if ($existing.installed_hash) { [string]$existing.installed_hash } else { $null }
+    $state = Get-LizardArtifactState -Record $existing -TargetPath $Dest -ExpectedSourceHash $SourceHash -Kind $Kind
+  } else {
+    $ownership = 'user-owned'
+    $installedHash = $null
+    $state = if (Test-Path -LiteralPath $Dest) { 'user-owned' } else { 'missing' }
   }
-  if ($rel.EndsWith('.lizard-agent-layer.md', [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
-  return $false
+  Set-ArtifactRecord (New-LizardArtifactRecord -Path $relative -Kind $Kind -Ownership $ownership -State $state -SourcePath $SourcePath -SourceVersion $LayerVersion -SourceHash $SourceHash -InstalledHash $installedHash -CurrentHash $currentHash -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup)
 }
 
 function Should-ReplacePath {
-  param([string]$Dest)
+  param([string]$Dest, [AllowNull()][string]$ExpectedSourceHash)
   if ($Force) { return $true }
   if (-not $ForceManaged) { return $false }
-  return (Test-LayerGeneratedPath (To-RelativeDisplay $Dest))
+  $relative = ConvertTo-LizardArtifactPath (To-RelativeDisplay $Dest)
+  $record = Get-ExistingArtifactRecord $relative
+  $state = Get-LizardArtifactState -Record $record -TargetPath $Dest -ExpectedSourceHash $ExpectedSourceHash -Kind 'file'
+  if ($null -ne $record -and [string]$record.ownership -eq 'layer-owned' -and $state -in @('layer-owned', 'stale-unmodified')) { return $true }
+  Add-UniqueListItem $Conflicts ("{0}: ForceManaged refused state '{1}' without unchanged layer-owned provenance." -f $relative, $state)
+  return $false
 }
 function New-MergeSuggestion {
   param([string]$Harness, [string]$InstructionPath, [string]$SidecarPath)
@@ -338,6 +385,7 @@ function New-InstallPlanMarkdown {
   $lines.Add(('- Created paths: `{0}`' -f $Created.Count)) | Out-Null
   $lines.Add(('- Skipped existing paths: `{0}`' -f $Skipped.Count)) | Out-Null
   $lines.Add(('- Manual merge items: `{0}`' -f $MergeNeeded.Count)) | Out-Null
+  $lines.Add(('- Ownership conflicts: `{0}`' -f $Conflicts.Count)) | Out-Null
   $lines.Add('') | Out-Null
   $lines.Add('## Commands') | Out-Null
   $lines.Add('') | Out-Null
@@ -363,6 +411,7 @@ function New-InstallPlanMarkdown {
   Add-MarkdownList $lines 'Created paths' @($Created)
   Add-MarkdownList $lines 'Skipped existing paths' @($Skipped)
   Add-MarkdownList $lines 'Manual merge needed' @($MergeNeeded)
+  Add-MarkdownList $lines 'Ownership conflicts' @($Conflicts)
   $lines.Add('## Merge suggestions') | Out-Null
   $lines.Add('') | Out-Null
   if ($MergeSuggestions.Count -eq 0) {
@@ -392,82 +441,91 @@ function Write-PlanReport {
 }
 
 function Ensure-Dir {
-  param([string]$Path)
+  param([string]$Path, [AllowNull()][string]$AdapterId, [string[]]$AdapterAliases = @(), [AllowNull()][string]$MirrorGroup)
   $Path = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $Path
   $label = To-RelativeDisplay $Path
   Add-UniqueListItem $ManagedPaths $label
   if (Test-Path -LiteralPath $Path) {
     Add-UniqueListItem $Skipped $label
+    Register-Artifact -Dest $Path -Kind directory -SourcePath $null -SourceHash $null -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup
     return
   }
   Add-UniqueListItem $Planned $label
   if ($Apply) {
     New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $Path | Out-Null
     Add-UniqueListItem $Created $label
-    Add-UniqueListItem $OwnedPaths $label
+    Register-Artifact -Dest $Path -Kind directory -SourcePath $null -SourceHash $null -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup -LayerWritten
   }
 }
 
 function Copy-IfMissing {
-  param([string]$Source, [string]$Dest)
+  param([string]$Source, [string]$Dest, [AllowNull()][string]$AdapterId, [string[]]$AdapterAliases = @(), [AllowNull()][string]$MirrorGroup)
   if (-not (Test-Path -LiteralPath $Source)) { throw "Missing source file: $Source" }
   $Dest = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $Dest
+  $sourceHash = Get-LizardSha256 $Source
+  $sourcePath = Get-LayerSourcePath $Source
   $label = To-RelativeDisplay $Dest
   Add-UniqueListItem $ManagedPaths $label
   $parent = Split-Path -Parent $Dest
   if (-not (Test-Path -LiteralPath $parent)) {
     if ($Apply) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $parent | Out-Null }
   }
-  $shouldReplace = Should-ReplacePath $Dest
-  if ((Test-Path -LiteralPath $Dest) -and -not $shouldReplace) {
+  $destExists = Test-Path -LiteralPath $Dest
+  $shouldReplace = if ($destExists) { Should-ReplacePath -Dest $Dest -ExpectedSourceHash $sourceHash } else { $false }
+  if ($destExists -and -not $shouldReplace) {
     Add-UniqueListItem $Skipped $label
+    Register-Artifact -Dest $Dest -Kind file -SourcePath $sourcePath -SourceHash $sourceHash -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup
     return
   }
   Add-UniqueListItem $Planned $label
   if ($Apply) {
     Copy-SafeItem -AuthorizedRoot $TargetRoot -Source $Source -Destination $Dest -Force:$shouldReplace
     Add-UniqueListItem $Created $label
-    Add-UniqueListItem $OwnedPaths $label
+    Register-Artifact -Dest $Dest -Kind file -SourcePath $sourcePath -SourceHash $sourceHash -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup -LayerWritten
   }
 }
 
 function Copy-SkillPackage {
-  param([string]$SkillName, [string]$DestRoot)
+  param([string]$SkillName, [string]$DestRoot, [AllowNull()][string]$AdapterId, [string[]]$AdapterAliases = @())
   if ($SkillName -notmatch '^[a-z0-9][a-z0-9-]{0,62}$') { throw "Invalid skill name '$SkillName'." }
   $sourceDir = Join-Path $LayerRoot "skills\$SkillName"
   $sourceSkill = Join-Path $sourceDir 'SKILL.md'
   if (-not (Test-Path -LiteralPath $sourceSkill)) { throw "Missing skill package: $SkillName" }
   $destSkillDir = Join-Path $DestRoot $SkillName
-  Ensure-Dir $destSkillDir
+  Ensure-Dir -Path $destSkillDir -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup ("skill:{0}:directory" -f $SkillName)
   Get-ChildItem -LiteralPath $sourceDir -Recurse -File | Sort-Object FullName | ForEach-Object {
     $relative = $_.FullName.Substring($sourceDir.Length).TrimStart('\')
-    Copy-IfMissing $_.FullName (Join-Path $destSkillDir $relative)
+    $mirrorGroup = "skill:{0}:{1}" -f $SkillName, $relative.Replace('\', '/')
+    Copy-IfMissing -Source $_.FullName -Dest (Join-Path $destSkillDir $relative) -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $mirrorGroup
   }
 }
 function Write-IfMissing {
-  param([string]$Dest, [string]$Content)
+  param([string]$Dest, [string]$Content, [string]$SourcePath = 'generated:content', [AllowNull()][string]$AdapterId, [string[]]$AdapterAliases = @(), [AllowNull()][string]$MirrorGroup)
   $Dest = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $Dest
+  $sourceHash = Get-LizardStringSha256 $Content
   $label = To-RelativeDisplay $Dest
   Add-UniqueListItem $ManagedPaths $label
   $parent = Split-Path -Parent $Dest
   if (-not (Test-Path -LiteralPath $parent)) {
     if ($Apply) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $parent | Out-Null }
   }
-  $shouldReplace = Should-ReplacePath $Dest
-  if ((Test-Path -LiteralPath $Dest) -and -not $shouldReplace) {
+  $destExists = Test-Path -LiteralPath $Dest
+  $shouldReplace = if ($destExists) { Should-ReplacePath -Dest $Dest -ExpectedSourceHash $sourceHash } else { $false }
+  if ($destExists -and -not $shouldReplace) {
     Add-UniqueListItem $Skipped $label
+    Register-Artifact -Dest $Dest -Kind file -SourcePath $SourcePath -SourceHash $sourceHash -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup
     return
   }
   Add-UniqueListItem $Planned $label
   if ($Apply) {
     Set-SafeContent -AuthorizedRoot $TargetRoot -Path $Dest -Value $Content
     Add-UniqueListItem $Created $label
-    Add-UniqueListItem $OwnedPaths $label
+    Register-Artifact -Dest $Dest -Kind file -SourcePath $SourcePath -SourceHash $sourceHash -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup -LayerWritten
   }
 }
 
 function Copy-InstructionFile {
-  param($Adapter, [string]$AdapterDir, [string]$AdapterName)
+  param($Adapter, [string]$AdapterDir, [string]$AdapterName, [string[]]$AdapterAliases = @())
   $instruction = $Adapter.instruction
   $srcRel = Assert-SafeRelativePath $instruction.src "adapter instruction src"
   $dstRel = Assert-SafeRelativePath $instruction.dst "adapter instruction dst"
@@ -475,45 +533,56 @@ function Copy-InstructionFile {
   $dst = Join-Path $TargetRoot $dstRel
   $policy = if ($instruction.mergePolicy) { $instruction.mergePolicy } else { 'sidecar-if-exists' }
 
-  $shouldReplaceInstruction = Should-ReplacePath $dst
+  $sourceHash = Get-LizardSha256 $src
+  $shouldReplaceInstruction = if (Test-Path -LiteralPath $dst) { Should-ReplacePath -Dest $dst -ExpectedSourceHash $sourceHash } else { $false }
   if ((Test-Path -LiteralPath $dst) -and -not $shouldReplaceInstruction -and $policy -ne 'overwrite') {
+    if ((Get-LizardSha256 $dst) -eq $sourceHash) {
+      Register-Artifact -Dest $dst -Kind file -SourcePath (Get-LayerSourcePath $src) -SourceHash $sourceHash -AdapterId $AdapterName -AdapterAliases $AdapterAliases -MirrorGroup ("adapter-instruction:{0}" -f (ConvertTo-LizardArtifactPath $dstRel))
+      return $true
+    }
     $existing = Get-Content -LiteralPath $dst -Raw -ErrorAction SilentlyContinue
     if ($existing -match 'lizard-agent-layer') {
       Add-UniqueListItem $Skipped $dstRel
       Add-UniqueListItem $ManagedPaths $dstRel
-      return
+      Register-Artifact -Dest $dst -Kind file -SourcePath (Get-LayerSourcePath $src) -SourceHash $sourceHash -AdapterId $AdapterName -AdapterAliases $AdapterAliases -MirrorGroup ("adapter-instruction:{0}" -f (ConvertTo-LizardArtifactPath $dstRel))
+      return $false
     }
     if ($policy -eq 'sidecar-if-exists') {
       $sidecarRel = if ($instruction.sidecar) { Assert-SafeRelativePath $instruction.sidecar "adapter instruction sidecar" } else { "$dstRel.lizard-agent-layer" }
-      Copy-IfMissing $src (Join-Path $TargetRoot $sidecarRel)
+      $sidecarPath = Join-Path $TargetRoot $sidecarRel
+      Copy-IfMissing -Source $src -Dest $sidecarPath -AdapterId $AdapterName -AdapterAliases $AdapterAliases -MirrorGroup ("adapter-instruction:{0}" -f (ConvertTo-LizardArtifactPath $dstRel))
       Add-UniqueListItem $MergeNeeded "$dstRel exists; review $sidecarRel and merge intentionally."
       Add-MergeSuggestion -Harness $AdapterName -InstructionPath $dstRel -SidecarPath $sidecarRel
-      return
+      if (-not $Apply) { return $true }
+      return ((Get-LizardSha256 $sidecarPath) -eq $sourceHash)
     }
     Add-UniqueListItem $Skipped $dstRel
-    return
+    Register-Artifact -Dest $dst -Kind file -SourcePath (Get-LayerSourcePath $src) -SourceHash $sourceHash -AdapterId $AdapterName -AdapterAliases $AdapterAliases -MirrorGroup ("adapter-instruction:{0}" -f (ConvertTo-LizardArtifactPath $dstRel))
+    return $false
   }
 
-  Copy-IfMissing $src $dst
+  Copy-IfMissing -Source $src -Dest $dst -AdapterId $AdapterName -AdapterAliases $AdapterAliases -MirrorGroup ("adapter-instruction:{0}" -f (ConvertTo-LizardArtifactPath $dstRel))
+  if (-not $Apply) { return $true }
+  return ((Get-LizardSha256 $dst) -eq $sourceHash)
 }
 
 function Install-Adapter {
   param([string]$AdapterName)
-  if ($AdapterName -notmatch '^[a-z0-9][a-z0-9-]{0,62}$') { throw "Invalid adapter name '$AdapterName'." }
-  $adapterDir = Join-Path $LayerRoot "adapters\$AdapterName"
-  $adapterManifestPath = Join-Path $adapterDir 'adapter.json'
-  if (-not (Test-Path -LiteralPath $adapterManifestPath)) { throw "Missing adapter manifest for '$AdapterName': $adapterManifestPath" }
-  $adapter = Get-Content -LiteralPath $adapterManifestPath -Raw | ConvertFrom-Json
-  if ($adapter.name -ne $AdapterName) { throw "Adapter manifest name '$($adapter.name)' does not match folder '$AdapterName'." }
-
-  Add-UniqueListItem $InstalledAdapters $AdapterName
-  Copy-InstructionFile $adapter $adapterDir $AdapterName
+  $entry = $AdapterDocMap[$AdapterName]
+  $adapter = $entry.manifest
+  $adapterDir = [string]$entry.adapter_dir
+  if ($EffectiveInstructionMap.ContainsKey($AdapterName)) {
+    $effective = $EffectiveInstructionMap[$AdapterName]
+    $adapterAliases = @($effective.aliases.ToArray())
+    $identityInstalled = Copy-InstructionFile -Adapter $adapter -AdapterDir $adapterDir -AdapterName $AdapterName -AdapterAliases $adapterAliases
+    if ($identityInstalled) { Add-UniqueListItem $InstalledAdapters $AdapterName }
+  }
 
   foreach ($mirror in @($adapter.skillMirrors)) {
     $mirrorRel = Assert-SafeRelativePath $mirror.dst "skill mirror dst"
-    Ensure-Dir (Join-Path $TargetRoot $mirrorRel)
+    Ensure-Dir -Path (Join-Path $TargetRoot $mirrorRel) -AdapterId $AdapterName -MirrorGroup ("adapter-mirror:{0}" -f (ConvertTo-LizardArtifactPath $mirrorRel))
     foreach ($skill in @($ProfileDoc.skills)) {
-      Copy-SkillPackage $skill (Join-Path $TargetRoot $mirrorRel)
+      Copy-SkillPackage -SkillName $skill -DestRoot (Join-Path $TargetRoot $mirrorRel) -AdapterId $AdapterName
     }
   }
 }
@@ -523,9 +592,12 @@ function Write-InstallManifest {
   $label = To-RelativeDisplay $manifestPath
   Add-UniqueListItem $ManagedPaths $label
   $doc = New-Object System.Collections.Specialized.OrderedDictionary
-  $doc['schema_version'] = 2
+  $doc['schema_version'] = 3
   $doc['layer'] = "lizard-agent-layer"
   $doc['layer_version'] = $LayerVersion
+  $doc['minimum_reader_schema_version'] = 2
+  $doc['writer_schema_version'] = 3
+  if ($ExistingManifestSchema -and $ExistingManifestSchema -lt 3) { $doc['migrated_from_schema_version'] = $ExistingManifestSchema }
   $doc['profile'] = $Profile
   $doc['requested_packs'] = @($RequestedPacks)
   $doc['pack_sources'] = @($PackSources.ToArray())
@@ -538,10 +610,13 @@ function Write-InstallManifest {
   $doc['model_profiles'] = $ProfileDoc.modelProfiles
   $doc['skills'] = @($ProfileDoc.skills)
   $doc['adapters'] = @($InstalledAdapters.ToArray())
+  $doc['adapter_aliases'] = @($AdapterComposition.aliases)
+  $doc['artifacts'] = @($ArtifactRecords.Values | Sort-Object path)
   $doc['managed_paths'] = @($ManagedPaths.ToArray())
   $doc['owned_paths'] = @($OwnedPaths.ToArray())
   $doc['merge_needed'] = @($MergeNeeded.ToArray())
   $doc['merge_suggestions'] = @($MergeSuggestions.ToArray())
+  $doc['conflicts'] = @($Conflicts.ToArray())
   if ($Apply) {
     Set-SafeContent -AuthorizedRoot $TargetRoot -Path $manifestPath -Value ($doc | ConvertTo-Json -Depth 10)
     Add-UniqueListItem $Created $label
@@ -550,6 +625,23 @@ function Write-InstallManifest {
     Add-UniqueListItem $Planned $label
   }
 }
+
+$AdapterEntries = New-Object System.Collections.Generic.List[object]
+$AdapterDocMap = @{}
+foreach ($adapterName in $SelectedHarnesses) {
+  if ($adapterName -notmatch '^[a-z0-9][a-z0-9-]{0,62}$') { throw "Invalid adapter name '$adapterName'." }
+  $adapterDir = Join-Path $LayerRoot "adapters\$adapterName"
+  $adapterManifestPath = Join-Path $adapterDir 'adapter.json'
+  if (-not (Test-Path -LiteralPath $adapterManifestPath)) { throw "Missing adapter manifest for '$adapterName': $adapterManifestPath" }
+  $adapter = Get-Content -LiteralPath $adapterManifestPath -Raw | ConvertFrom-Json
+  if ($adapter.name -ne $adapterName) { throw "Adapter manifest name '$($adapter.name)' does not match folder '$adapterName'." }
+  $entry = [pscustomobject]@{ name = $adapterName; manifest = $adapter; adapter_dir = $adapterDir }
+  $AdapterEntries.Add($entry) | Out-Null
+  $AdapterDocMap[$adapterName] = $entry
+}
+$AdapterComposition = Resolve-LizardAdapterComposition -Adapters @($AdapterEntries.ToArray())
+$EffectiveInstructionMap = @{}
+foreach ($effective in @($AdapterComposition.effective_instructions)) { $EffectiveInstructionMap[[string]$effective.name] = $effective }
 
 Write-Host "lizard-agent-layer $Mode"
 Write-Host "Target: $TargetRoot"
@@ -572,7 +664,7 @@ Ensure-Dir (Join-Path $TargetRoot ".agent\skills")
 
 Copy-IfMissing (Join-Path $LayerRoot "templates\agent-gitignore") (Join-Path $TargetRoot ".agent\.gitignore")
 if ($SelectedPacks.Count -gt 0) {
-  Write-IfMissing (Join-Path $TargetRoot ".agent\project-profile.json") ($ProfileDoc | ConvertTo-Json -Depth 10)
+  Write-IfMissing -Dest (Join-Path $TargetRoot ".agent\project-profile.json") -Content ($ProfileDoc | ConvertTo-Json -Depth 10) -SourcePath 'generated:project-profile'
 } else {
   Copy-IfMissing $ProfilePath (Join-Path $TargetRoot ".agent\project-profile.json")
 }
@@ -596,7 +688,7 @@ foreach ($skill in $ProfileDoc.skills) {
     Write-Warning "Profile references missing skill '$skill'."
     continue
   }
-  Copy-SkillPackage $skill (Join-Path $TargetRoot ".agent\skills")
+  Copy-SkillPackage -SkillName $skill -DestRoot (Join-Path $TargetRoot ".agent\skills")
   $indexLines.Add("## $skill") | Out-Null
   $indexLines.Add(('Source: `.agent/skills/{0}/SKILL.md`' -f $skill)) | Out-Null
   $indexLines.Add("") | Out-Null
@@ -604,8 +696,8 @@ foreach ($skill in $ProfileDoc.skills) {
   $manifestLines.Add(($manifest | ConvertTo-Json -Compress)) | Out-Null
 }
 
-Write-IfMissing (Join-Path $TargetRoot ".agent\skills\_index.md") ($indexLines -join "`n")
-Write-IfMissing (Join-Path $TargetRoot ".agent\skills\_manifest.jsonl") ($manifestLines -join "`n")
+Write-IfMissing -Dest (Join-Path $TargetRoot ".agent\skills\_index.md") -Content ($indexLines -join "`n") -SourcePath 'generated:skill-index'
+Write-IfMissing -Dest (Join-Path $TargetRoot ".agent\skills\_manifest.jsonl") -Content ($manifestLines -join "`n") -SourcePath 'generated:skill-manifest'
 
 foreach ($adapterName in $SelectedHarnesses) {
   Install-Adapter $adapterName
@@ -636,4 +728,8 @@ if ($ShouldWritePlan) {
 if (-not $Apply) {
   Write-Host ""
   Write-Host "Preview only. Re-run with -Apply to write files."
+}
+if ($Conflicts.Count -gt 0) {
+  Write-Host "Ownership conflicts:"
+  foreach ($item in $Conflicts) { Write-Host "  ! $item" }
 }

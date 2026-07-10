@@ -261,13 +261,16 @@ Run-Step 'upgrade preserves requested packs' {
 }
 
 Run-Step 'update target preview plan' {
+  $historyPath = Join-Path $overlayTarget '.agent\lizard-agent-layer.update-history.jsonl'
+  $historyCountBefore = if (Test-Path -LiteralPath $historyPath) { @(Get-Content -LiteralPath $historyPath).Count } else { 0 }
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\update-target.ps1') -TargetPath $overlayTarget -PlanPath $overlayUpdatePlanPath -OutputDir $overlayUpdateOutputDir | Out-String | Write-Host
   if (-not (Test-Path -LiteralPath $overlayUpdatePlanPath)) { throw 'Expected update plan report.' }
   $plan = Get-Content -LiteralPath $overlayUpdatePlanPath -Raw
   foreach ($expected in @('# lizard-agent-layer update plan', 'Installed layer version', 'Current layer version', 'Requested packs: `project-overlay`', 'Preview only', 'Apply preserving existing files', 'Manifest differences')) {
     if ($plan -notmatch [regex]::Escape($expected)) { throw "Expected update plan to contain: $expected" }
   }
-  if (Test-Path -LiteralPath (Join-Path $overlayTarget '.agent\lizard-agent-layer.update-history.jsonl')) { throw 'Preview update wrote update history.' }
+  $historyCountAfter = if (Test-Path -LiteralPath $historyPath) { @(Get-Content -LiteralPath $historyPath).Count } else { 0 }
+  if ($historyCountAfter -ne $historyCountBefore) { throw 'Preview update changed update history.' }
   $reportPath = Join-Path $overlayUpdateOutputDir 'update-report.json'
   if (-not (Test-Path -LiteralPath $reportPath)) { throw 'Expected update report JSON.' }
   $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json

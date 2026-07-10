@@ -20,17 +20,25 @@ Target writes are authorized only beneath the selected target root. Report write
 
 The guard is intentionally conservative: a target root or destination ancestry containing a link is rejected instead of followed. This keeps force modes from widening the filesystem boundary.
 
+## Ownership and integrity
+
+Manifest v3 records each managed artifact separately. Layer-owned and adopted files carry source, installed, and current SHA-256 hashes; user-owned files are visible in the contract but are not claimed as generated content.
+
+`-ForceManaged` is evidence-based. It may refresh an unchanged layer-owned artifact, but it preserves user-owned, adopted, locally modified, legacy-ambiguous, and integrity-unknown files. Schema v2 migration defaults ambiguous paths to user-owned.
+
+Strict manifest checks fail on missing identities, content changes, source drift, incomplete mirrors, or adapter identity mismatches. A legacy manifest can report only `integrity-unknown`, never a strict pass.
+
 ## Harness safety
 
 - Adapters are declarative manifests under `adapters/<name>/adapter.json`.
 - Adapters may mirror skills into harness-specific folders.
-- Duplicate instruction destinations should be avoided in the same profile unless intentional.
+- Duplicate or overlapping destinations fail before mutation unless instruction adapters declare a shared compatibility group with unique precedence.
 - Generic `AGENTS.md` is intended for tools without a dedicated adapter, not as a default companion to Codex.
 
 ## Target-project safety
 
 - Project-local instructions remain authoritative.
-- Permissions are copied as a starting point; target projects own them after install.
+- Pre-existing project files remain user-owned. Files created by the layer remain layer-owned until explicitly adopted or locally modified.
 - Raw logs and generated dashboards are private by default.
 - L2 worktrees must be outside the target root; creation, verification, and cleanup reject unsafe path identities.
 

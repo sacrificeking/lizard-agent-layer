@@ -38,6 +38,15 @@ Finding counts:
 - **Remaining validation:** execute the same symbolic-link fixtures on Ubuntu and macOS in package 4; Windows junction fixtures already pass
 - **Release note:** This removes the P0 write-escape behavior locally, but the repository remains not release-ready until the dependent P1 ownership, integrity, transaction, version, worktree, and verifier findings are resolved.
 
+### Package 2 — Evidence-based ownership and update gates
+
+- **Status:** Implemented locally on 2026-07-10
+- **Scope:** A2, B2, B3, and the non-transactional gates from B4; F-002, F-004, F-005, and F-007
+- **Evidence:** `scripts/Lizard.Manifest.psm1`, manifest schema v3, migration registry, content-aware strict diff, exact doctor identity checks, adapter preflight composition, and focused ownership/integrity/version tests
+- **Passing gates:** structural validation, focused positive/negative suites, and complete end-to-end smoke
+- **Remaining dependency:** transaction-backed rollback and migration recovery belong to package 3; cross-platform execution belongs to package 4
+- **Release note:** Managed refresh and integrity claims are now evidence-based, but release readiness still depends on transaction, worktree-evidence, portability, and schema-runtime packages.
+
 ## Findings Register
 
 ### F-001 — Linked directories can redirect writes outside the target
@@ -66,7 +75,7 @@ Finding counts:
 - **Category:** Installer, Update, Manifest, and Merge Safety
 - **Priority:** P1
 - **Severity:** High
-- **Status:** Observed
+- **Status:** Implemented locally; explicit adoption command remains optional follow-up
 - **Confidence:** High
 - **Evidence:** `scripts/install.ps1:244-275`, `scripts/install.ps1:391-459`, `scripts/install.ps1:515-542`. Pre-existing or initially skipped `.agent` files are classified broadly enough to be replaced during a later managed refresh.
 - **Impact:** Project-specific memory, protocols, or skills can be lost even though managed refresh is documented as targeting generated artifacts.
@@ -108,7 +117,7 @@ Finding counts:
 - **Category:** Installer Safety; Tests and Drift Protection; Governance
 - **Priority:** P1
 - **Severity:** High
-- **Status:** Observed
+- **Status:** Implemented locally; cross-platform tamper execution pending
 - **Confidence:** High
 - **Evidence:** `scripts/manifest-diff.ps1:116-132` compares selected lists and existence. At line 122, harnesses are compared to themselves. A modified installed skill passed strict diff with zero differences.
 - **Impact:** Stale, locally modified, truncated, or incorrectly mirrored files can be certified as aligned with the current layer.
@@ -129,7 +138,7 @@ Finding counts:
 - **Category:** Architecture; Adapter Fidelity; Tests
 - **Priority:** P1
 - **Severity:** High
-- **Status:** Observed
+- **Status:** Implemented locally; full three-OS matrix pending
 - **Confidence:** High
 - **Evidence:** Generic and Codex adapters can both target `AGENTS.md`. `scripts/install.ps1:463-491` and `scripts/doctor.ps1:73-104` accept a common `lizard-agent-layer` substring rather than adapter-specific identity. A combined fixture installed generic content, recorded Codex too, and passed strict doctor.
 - **Impact:** Manifest and diagnostics overstate harness fidelity; adapter ordering changes the installed result.
@@ -171,7 +180,7 @@ Finding counts:
 - **Category:** Update Safety; Governance
 - **Priority:** P1
 - **Severity:** High
-- **Status:** Observed
+- **Status:** Core gates implemented locally; transaction-backed rollback pending B1
 - **Confidence:** High
 - **Evidence:** Version relation is calculated at `scripts/update-target.ps1:180-191`, but apply proceeds unconditionally at lines 233-270. A target declaring version `99.0.0` was updated by layer version `1.4.1` without an override.
 - **Impact:** Older layer checkouts can overwrite newer target contracts and discard fields or semantics they do not understand.
@@ -416,6 +425,7 @@ B2 Integrity diff + structured evidence
 #### A2 — Manifest v3 ownership and artifact identity
 
 - **Priority:** P1
+- **Status:** Implemented locally; explicit adoption command is not yet exposed
 - **Goal:** Replace path-class inference with evidence-based ownership and integrity.
 - **Files:** `scripts/install.ps1`, `scripts/update-target.ps1`, `scripts/doctor.ps1`, schemas, docs, fixtures.
 - **Steps:**
@@ -475,6 +485,7 @@ B2 Integrity diff + structured evidence
 #### B2 — Content-aware strict manifest diff
 
 - **Priority:** P1
+- **Status:** Implemented locally; three-OS execution pending
 - **Goal:** Make `-Strict` a defensible content and contract check.
 - **Files:** `scripts/manifest-diff.ps1`, doctor, updater, schema, reports.
 - **Steps:**
@@ -494,6 +505,7 @@ B2 Integrity diff + structured evidence
 #### B3 — Adapter composition and identity gate
 
 - **Priority:** P1
+- **Status:** Implemented locally; three-OS execution pending
 - **Goal:** Make expanded adapter results deterministic and verifiable.
 - **Files:** Adapter schema/manifests, installer, validator, doctor, matrix.
 - **Steps:**
@@ -513,6 +525,7 @@ B2 Integrity diff + structured evidence
 #### B4 — Downgrade and migration gates
 
 - **Priority:** P1
+- **Status:** Version/schema gates implemented; transaction rollback pending B1
 - **Goal:** Prevent unsupported readers/writers from silently mutating target state.
 - **Files:** Updater, upgrade wrapper, schemas, manifest, history, docs.
 - **Steps:** Define reader/writer versions; create ordered migrations; block future versions; add explicit approved downgrade; back up before migration.
@@ -683,12 +696,12 @@ The forecast assumes that every correction receives permanent positive and negat
 - [x] Every destination is canonically resolved and authorized immediately before mutation.
 - [ ] Junction and symlink fixtures prove zero writes outside approved roots.
 - [ ] Existing customized instructions, protocols, memory, and skills remain preserved.
-- [ ] `ForceManaged` refreshes only exact, unchanged, layer-owned artifacts.
+- [x] `ForceManaged` refreshes only exact, unchanged, layer-owned artifacts.
 - [ ] Fault injection after each installer/update mutation is recoverable.
 - [ ] Per-target locking prevents concurrent writers.
-- [ ] Manifest diff verifies content, ownership, adapter identity, and every mirror.
-- [ ] Undeclared adapter destination collisions fail before writes.
-- [ ] Future-version targets and unapproved downgrades stop before writes.
+- [x] Manifest diff verifies content, ownership, adapter identity, and every mirror.
+- [x] Undeclared adapter destination collisions fail before writes.
+- [x] Future-version targets and unapproved downgrades stop before writes.
 - [ ] Worktree create, verify, and cleanup share one lifecycle contract.
 - [ ] Verifier reports bind to revision, diff, commands, exits, and evidence hashes.
 - [x] Preview commands leave target content and Git status unchanged by default.

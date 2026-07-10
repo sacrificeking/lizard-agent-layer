@@ -1,0 +1,14 @@
+{
+  "currentSchemaVersion": 3,
+  "minimumReadableSchemaVersion": 2,
+  "maximumReadableSchemaVersion": 3,
+  "migrations": [
+    {
+      "from": 2,
+      "to": 3,
+      "mode": "conservative",
+      "ambiguousOwnership": "user-owned",
+      "description": "Preserve every legacy artifact unless exact v3 ownership and installed-content evidence exists."
+    }
+  ]
+}

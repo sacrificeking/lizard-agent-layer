@@ -9,7 +9,9 @@
   [switch]$Json,
   [string]$PlanPath,
   [string]$OutputDir,
-  [switch]$AllowTargetReportWrite
+  [switch]$AllowTargetReportWrite,
+  [switch]$AllowDowngrade,
+  [switch]$HumanApproved
 )
 
 $ErrorActionPreference = "Stop"
@@ -65,6 +67,8 @@ function Format-CommandLine {
   if ($SelectedPacks.Count -gt 0) { $parts.Add(('-Packs {0}' -f ($SelectedPacks -join ','))) | Out-Null }
   if ($AsApply) { $parts.Add('-Apply') | Out-Null }
   if ($AsForce) { $parts.Add('-ForceManaged') | Out-Null }
+  if ($AllowDowngrade) { $parts.Add('-AllowDowngrade') | Out-Null }
+  if ($HumanApproved) { $parts.Add('-HumanApproved') | Out-Null }
   return ($parts -join ' ')
 }
 
@@ -115,11 +119,14 @@ function New-UpdatePlanMarkdown {
   $lines.Add(('- Installed layer version: `{0}`' -f $InstalledVersion)) | Out-Null
   $lines.Add(('- Current layer version: `{0}`' -f $CurrentVersion)) | Out-Null
   $lines.Add(('- Version relation: `{0}`' -f $VersionRelation)) | Out-Null
+  $lines.Add(('- Installed manifest schema: `{0}`' -f $InstalledManifestSchema)) | Out-Null
+  $lines.Add(('- Target manifest schema after apply: `3`')) | Out-Null
   $lines.Add(('- Profile: `{0}`' -f $SelectedProfile)) | Out-Null
   $lines.Add(('- Harnesses: `{0}`' -f (Format-ListValue $SelectedHarnesses))) | Out-Null
   $lines.Add(('- Requested packs: `{0}`' -f (Format-ListValue $SelectedPacks))) | Out-Null
   $lines.Add(('- Installed expanded packs: `{0}`' -f (Format-ListValue $InstalledExpandedPacks))) | Out-Null
   $lines.Add(('- Force managed files: `{0}`' -f $ForceManaged.IsPresent)) | Out-Null
+  $lines.Add(('- Downgrade approved: `{0}`' -f ($AllowDowngrade -and $HumanApproved))) | Out-Null
   $lines.Add(('- Manifest diff status: `{0}`' -f $DiffReport.status)) | Out-Null
   $lines.Add(('- Manifest differences: `{0}`' -f $DiffReport.summary.differences)) | Out-Null
   $lines.Add('') | Out-Null
@@ -134,6 +141,8 @@ function New-UpdatePlanMarkdown {
   $lines.Add('- Without `-ForceManaged`, existing target files are preserved and missing/generated layer files are repaired.') | Out-Null
   $lines.Add('- With `-ForceManaged`, generated layer artifacts may be replaced from the current layer after reviewing this plan; unowned root instruction files remain merge-reviewed.') | Out-Null
   $lines.Add('- Existing project instruction files can still produce sidecar merge suggestions instead of silent edits, depending on adapter policy.') | Out-Null
+  $lines.Add('- Schema v2 manifests migrate conservatively to v3; ambiguous legacy files become user-owned and are not force-refreshed.') | Out-Null
+  $lines.Add('- A newer installed layer version requires both `-AllowDowngrade` and `-HumanApproved`.') | Out-Null
   $lines.Add('- After apply, manifest diff is run again in strict mode and an update-history JSONL entry is appended in `.agent/`.') | Out-Null
   $lines.Add('') | Out-Null
   $lines.Add('## Commands') | Out-Null
@@ -205,6 +214,12 @@ $Manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $ProfileDoc = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
 $CurrentVersion = (Get-Content -LiteralPath $versionPath -Raw).Trim()
 $InstalledVersion = if ($Manifest.layer_version) { [string]$Manifest.layer_version } else { 'unknown' }
+$InstalledManifestSchema = if ($null -ne $Manifest.schema_version) { try { [int]$Manifest.schema_version } catch { throw "MANIFEST_SCHEMA_INVALID: $($Manifest.schema_version)" } } else { 1 }
+if ($InstalledManifestSchema -lt 2) { throw "MANIFEST_SCHEMA_UNSUPPORTED: Schema $InstalledManifestSchema is older than minimum readable schema 2." }
+if ($InstalledManifestSchema -gt 3) { throw "MANIFEST_READER_TOO_OLD: Target schema $InstalledManifestSchema is newer than supported schema 3." }
+if ($Manifest.minimum_reader_schema_version -and [int]$Manifest.minimum_reader_schema_version -gt 3) { throw "MANIFEST_READER_TOO_OLD: Target requires reader schema $($Manifest.minimum_reader_schema_version)." }
+try { $null = [Version]$CurrentVersion } catch { throw "VERSION_FORMAT_INVALID: Current layer version '$CurrentVersion' is not a supported semantic version." }
+try { $null = [Version]$InstalledVersion } catch { throw "VERSION_FORMAT_INVALID: Installed layer version '$InstalledVersion' is not a supported semantic version." }
 $SelectedProfile = if (-not [string]::IsNullOrWhiteSpace($Profile)) { $Profile } elseif ($Manifest.profile) { [string]$Manifest.profile } elseif ($ProfileDoc.profile) { [string]$ProfileDoc.profile } else { 'standard' }
 $SelectedHarnesses = if ($Harnesses -and $Harnesses.Count -gt 0) { Expand-ValueList $Harnesses } elseif ($Manifest.harnesses) { Expand-ValueList $Manifest.harnesses } elseif ($ProfileDoc.harnesses) { Expand-ValueList $ProfileDoc.harnesses } else { @() }
 $SelectedPacks = if ($Packs -and $Packs.Count -gt 0) { Expand-ValueList $Packs } elseif ($Manifest.requested_packs) { Expand-ValueList $Manifest.requested_packs } elseif ($ProfileDoc.requestedPacks) { Expand-ValueList $ProfileDoc.requestedPacks } elseif ($Manifest.packs) { Expand-ValueList $Manifest.packs } else { @() }
@@ -214,6 +229,9 @@ $SelectedPacks = @($SelectedPacks | Where-Object { -not [string]::IsNullOrWhiteS
 $InstalledExpandedPacks = @($InstalledExpandedPacks | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
 $VersionRelation = Get-VersionRelation -Installed $InstalledVersion -Current $CurrentVersion
 $Mode = if ($Apply) { 'APPLY' } else { 'PREVIEW' }
+if ($Apply -and $VersionRelation -eq 'installed-target-newer' -and (-not $AllowDowngrade -or -not $HumanApproved)) {
+  throw "DOWNGRADE_APPROVAL_REQUIRED: Installed version $InstalledVersion is newer than current layer $CurrentVersion. Re-run only after review with -AllowDowngrade -HumanApproved."
+}
 
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 $effectiveOutputDir = Resolve-UserPath -Path $OutputDir -Fallback (Join-Path $LayerRoot ".tmp\updates\$stamp")
@@ -257,15 +275,19 @@ if ($Apply) {
   $postDiff = Invoke-ManifestDiff -DiffOutputDir $postDiffDir -Strict
   $historyPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.update-history.jsonl'
   $historyEntry = [ordered]@{
-    schema_version = 1
+    schema_version = 2
     updated_at = (Get-Date).ToUniversalTime().ToString('o')
     from_version = $InstalledVersion
     to_version = $CurrentVersion
+    from_manifest_schema = $InstalledManifestSchema
+    to_manifest_schema = 3
     version_relation_before = $VersionRelation
     profile = $SelectedProfile
     requested_packs = @($SelectedPacks)
     harnesses = @($SelectedHarnesses)
     force_managed = $ForceManaged.IsPresent
+    allow_downgrade = $AllowDowngrade.IsPresent
+    human_approved = $HumanApproved.IsPresent
     update_plan_path = $effectivePlanPath
     install_plan_path = $installPlanPath
     pre_manifest_status = [string]$preDiff.status
@@ -284,11 +306,15 @@ $report = [ordered]@{
   installed_layer_version = $InstalledVersion
   current_layer_version = $CurrentVersion
   version_relation = $VersionRelation
+  installed_manifest_schema = $InstalledManifestSchema
+  target_manifest_schema = 3
   profile = $SelectedProfile
   harnesses = @($SelectedHarnesses)
   requested_packs = @($SelectedPacks)
   installed_expanded_packs = @($InstalledExpandedPacks)
   force_managed = $ForceManaged.IsPresent
+  allow_downgrade = $AllowDowngrade.IsPresent
+  human_approved = $HumanApproved.IsPresent
   plan_path = $effectivePlanPath
   output_dir = $effectiveOutputDir
   install_plan_path = if ($Apply) { $installPlanPath } else { $null }

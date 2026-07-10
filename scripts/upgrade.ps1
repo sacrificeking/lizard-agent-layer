@@ -2,7 +2,9 @@ param(
   [string]$TargetPath = (Get-Location).Path,
   [string[]]$Harnesses,
   [switch]$Apply,
-  [switch]$Force
+  [switch]$Force,
+  [switch]$AllowDowngrade,
+  [switch]$HumanApproved
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,9 +44,16 @@ Write-Host ""
 Write-Host "This conservative upgrade repairs missing generated files. Existing files are preserved unless -Force is passed."
 Write-Host ""
 
-$argsList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $ScriptDir 'install.ps1'), '-TargetPath', $TargetRoot, '-Profile', $profile)
-if ($selectedHarnesses -and $selectedHarnesses.Count -gt 0) { $argsList += '-Harnesses'; $argsList += ($selectedHarnesses -join ',') }
-if ($selectedPacks -and $selectedPacks.Count -gt 0) { $argsList += '-Packs'; $argsList += ($selectedPacks -join ',') }
+$workflowScript = if (Test-Path -LiteralPath $manifestPath) { 'update-target.ps1' } else { 'install.ps1' }
+$argsList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $ScriptDir $workflowScript), '-TargetPath', $TargetRoot)
+if ($workflowScript -eq 'install.ps1') {
+  $argsList += @('-Profile', $profile)
+  if ($selectedHarnesses -and $selectedHarnesses.Count -gt 0) { $argsList += '-Harnesses'; $argsList += ($selectedHarnesses -join ',') }
+  if ($selectedPacks -and $selectedPacks.Count -gt 0) { $argsList += '-Packs'; $argsList += ($selectedPacks -join ',') }
+} else {
+  if ($Force) { $argsList += '-ForceManaged' }
+  if ($AllowDowngrade) { $argsList += '-AllowDowngrade' }
+  if ($HumanApproved) { $argsList += '-HumanApproved' }
+}
 if ($Apply) { $argsList += '-Apply' }
-if ($Force) { $argsList += '-Force' }
 & powershell.exe @argsList

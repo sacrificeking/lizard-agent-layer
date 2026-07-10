@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-07-09T15:33:32.2976837Z",
-    "layer_version":  "1.4.0",
-    "artifact_count":  82,
-    "total_bytes":  78489,
-    "token_estimate":  19613,
+    "generated_at":  "2026-07-10T16:19:33.8773301Z",
+    "layer_version":  "1.4.1",
+    "artifact_count":  84,
+    "total_bytes":  81916,
+    "token_estimate":  20470,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -27,11 +27,11 @@
                       {
                           "kind":  "adapter",
                           "path":  "adapters/codex/adapter.json",
-                          "sha256":  "283eda59bc865a0419cf57d968d29c2a16e743d7923da09591802383c5d04488",
-                          "bytes":  391,
-                          "lines":  14,
-                          "words":  37,
-                          "token_estimate":  97
+                          "sha256":  "a7d8d07c7b72306473ded92c5290746772d9aa4908ee3aa38c2f40f3c506ba57",
+                          "bytes":  476,
+                          "lines":  18,
+                          "words":  44,
+                          "token_estimate":  119
                       },
                       {
                           "kind":  "adapter",
@@ -81,11 +81,11 @@
                       {
                           "kind":  "adapter",
                           "path":  "adapters/generic-agents-md/adapter.json",
-                          "sha256":  "72e32c60cb7e570b6f80c9c21d929541c14603cdbca34486aab7ae6d7a5efca6",
-                          "bytes":  359,
-                          "lines":  12,
-                          "words":  33,
-                          "token_estimate":  89
+                          "sha256":  "a8ddfbc9cff463e143e8cf41b60cca1411c490cb2251e26d7302bd312c9377da",
+                          "bytes":  443,
+                          "lines":  16,
+                          "words":  40,
+                          "token_estimate":  110
                       },
                       {
                           "kind":  "adapter",
@@ -629,6 +629,15 @@
                       },
                       {
                           "kind":  "registry",
+                          "path":  "registry/manifest-migrations.json",
+                          "sha256":  "bd01337463439e155ce55767e81f15667aaa246537b59afb33955d6562f74ebf",
+                          "bytes":  364,
+                          "lines":  15,
+                          "words":  34,
+                          "token_estimate":  91
+                      },
+                      {
+                          "kind":  "registry",
                           "path":  "registry/maturity-levels.json",
                           "sha256":  "ed2cd6c60f3874708e999b056097cff3314a2bd43f93eea1ddc3987f97605ba5",
                           "bytes":  827,
@@ -657,11 +666,20 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/adapter.schema.json",
-                          "sha256":  "0ff8b602ee712d4d30a5d172bb2cdcad5955a52afb06cc1ada886574ed5051b6",
-                          "bytes":  1096,
-                          "lines":  36,
-                          "words":  96,
-                          "token_estimate":  274
+                          "sha256":  "ea09d4bb207abfff88cedbc65b9af25b9b3ab1bd9eb4098f420d3a2c4cc726c0",
+                          "bytes":  1418,
+                          "lines":  45,
+                          "words":  123,
+                          "token_estimate":  354
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/install-manifest.schema.json",
+                          "sha256":  "f6848900ae4a8b843cf97a352fc6b7b6e47a0b1f192182d2bb32bbf9992db194",
+                          "bytes":  2572,
+                          "lines":  63,
+                          "words":  235,
+                          "token_estimate":  643
                       },
                       {
                           "kind":  "schema",
