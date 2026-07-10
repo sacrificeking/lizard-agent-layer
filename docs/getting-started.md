@@ -125,13 +125,15 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-sync.ps1 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-cost.ps1 -Pattern daily-triage -Level L1 -Cadence 1d
 ```
 
-For L2 assisted fixes, initialize `minimal-fix-assist`, preview the worktree, and require `-Apply -HumanApproved` before any worktree is created:
+For L2 assisted fixes, initialize `minimal-fix-assist`, preview the worktree, require `-Apply -HumanApproved` before any worktree is created, verify against the exact branch/worktree, and clean up with the same human gate:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern minimal-fix-assist -WritePlan
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123 -Apply -HumanApproved
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-verify.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -Verifier reviewer-name -Status NEEDS_REVIEW -Apply
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -RemoveBranch
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -RemoveBranch -Apply -HumanApproved
 ```
 
 See [Loop engineering](loop-engineering.md) for the readiness model and safety rules.

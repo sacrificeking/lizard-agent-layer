@@ -66,4 +66,4 @@ CI runs `scripts/pack-report.ps1 -Strict` after structural validation. This writ
 
 ## Smoke hardening
 
-The smoke test includes pack install checks, target pack overlay checks, loop-engineering init/audit/report/sync/cost plus L2 worktree/verifier coverage, `manifest-diff.ps1 -Strict`, upgrade verification that requested packs are preserved, and `update-target.ps1` preview/apply coverage with update-history validation.
+The smoke test includes pack install checks, target pack overlay checks, loop-engineering init/audit/report/sync/cost plus L2 worktree/verifier negative-gate and cleanup coverage, `manifest-diff.ps1 -Strict`, upgrade verification that requested packs are preserved, and `update-target.ps1` preview/apply coverage with update-history validation.

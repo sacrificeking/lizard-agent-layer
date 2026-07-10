@@ -30,6 +30,11 @@ $l2InitOutputDir = Join-Path $tmpRoot 'l2-loop-init-output'
 $l2AuditOutputDir = Join-Path $tmpRoot 'l2-loop-audit-output'
 $l2WorktreeOutputDir = Join-Path $tmpRoot 'l2-worktree-output'
 $l2VerifyOutputDir = Join-Path $tmpRoot 'l2-verify-output'
+$l2NoApprovalOutputDir = Join-Path $tmpRoot 'l2-worktree-no-approval-output'
+$l2VerifyMissingOutputDir = Join-Path $tmpRoot 'l2-verify-missing-output'
+$l2VerifyMismatchOutputDir = Join-Path $tmpRoot 'l2-verify-mismatch-output'
+$l2CleanupPreviewOutputDir = Join-Path $tmpRoot 'l2-cleanup-preview-output'
+$l2CleanupOutputDir = Join-Path $tmpRoot 'l2-cleanup-output'
 $l2WorktreePath = Join-Path $tmpRoot 'l2-assisted-worktree'
 
 foreach ($target in @($standardTarget, $packTarget, $overlayTarget, $cursorTarget, $sidecarTarget, $analysisTarget, $loopTarget, $l2Target)) {
@@ -180,19 +185,54 @@ Run-Step 'L2 assisted loop init' {
 
 Run-Step 'L2 worktree and verifier gates' {
   $branch = 'lizard/l2/smoke-fix'
+  $noApprovalOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-worktree.ps1') -TargetPath $l2Target -ItemId smoke-fix -Branch $branch -WorktreePath $l2WorktreePath -OutputDir $l2NoApprovalOutputDir -Apply 2>&1
+  $noApprovalExit = $LASTEXITCODE
+  $noApprovalOutput | Out-String | Write-Host
+  if ($noApprovalExit -eq 0) { throw 'Expected L2 worktree apply without HumanApproved to fail.' }
+  if (Test-Path -LiteralPath $l2WorktreePath) { throw 'L2 worktree was created without HumanApproved.' }
+
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-worktree.ps1') -TargetPath $l2Target -ItemId smoke-fix -Branch $branch -WorktreePath $l2WorktreePath -OutputDir $l2WorktreeOutputDir | Out-String | Write-Host
   if (Test-Path -LiteralPath $l2WorktreePath) { throw 'L2 worktree preview created a worktree.' }
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-worktree.ps1') -TargetPath $l2Target -ItemId smoke-fix -Branch $branch -WorktreePath $l2WorktreePath -OutputDir $l2WorktreeOutputDir -Apply -HumanApproved | Out-String | Write-Host
   if (-not (Test-Path -LiteralPath $l2WorktreePath)) { throw 'Expected L2 assisted worktree to exist after approved apply.' }
   $worktreeReport = Get-Content -LiteralPath (Join-Path $l2WorktreeOutputDir 'loop-worktree-report.json') -Raw | ConvertFrom-Json
   if ($worktreeReport.auto_merge -ne $false) { throw 'L2 worktree report must keep auto_merge false.' }
+
+  $missingVerifierOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -WorktreePath $l2WorktreePath -Branch $branch -OutputDir $l2VerifyMissingOutputDir 2>&1
+  $missingVerifierExit = $LASTEXITCODE
+  $missingVerifierOutput | Out-String | Write-Host
+  if ($missingVerifierExit -eq 0) { throw 'Expected L2 verifier without Verifier to fail.' }
+  $missingVerifierReport = Get-Content -LiteralPath (Join-Path $l2VerifyMissingOutputDir 'loop-verify-report.json') -Raw | ConvertFrom-Json
+  if (@($missingVerifierReport.failures) -notcontains 'Verifier is required.') { throw 'Expected missing verifier failure in report.' }
+
+  $mismatchOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -WorktreePath $l2WorktreePath -Branch 'lizard/l2/wrong-branch' -Verifier smoke-verifier -OutputDir $l2VerifyMismatchOutputDir 2>&1
+  $mismatchExit = $LASTEXITCODE
+  $mismatchOutput | Out-String | Write-Host
+  if ($mismatchExit -eq 0) { throw 'Expected L2 verifier branch mismatch to fail.' }
+  $mismatchReport = Get-Content -LiteralPath (Join-Path $l2VerifyMismatchOutputDir 'loop-verify-report.json') -Raw | ConvertFrom-Json
+  if ($mismatchReport.branch_matches -ne $false) { throw 'Expected verifier branch_matches false for mismatch.' }
+  if ($mismatchReport.same_git_common_dir -ne $true) { throw 'Expected mismatch verifier to still identify same repository.' }
+
   & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -WorktreePath $l2WorktreePath -Branch $branch -Verifier smoke-verifier -Status NEEDS_REVIEW -Summary 'Smoke verifier packet generated.' -OutputDir $l2VerifyOutputDir -Apply | Out-String | Write-Host
+  $verifyReport = Get-Content -LiteralPath (Join-Path $l2VerifyOutputDir 'loop-verify-report.json') -Raw | ConvertFrom-Json
+  if ($verifyReport.branch_matches -ne $true) { throw 'Expected verifier branch binding to pass.' }
+  if ($verifyReport.same_git_common_dir -ne $true) { throw 'Expected verifier repository binding to pass.' }
+  if ($verifyReport.verifier_file_safe -ne $true) { throw 'Expected verifier file path to be safe.' }
   $targetVerifier = Join-Path $l2Target '.agent\loops\loop-verifier-report.md'
   if (-not (Test-Path -LiteralPath $targetVerifier)) { throw 'Expected target verifier report.' }
   $verifierText = Get-Content -LiteralPath $targetVerifier -Raw
   foreach ($expected in @('Auto-merge: forbidden', 'Human merge review required: true', 'Merge allowed automatically: false')) {
     if ($verifierText -notmatch [regex]::Escape($expected)) { throw "Expected verifier report to contain: $expected" }
   }
+
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-worktree-cleanup.ps1') -TargetPath $l2Target -WorktreePath $l2WorktreePath -Branch $branch -RemoveBranch -OutputDir $l2CleanupPreviewOutputDir | Out-String | Write-Host
+  if (-not (Test-Path -LiteralPath $l2WorktreePath)) { throw 'L2 cleanup preview removed the worktree.' }
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-worktree-cleanup.ps1') -TargetPath $l2Target -WorktreePath $l2WorktreePath -Branch $branch -RemoveBranch -Force -OutputDir $l2CleanupOutputDir -Apply -HumanApproved | Out-String | Write-Host
+  if (Test-Path -LiteralPath $l2WorktreePath) { throw 'Expected L2 cleanup apply to remove the worktree.' }
+  $cleanupReport = Get-Content -LiteralPath (Join-Path $l2CleanupOutputDir 'loop-worktree-cleanup-report.json') -Raw | ConvertFrom-Json
+  if ($cleanupReport.removed -ne $true) { throw 'Expected cleanup report removed true.' }
+  if ($cleanupReport.branch_deleted -ne $true) { throw 'Expected cleanup report branch_deleted true.' }
+  if ($cleanupReport.auto_merge -ne $false) { throw 'Cleanup report must keep auto_merge false.' }
 }
 
 Run-Step 'install apply target pack overlay' {

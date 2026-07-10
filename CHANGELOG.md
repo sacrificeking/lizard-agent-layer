@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.1 - 2026-07-10
+
+### Added
+
+- `loop-worktree-cleanup.ps1` for preview-first, human-approved cleanup of isolated L2 worktrees and optional branch deletion.
+- Permanent smoke coverage for L2 negative gates: missing human approval, missing verifier, branch mismatch, and cleanup preview/apply behavior.
+
+### Changed
+
+- Hardened `loop-verify.ps1` with safe verifier-file path validation, target/worktree repository binding, worktree-root checks, and branch matching.
+
 ## 1.4.0 - 2026-07-09
 
 ### Added
@@ -8,6 +19,7 @@
 - `worktree-isolation` skill plus `worktree-policy.md`, `assisted-fix-plan.md`, and `loop-verifier-report.md` runtime templates.
 - `loop-worktree.ps1` for preview-first, human-approved worktree creation and `loop-verify.ps1` for verifier decision packets.
 - L2 validation, audit, sync, report, pack, and smoke coverage to enforce worktree isolation, verifier requirements, and human merge review gates.
+
 ## 1.3.0 - 2026-07-09
 
 ### Added

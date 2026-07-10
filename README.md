@@ -15,7 +15,7 @@ Portable agent infrastructure for projects that need consistent AI-assisted deve
 - Preview-first installers that avoid clobbering target files.
 - Optional install plan reports with merge suggestions for existing instruction files.
 - Plan-first target updates with version comparison, manifest diff, apply mode, force-managed refresh, and update history.
-- L1/report-only and L2 assisted loop engineering runtime with patterns, state, budget, run-log, constraints, worktree isolation, verifier reports, audit, sync, and cost tooling.
+- L1/report-only and L2 assisted loop engineering runtime with patterns, state, budget, run-log, constraints, worktree isolation, hardened verifier reports, cleanup, audit, sync, and cost tooling.
 - Standalone merge suggestion reports with patch and copy-block artifacts.
 - Target analyzer for profile, harness, skill, pack, monorepo, non-Node, and risk recommendations.
 - Adapter matrix tests for every profile/harness combination.

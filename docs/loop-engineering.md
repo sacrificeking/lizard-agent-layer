@@ -85,6 +85,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-cost.ps1 
 ## Model routing
 
 Use cheaper models for deterministic scanning, inventory, state pruning, and checklist expansion. Use stronger models for ambiguous failures, architecture tradeoffs, security/auth/finance findings, and release verdicts. This keeps loops useful across Codex, Claude, Gemini, Cursor-compatible agents, and older budget models.
+
 ## L2 Assisted Worktree Flow
 
 L2 is not autonomy. It is a controlled assisted workflow for one human-approved item.
@@ -94,8 +95,9 @@ L2 is not autonomy. It is a controlled assisted workflow for one human-approved 
 3. Preview worktree creation with `loop-worktree.ps1`.
 4. Create the worktree only with `-Apply -HumanApproved`.
 5. Make the smallest approved change in the assisted worktree.
-6. Generate a verifier packet with `loop-verify.ps1`.
+6. Generate a branch-bound verifier packet with `loop-verify.ps1`.
 7. Let a human decide whether to merge, revise, discard, or pause.
+8. Clean up the isolated worktree only with `loop-worktree-cleanup.ps1 -Apply -HumanApproved`.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern minimal-fix-assist -WritePlan
@@ -103,6 +105,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123 -Apply -HumanApproved
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-verify.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -Verifier reviewer-name -Status NEEDS_REVIEW -Apply
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -RemoveBranch
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -RemoveBranch -Apply -HumanApproved
 ```
 
-L2 never auto-merges, pushes, releases, deploys, changes dependencies, edits migrations, or touches secrets without separate explicit approval.
+L2 never auto-merges, pushes, releases, deploys, changes dependencies, edits migrations, or touches secrets without separate explicit approval. The verifier rejects unsafe report paths, wrong repositories, non-root worktree paths, and branch mismatches before it can write the target verifier report.
