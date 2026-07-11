@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-07-10T16:19:33.8773301Z",
+    "generated_at":  "2026-07-11T04:58:02.7383168Z",
     "layer_version":  "1.4.1",
-    "artifact_count":  84,
-    "total_bytes":  81916,
-    "token_estimate":  20470,
+    "artifact_count":  86,
+    "total_bytes":  86166,
+    "token_estimate":  21533,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -207,11 +207,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/loop-verifier/SKILL.md",
-                          "sha256":  "c640eb83a235c4cea1e3593a07f77e3c09f55e309f396f6b89f961f841e66d70",
-                          "bytes":  1310,
-                          "lines":  42,
-                          "words":  189,
-                          "token_estimate":  327
+                          "sha256":  "1dd7dcebe01d3c7141dbe7663ac968bbd5bc7312ab20a16989201f4ceadb0fc0",
+                          "bytes":  2282,
+                          "lines":  50,
+                          "words":  317,
+                          "token_estimate":  570
                       },
                       {
                           "kind":  "skill",
@@ -576,11 +576,11 @@
                       {
                           "kind":  "template",
                           "path":  "templates/loops/loop-verifier-report.md",
-                          "sha256":  "0ec049c07752ff53d1f5c2fc0e1e2793fc402014a9f33694d768c7f44668ce95",
-                          "bytes":  406,
-                          "lines":  32,
-                          "words":  54,
-                          "token_estimate":  102
+                          "sha256":  "72985401cf6bc24c6d67b4b0e21f5c8b2e5d247cf1cef4466d423f19149d54b6",
+                          "bytes":  497,
+                          "lines":  38,
+                          "words":  67,
+                          "token_estimate":  125
                       },
                       {
                           "kind":  "template",
@@ -761,6 +761,24 @@
                           "lines":  39,
                           "words":  111,
                           "token_estimate":  300
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/verifier-evidence.schema.json",
+                          "sha256":  "8dd4fdae6bfb72f66d7f114efea93db60d1a531d66db946e2cea482f05e79cec",
+                          "bytes":  1579,
+                          "lines":  33,
+                          "words":  141,
+                          "token_estimate":  395
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/worktree-lifecycle.schema.json",
+                          "sha256":  "a310098c49f40840e06fe0cd00d337be3ff01d491cd296b8e4c6444959569fb4",
+                          "bytes":  1608,
+                          "lines":  36,
+                          "words":  151,
+                          "token_estimate":  402
                       }
                   ]
 }

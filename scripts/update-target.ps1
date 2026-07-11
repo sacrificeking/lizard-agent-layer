@@ -11,13 +11,15 @@
   [string]$OutputDir,
   [switch]$AllowTargetReportWrite,
   [switch]$AllowDowngrade,
-  [switch]$HumanApproved
+  [switch]$HumanApproved,
+  [int]$TestFailAfterMutation = 0
 )
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $manifestPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.install.json'
 $profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
@@ -254,48 +256,69 @@ Set-SafeContent -AuthorizedRoot $planParent -Path $effectivePlanPath -Value $upd
 
 $postDiff = $null
 $installOutput = $null
+$transactionResult = $null
+$transactionOperationId = $null
 if ($Apply) {
-  $installArgs = @(
-    '-NoProfile',
-    '-ExecutionPolicy', 'Bypass',
-    '-File', (Join-Path $ScriptDir 'install.ps1'),
-    '-TargetPath', $TargetRoot,
-    '-Profile', $SelectedProfile,
-    '-WritePlan',
-    '-PlanPath', $installPlanPath,
-    '-Apply'
-  )
-  if ($SelectedHarnesses.Count -gt 0) { $installArgs += '-Harnesses'; $installArgs += ($SelectedHarnesses -join ',') }
-  if ($SelectedPacks.Count -gt 0) { $installArgs += '-Packs'; $installArgs += ($SelectedPacks -join ',') }
-  if ($ForceManaged) { $installArgs += '-ForceManaged' }
-  $global:LASTEXITCODE = 0
-  $installOutput = & powershell.exe @installArgs | Out-String
-  if (-not $Json) { Write-Host $installOutput }
-  if ($LASTEXITCODE -ne 0) { throw "install.ps1 failed with exit code $LASTEXITCODE." }
-  $postDiff = Invoke-ManifestDiff -DiffOutputDir $postDiffDir -Strict
-  $historyPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.update-history.jsonl'
-  $historyEntry = [ordered]@{
-    schema_version = 2
-    updated_at = (Get-Date).ToUniversalTime().ToString('o')
-    from_version = $InstalledVersion
-    to_version = $CurrentVersion
-    from_manifest_schema = $InstalledManifestSchema
-    to_manifest_schema = 3
-    version_relation_before = $VersionRelation
-    profile = $SelectedProfile
-    requested_packs = @($SelectedPacks)
-    harnesses = @($SelectedHarnesses)
-    force_managed = $ForceManaged.IsPresent
-    allow_downgrade = $AllowDowngrade.IsPresent
-    human_approved = $HumanApproved.IsPresent
-    update_plan_path = $effectivePlanPath
-    install_plan_path = $installPlanPath
-    pre_manifest_status = [string]$preDiff.status
-    pre_manifest_differences = [int]$preDiff.summary.differences
-    post_manifest_status = [string]$postDiff.status
-    post_manifest_differences = [int]$postDiff.summary.differences
+  $updateTransaction = Start-LizardTransaction -TargetRoot $TargetRoot -OperationName 'update' -FailAfterMutation $TestFailAfterMutation
+  $transactionOperationId = [string]$updateTransaction.operation_id
+  try {
+    $installArgs = @(
+      '-NoProfile',
+      '-ExecutionPolicy', 'Bypass',
+      '-File', (Join-Path $ScriptDir 'install.ps1'),
+      '-TargetPath', $TargetRoot,
+      '-Profile', $SelectedProfile,
+      '-WritePlan',
+      '-PlanPath', $installPlanPath,
+      '-Apply',
+      '-JoinTransaction',
+      '-TransactionId', $transactionOperationId
+    )
+    if ($SelectedHarnesses.Count -gt 0) { $installArgs += '-Harnesses'; $installArgs += ($SelectedHarnesses -join ',') }
+    if ($SelectedPacks.Count -gt 0) { $installArgs += '-Packs'; $installArgs += ($SelectedPacks -join ',') }
+    if ($ForceManaged) { $installArgs += '-ForceManaged' }
+    if ($TestFailAfterMutation -gt 0) { $installArgs += '-TestFailAfterMutation'; $installArgs += [string]$TestFailAfterMutation }
+    $global:LASTEXITCODE = 0
+    $installOutput = & powershell.exe @installArgs | Out-String
+    if (-not $Json) { Write-Host $installOutput }
+    if ($LASTEXITCODE -ne 0) { throw "install.ps1 failed with exit code $LASTEXITCODE." }
+    Join-LizardTransaction -TargetRoot $TargetRoot -OperationId $transactionOperationId | Out-Null
+    $postDiff = Invoke-ManifestDiff -DiffOutputDir $postDiffDir -Strict
+    $historyPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.update-history.jsonl'
+    $historyEntry = [ordered]@{
+      schema_version = 2
+      updated_at = (Get-Date).ToUniversalTime().ToString('o')
+      transaction_operation_id = $transactionOperationId
+      from_version = $InstalledVersion
+      to_version = $CurrentVersion
+      from_manifest_schema = $InstalledManifestSchema
+      to_manifest_schema = 3
+      version_relation_before = $VersionRelation
+      profile = $SelectedProfile
+      requested_packs = @($SelectedPacks)
+      harnesses = @($SelectedHarnesses)
+      force_managed = $ForceManaged.IsPresent
+      allow_downgrade = $AllowDowngrade.IsPresent
+      human_approved = $HumanApproved.IsPresent
+      update_plan_path = $effectivePlanPath
+      install_plan_path = $installPlanPath
+      pre_manifest_status = [string]$preDiff.status
+      pre_manifest_differences = [int]$preDiff.summary.differences
+      post_manifest_status = [string]$postDiff.status
+      post_manifest_differences = [int]$postDiff.summary.differences
+    }
+    Add-LizardTransactionalContent -Path $historyPath -Value ($historyEntry | ConvertTo-Json -Depth 10 -Compress)
+    $transactionResult = Complete-LizardTransaction
+  } catch {
+    $updateError = $_
+    try {
+      if (Test-Path -LiteralPath (Join-Path $TargetRoot '.lizard-agent-layer.lock')) {
+        Join-LizardTransaction -TargetRoot $TargetRoot -OperationId $transactionOperationId | Out-Null
+        Undo-LizardTransaction | Out-Null
+      }
+    } catch { Write-Warning "Transaction rollback requires recovery: $($_.Exception.Message)" }
+    throw $updateError
   }
-  Add-SafeContent -AuthorizedRoot $TargetRoot -Path $historyPath -Value ($historyEntry | ConvertTo-Json -Depth 10 -Compress)
 }
 
 $report = [ordered]@{
@@ -315,6 +338,8 @@ $report = [ordered]@{
   force_managed = $ForceManaged.IsPresent
   allow_downgrade = $AllowDowngrade.IsPresent
   human_approved = $HumanApproved.IsPresent
+  transaction_operation_id = $transactionOperationId
+  transaction = $transactionResult
   plan_path = $effectivePlanPath
   output_dir = $effectiveOutputDir
   install_plan_path = if ($Apply) { $installPlanPath } else { $null }

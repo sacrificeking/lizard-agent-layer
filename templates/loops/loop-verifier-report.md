@@ -7,7 +7,13 @@ Auto-merge: forbidden
 
 Status: NEEDS_REVIEW
 Verifier:
+Implementer:
 Verified at:
+Operation ID:
+Lifecycle hash:
+HEAD SHA:
+Git state hash:
+Evidence packet hash:
 Worktree path:
 Branch:
 

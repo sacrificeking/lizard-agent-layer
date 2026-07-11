@@ -10,6 +10,9 @@
 - Manifest schema v3 with per-artifact ownership, source/installed/current SHA-256 identity, source version, adapter identity, aliases, mirror groups, and conflict state.
 - Conservative schema v2-to-v3 migration registry plus focused ownership, tamper, mirror, adapter-composition, future-schema, malformed-version, and downgrade fixtures.
 - Declarative adapter compatibility and precedence for the shared Generic/Codex `AGENTS.md` destination.
+- Per-target transaction locks, write-ahead mutation journals, exact replacement backups, crash recovery tooling, and fault-injection coverage for install, update, loop init/sync, and verifier writes.
+- Hashed L2 worktree lifecycle and verifier-evidence envelopes with operation, repository, branch, HEAD, Git-state, command, output, and evidence-file identity.
+- Adversarial lifecycle tests for nested worktrees, tampering, self-verification, command failure, detached HEAD, stale evidence, unbound cleanup, and rollback.
 
 ### Changed
 
@@ -20,6 +23,8 @@
 - Strict manifest diff now validates actual content hashes, source drift, artifact coverage, ownership indexes, mirror equality, and exact adapter identity; legacy manifests report `integrity-unknown` instead of passing.
 - Target updates block unsupported manifest schemas, malformed versions, and unapproved downgrade applies before report or target writes; downgrade previews remain reviewable.
 - `upgrade.ps1` now routes installed targets through the same plan-first update and history workflow.
+- L2 creation, verification, audit, and cleanup now share one persisted lifecycle contract; new cleanup applies require that contract unless reviewed legacy mode is explicit.
+- `PASS` and `WARN` verifier packets now require independent roles and successful executable evidence; `NEEDS_REVIEW` remains a non-verdict mode.
 
 ## 1.4.1 - 2026-07-10
 

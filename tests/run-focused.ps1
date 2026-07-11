@@ -9,7 +9,9 @@ $tests = @(
   'tests\unit\safe-fs.tests.ps1',
   'tests\adversarial\install-containment.tests.ps1',
   'tests\integration\manifest-v3.tests.ps1',
-  'tests\adversarial\version-gates.tests.ps1'
+  'tests\adversarial\version-gates.tests.ps1',
+  'tests\integration\transaction.tests.ps1',
+  'tests\adversarial\loop-evidence.tests.ps1'
 )
 $results = New-Object System.Collections.Generic.List[object]
 

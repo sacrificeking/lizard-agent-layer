@@ -95,7 +95,7 @@ L2 is not autonomy. It is a controlled assisted workflow for one human-approved 
 3. Preview worktree creation with `loop-worktree.ps1`.
 4. Create the worktree only with `-Apply -HumanApproved`.
 5. Make the smallest approved change in the assisted worktree.
-6. Generate a branch-bound verifier packet with `loop-verify.ps1`.
+6. Generate an evidence-bound verifier packet with `loop-verify.ps1` and the lifecycle file produced during creation.
 7. Let a human decide whether to merge, revise, discard, or pause.
 8. Clean up the isolated worktree only with `loop-worktree-cleanup.ps1 -Apply -HumanApproved`.
 
@@ -104,9 +104,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern minimal-fix-assist -Apply
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123 -Apply -HumanApproved
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-verify.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -Verifier reviewer-name -Status NEEDS_REVIEW -Apply
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -RemoveBranch
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -RemoveBranch -Apply -HumanApproved
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-verify.ps1 -TargetPath D:\path\to\project -LifecyclePath D:\path\to\reports\loop-worktree-lifecycle.json -Implementer implementer-name -Verifier reviewer-name -Status PASS -VerificationCommand "npm test" -Apply
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -LifecyclePath D:\path\to\reports\loop-worktree-lifecycle.json -RemoveBranch
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -LifecyclePath D:\path\to\reports\loop-worktree-lifecycle.json -RemoveBranch -Apply -HumanApproved
 ```
 
-L2 never auto-merges, pushes, releases, deploys, changes dependencies, edits migrations, or touches secrets without separate explicit approval. The verifier rejects unsafe report paths, wrong repositories, non-root worktree paths, and branch mismatches before it can write the target verifier report.
+L2 never auto-merges, pushes, releases, deploys, changes dependencies, edits migrations, or touches secrets without separate explicit approval. The verifier rejects unsafe report paths, wrong repositories, non-root worktree paths, branch mismatches, self-review, failed commands, tampered lifecycle data, and stale Git state before it can write the target verifier report. See [L2 Lifecycle And Verifier Evidence](loop-evidence.md).

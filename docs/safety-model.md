@@ -28,6 +28,12 @@ Manifest v3 records each managed artifact separately. Layer-owned and adopted fi
 
 Strict manifest checks fail on missing identities, content changes, source drift, incomplete mirrors, or adapter identity mismatches. A legacy manifest can report only `integrity-unknown`, never a strict pass.
 
+## Transactions and recovery
+
+Apply operations acquire a per-target lock and journal every target mutation before it occurs. Replacements receive SHA-256-verified backups. Install, update, update history, loop init, loop sync, and verifier writes commit through the shared transaction module or replay the journal in reverse.
+
+Interrupted operations remain locked and recoverable through `scripts/transaction-recover.ps1`. See [Target Transactions](transactions.md) for the exact guarantees and recovery workflow.
+
 ## Harness safety
 
 - Adapters are declarative manifests under `adapters/<name>/adapter.json`.
@@ -40,7 +46,9 @@ Strict manifest checks fail on missing identities, content changes, source drift
 - Project-local instructions remain authoritative.
 - Pre-existing project files remain user-owned. Files created by the layer remain layer-owned until explicitly adopted or locally modified.
 - Raw logs and generated dashboards are private by default.
-- L2 worktrees must be outside the target root; creation, verification, and cleanup reject unsafe path identities.
+- L2 worktrees must be outside the target root; creation, verification, and cleanup share one hashed lifecycle identity.
+- L2 verdicts bind reviewer role, HEAD, final Git state, command exits, command-output hashes, and evidence-file hashes. Changed or tampered evidence fails closed.
+- L2 remains assisted: verifier PASS is a decision packet for human merge review, never merge permission.
 
 ## High-risk workflows
 

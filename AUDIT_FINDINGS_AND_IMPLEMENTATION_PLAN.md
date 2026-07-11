@@ -47,6 +47,15 @@ Finding counts:
 - **Remaining dependency:** transaction-backed rollback and migration recovery belong to package 3; cross-platform execution belongs to package 4
 - **Release note:** Managed refresh and integrity claims are now evidence-based, but release readiness still depends on transaction, worktree-evidence, portability, and schema-runtime packages.
 
+### Package 3 — Transactions and evidence-bound L2 lifecycle
+
+- **Status:** Implemented locally on 2026-07-10; three-OS execution pending
+- **Scope:** B1, B5, B6; F-003, F-006, F-008, and transaction completion for F-007
+- **Evidence:** `scripts/Lizard.Transaction.psm1`, `transaction-recover.ps1`, transaction-backed install/update/loop writers, hashed worktree lifecycle and verifier envelopes, and focused fault/tamper suites
+- **Passing gates:** failure-injected install/update/loop rollback, stale-lock recovery, concurrent-writer rejection, complete L2 lifecycle, evidence tamper/self-review/failed-command/detached/stale-state rejection
+- **Remaining validation:** cross-platform lock, process, Git-path, symlink, and PowerShell-host execution belongs to package 4
+- **Release note:** P1 failure resilience and L2 evidence contracts are implemented; release readiness still depends on portability, executable schema validation, and the remaining P2/P3 packages.
+
 ## Findings Register
 
 ### F-001 — Linked directories can redirect writes outside the target
@@ -96,7 +105,7 @@ Finding counts:
 - **Category:** Installer Safety; Loop Resilience
 - **Priority:** P1
 - **Severity:** High
-- **Status:** Observed
+- **Status:** Implemented locally; three-OS execution pending
 - **Confidence:** High
 - **Evidence:** Sequential writes at `scripts/install.ps1:560-608`; the install manifest is written last. Update applies installation, performs a post-check, and appends history sequentially at `scripts/update-target.ps1:233-270`. A collision fixture left partial state without a final manifest.
 - **Impact:** Permission errors, interruption, disk exhaustion, or later path collisions can leave a mixed or unowned installation. A failed post-update check may occur after target content has already changed.
@@ -159,7 +168,7 @@ Finding counts:
 - **Category:** Loop Runtime and Resilience
 - **Priority:** P1
 - **Severity:** High
-- **Status:** Observed
+- **Status:** Implemented locally; three-OS execution pending
 - **Confidence:** High
 - **Evidence:** `scripts/loop-worktree.ps1:41-49,78-88` permits a target-contained path, while `scripts/loop-worktree-cleanup.ps1:56-60` refuses to clean it. A fixture created a nested worktree and dirtied the main tree.
 - **Impact:** The layer can create a worktree that its own cleanup tool rejects, undermining isolation and recovery.
@@ -180,7 +189,7 @@ Finding counts:
 - **Category:** Update Safety; Governance
 - **Priority:** P1
 - **Severity:** High
-- **Status:** Core gates implemented locally; transaction-backed rollback pending B1
+- **Status:** Implemented locally; three-OS execution pending
 - **Confidence:** High
 - **Evidence:** Version relation is calculated at `scripts/update-target.ps1:180-191`, but apply proceeds unconditionally at lines 233-270. A target declaring version `99.0.0` was updated by layer version `1.4.1` without an override.
 - **Impact:** Older layer checkouts can overwrite newer target contracts and discard fields or semantics they do not understand.
@@ -201,7 +210,7 @@ Finding counts:
 - **Category:** Loop Runtime; Tests and Assurance
 - **Priority:** P1
 - **Severity:** High
-- **Status:** Observed
+- **Status:** Implemented locally; three-OS execution pending
 - **Confidence:** High
 - **Evidence:** `scripts/loop-verify.ps1` accepts verifier name, status, and summary as caller-supplied values. It does not require a reviewed HEAD SHA, tree/diff hash, verification commands, exit codes, or evidence hashes.
 - **Impact:** A PASS packet does not prove which revision or results were reviewed and can become stale immediately.
@@ -465,6 +474,7 @@ B2 Integrity diff + structured evidence
 #### B1 — Transaction engine and per-target locking
 
 - **Priority:** P1
+- **Status:** Implemented locally; three-OS execution pending
 - **Goal:** Make apply/update atomic or deterministically recoverable.
 - **Files:** New transaction module; installer, updater, loop init/sync, history writers.
 - **Steps:**
@@ -525,7 +535,7 @@ B2 Integrity diff + structured evidence
 #### B4 — Downgrade and migration gates
 
 - **Priority:** P1
-- **Status:** Version/schema gates implemented; transaction rollback pending B1
+- **Status:** Implemented locally; three-OS execution pending
 - **Goal:** Prevent unsupported readers/writers from silently mutating target state.
 - **Files:** Updater, upgrade wrapper, schemas, manifest, history, docs.
 - **Steps:** Define reader/writer versions; create ordered migrations; block future versions; add explicit approved downgrade; back up before migration.
@@ -539,6 +549,7 @@ B2 Integrity diff + structured evidence
 #### B5 — Unified worktree lifecycle
 
 - **Priority:** P1
+- **Status:** Implemented locally; three-OS execution pending
 - **Goal:** Ensure every created worktree is verifiable and cleanable by the same toolchain.
 - **Files:** Worktree create/verify/cleanup scripts, schema, docs.
 - **Steps:** Share path rules; forbid nested paths; persist identity; require identity in verify/cleanup; add recovery diagnostics.
@@ -552,6 +563,7 @@ B2 Integrity diff + structured evidence
 #### B6 — Evidence-bound verifier
 
 - **Priority:** P1
+- **Status:** Implemented locally; three-OS execution pending
 - **Goal:** Make a verifier verdict reproducible and revision-specific.
 - **Files:** Verifier script, schema, template, skills, audit/report scripts.
 - **Steps:** Capture HEAD/tree/diff hashes; commands and exits; evidence hashes; reviewer identity; dirty state; expiry/change invalidation.

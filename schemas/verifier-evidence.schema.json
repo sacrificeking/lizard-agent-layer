@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.dev/schemas/verifier-evidence.schema.json",
+  "title": "lizard-agent-layer verifier evidence envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "payload", "payload_hash"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "payload_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "payload": {
+      "type": "object",
+      "required": ["operation_id", "lifecycle_path", "lifecycle_hash", "requested_status", "effective_status", "verifier", "verified_at", "git_state_hash", "commands", "evidence_files", "auto_merge", "human_merge_review_required"],
+      "properties": {
+        "operation_id": { "type": ["string", "null"] },
+        "lifecycle_path": { "type": ["string", "null"] },
+        "lifecycle_hash": { "type": ["string", "null"] },
+        "requested_status": { "enum": ["NEEDS_REVIEW", "PASS", "WARN", "FAIL"] },
+        "effective_status": { "enum": ["NEEDS_REVIEW", "PASS", "WARN", "FAIL", "INVALID"] },
+        "verifier": { "type": ["string", "null"] },
+        "implementer": { "type": ["string", "null"] },
+        "verified_at": { "type": "string", "format": "date-time" },
+        "head_sha": { "type": ["string", "null"] },
+        "git_state_hash": { "type": ["string", "null"] },
+        "commands": { "type": "array" },
+        "evidence_files": { "type": "array" },
+        "auto_merge": { "const": false },
+        "human_merge_review_required": { "const": true }
+      }
+    }
+  }
+}

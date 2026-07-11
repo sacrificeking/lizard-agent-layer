@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.dev/schemas/worktree-lifecycle.schema.json",
+  "title": "lizard-agent-layer worktree lifecycle envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "payload", "payload_hash"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "payload_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation_id", "status", "target_root", "git_common_dir", "branch", "base_sha", "worktree_root", "auto_merge"],
+      "properties": {
+        "operation_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+        "status": { "enum": ["PREVIEW", "CREATED", "STOP"] },
+        "created_at": { "type": "string", "format": "date-time" },
+        "target_root": { "type": "string", "minLength": 1 },
+        "target_git_root": { "type": ["string", "null"] },
+        "git_common_dir": { "type": ["string", "null"] },
+        "item_id": { "type": "string" },
+        "branch": { "type": "string", "minLength": 1 },
+        "observed_branch": { "type": ["string", "null"] },
+        "base_ref": { "type": "string" },
+        "base_sha": { "type": ["string", "null"] },
+        "observed_head_sha": { "type": ["string", "null"] },
+        "worktree_root": { "type": "string", "minLength": 1 },
+        "worktree_common_dir": { "type": ["string", "null"] },
+        "human_approved": { "type": "boolean" },
+        "auto_merge": { "const": false }
+      }
+    }
+  }
+}

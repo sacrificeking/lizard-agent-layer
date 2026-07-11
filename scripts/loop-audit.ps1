@@ -12,6 +12,7 @@ $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.LoopEvidence.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
@@ -76,7 +77,54 @@ if ($manifest) {
   Test-RelativeFile ([string]$manifest.constraints_file) 'Loop constraints file' | Out-Null
   if (($manifest.PSObject.Properties.Name -contains 'worktree_policy_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.worktree_policy_file)) { Test-RelativeFile ([string]$manifest.worktree_policy_file) 'Loop worktree policy file' | Out-Null }
   if (($manifest.PSObject.Properties.Name -contains 'assisted_plan_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.assisted_plan_file)) { Test-RelativeFile ([string]$manifest.assisted_plan_file) 'Loop assisted fix plan file' | Out-Null }
-  if (($manifest.PSObject.Properties.Name -contains 'verifier_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.verifier_file)) { Test-RelativeFile ([string]$manifest.verifier_file) 'Loop verifier report file' | Out-Null }
+  if (($manifest.PSObject.Properties.Name -contains 'verifier_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.verifier_file)) {
+    $verifierRelative = [string]$manifest.verifier_file
+    Test-RelativeFile $verifierRelative 'Loop verifier report file' | Out-Null
+    $verifierFullPath = Join-Path $TargetRoot $verifierRelative.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
+    $verifierEvidencePath = [System.IO.Path]::ChangeExtension($verifierFullPath, '.evidence.json')
+    $verifierText = if (Test-Path -LiteralPath $verifierFullPath -PathType Leaf) { Get-Content -LiteralPath $verifierFullPath -Raw } else { '' }
+    $declaredStatusMatch = [regex]::Match($verifierText, '(?m)^Status:\s*(NEEDS_REVIEW|PASS|WARN|FAIL|INVALID)\s*$')
+    $declaredStatus = if ($declaredStatusMatch.Success) { [string]$declaredStatusMatch.Groups[1].Value } else { $null }
+    if (Test-Path -LiteralPath $verifierEvidencePath -PathType Leaf) {
+      try {
+        $evidenceEnvelope = Read-LizardEvidenceEnvelope -Path $verifierEvidencePath -SchemaVersion 1
+        $evidence = $evidenceEnvelope.payload
+        Add-Pass "Verifier evidence hash is valid: $($evidenceEnvelope.payload_hash)"
+        if ([string]$evidence.effective_status -eq 'INVALID') { Add-Failure 'Verifier evidence has INVALID effective status.' }
+        if ([string]::IsNullOrWhiteSpace([string]$evidence.verifier)) { Add-Failure 'Verifier evidence is missing verifier identity.' }
+        if ([string]$evidence.effective_status -ne 'NEEDS_REVIEW') {
+          if ([string]::IsNullOrWhiteSpace([string]$evidence.implementer)) { Add-Failure 'Verifier verdict is missing implementer identity.' }
+          elseif (([string]$evidence.verifier).Equals([string]$evidence.implementer, [System.StringComparison]::OrdinalIgnoreCase)) { Add-Failure 'Verifier evidence violates role separation.' }
+          if (@($evidence.commands).Count -eq 0) { Add-Failure 'Verifier verdict contains no command results.' }
+        }
+        if ([string]$evidence.effective_status -in @('PASS', 'WARN')) {
+          foreach ($command in @($evidence.commands)) { if ([int]$command.exit_code -ne 0) { Add-Failure "Passing verifier evidence contains failed command: $($command.command)" } }
+        }
+        if ([string]::IsNullOrWhiteSpace([string]$evidence.head_sha) -or [string]::IsNullOrWhiteSpace([string]$evidence.git_state_hash)) { Add-Failure 'Verifier evidence is not bound to HEAD and git state hashes.' }
+        if ($declaredStatus -ne [string]$evidence.effective_status) { Add-Failure "Verifier Markdown status '$declaredStatus' does not match evidence status '$($evidence.effective_status)'." }
+        $packetHashMatch = [regex]::Match($verifierText, '(?m)^Evidence packet hash:\s*([a-f0-9]{64})\s*$')
+        if (-not $packetHashMatch.Success -or [string]$packetHashMatch.Groups[1].Value -ne [string]$evidenceEnvelope.payload_hash) { Add-Failure 'Verifier Markdown is not bound to the current evidence packet hash.' }
+        if ([string]::IsNullOrWhiteSpace([string]$evidence.lifecycle_path)) { Add-Failure 'Verifier evidence is missing lifecycle path.' }
+        else {
+          $lifecycleEnvelope = Read-LizardEvidenceEnvelope -Path ([string]$evidence.lifecycle_path) -SchemaVersion 1
+          if ([string]$lifecycleEnvelope.payload_hash -ne [string]$evidence.lifecycle_hash) { Add-Failure 'Verifier lifecycle hash no longer matches its contract.' }
+          if ([string]$lifecycleEnvelope.payload.operation_id -ne [string]$evidence.operation_id) { Add-Failure 'Verifier operation ID does not match lifecycle contract.' }
+        }
+        if (-not [string]::IsNullOrWhiteSpace([string]$evidence.worktree_root) -and (Test-Path -LiteralPath ([string]$evidence.worktree_root) -PathType Container)) {
+          $currentEvidence = Get-LizardGitStateEvidence -WorktreePath ([string]$evidence.worktree_root)
+          if ([string]$currentEvidence.state_hash -ne [string]$evidence.git_state_hash) { Add-Failure 'Verifier evidence is stale because the worktree state changed after verification.' }
+          else { Add-Pass 'Verifier git state hash still matches the worktree.' }
+          foreach ($file in @($evidence.evidence_files)) {
+            $candidate = Resolve-SafeTargetDestination -AuthorizedRoot ([string]$evidence.worktree_root) -DestinationPath (Join-Path ([string]$evidence.worktree_root) ([string]$file.path).Replace('/', [System.IO.Path]::DirectorySeparatorChar))
+            if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) { Add-Failure "Verifier evidence file is missing: $($file.path)" }
+            elseif ((Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash.ToLowerInvariant() -ne [string]$file.sha256) { Add-Failure "Verifier evidence file changed: $($file.path)" }
+          }
+        } else { Add-Warning 'Verifier worktree is unavailable; current git state cannot be recomputed.' }
+      } catch { Add-Failure "Verifier evidence rejected: $($_.Exception.Message)" }
+    } elseif ($declaredStatus -in @('PASS', 'WARN', 'FAIL')) {
+      Add-Failure "Verifier Markdown declares $declaredStatus without a hashed evidence sidecar."
+    }
+  }
   foreach ($skill in @($manifest.skills)) {
     $skillName = [string]$skill
     $candidates = @(

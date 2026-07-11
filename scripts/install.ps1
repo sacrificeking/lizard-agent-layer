@@ -8,7 +8,11 @@
   [switch]$ForceManaged,
   [switch]$WritePlan,
   [string]$PlanPath,
-  [switch]$AllowTargetReportWrite
+  [switch]$AllowTargetReportWrite,
+  [string]$TransactionId,
+  [switch]$JoinTransaction,
+  [int]$TestFailAfterMutation = 0,
+  [switch]$InternalPreflight
 )
 
 $ErrorActionPreference = "Stop"
@@ -16,12 +20,14 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LayerRoot = Split-Path -Parent $ScriptDir
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Manifest.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $ProfilePath = Join-Path $LayerRoot "profiles\$Profile.json"
 $VersionPath = Join-Path $LayerRoot "VERSION"
 $LayerVersion = if (Test-Path -LiteralPath $VersionPath) { (Get-Content -LiteralPath $VersionPath -Raw).Trim() } else { "0.0.0-dev" }
 $ShouldWritePlan = $WritePlan.IsPresent -or -not [string]::IsNullOrWhiteSpace($PlanPath)
 $EffectivePlanPath = $null
+$PlanInsideTarget = $false
 
 if (-not (Test-Path -LiteralPath $ProfilePath)) {
   throw "Unknown profile '$Profile'. Expected a JSON file under profiles/."
@@ -204,8 +210,12 @@ function Resolve-PlanReportPath {
 if ($ShouldWritePlan) {
   $EffectivePlanPath = Resolve-PlanReportPath
   if (-not $AllowTargetReportWrite) { Assert-PathOutsideRoot -Path $EffectivePlanPath -ExcludedRoot $TargetRoot -Label 'PlanPath' }
+  $PlanInsideTarget = Test-LizardPathWithinRoot -Path $EffectivePlanPath -AuthorizedRoot $TargetRoot
   $planParent = Split-Path -Parent $EffectivePlanPath
-  if ($planParent) { $planParent = Initialize-SafeDirectory -Path $planParent }
+  if ($planParent) {
+    if ($Apply -and $PlanInsideTarget) { Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $planParent | Out-Null }
+    else { $planParent = Initialize-SafeDirectory -Path $planParent }
+  }
 }
 $Mode = if ($Apply) { "APPLY" } else { "PREVIEW" }
 $Planned = New-Object System.Collections.Generic.List[string]
@@ -437,7 +447,13 @@ function New-InstallPlanMarkdown {
 function Write-PlanReport {
   if (-not $ShouldWritePlan) { return }
   $markdown = New-InstallPlanMarkdown
-  Set-SafeContent -AuthorizedRoot $planParent -Path $EffectivePlanPath -Value $markdown
+  if ($Apply -and $PlanInsideTarget) {
+    New-LizardTransactionalDirectory -Path $planParent | Out-Null
+    Set-LizardTransactionalContent -Path $EffectivePlanPath -Value $markdown
+  } else {
+    if (-not (Test-Path -LiteralPath $planParent)) { $script:planParent = Initialize-SafeDirectory -Path $planParent }
+    Set-SafeContent -AuthorizedRoot $planParent -Path $EffectivePlanPath -Value $markdown
+  }
 }
 
 function Ensure-Dir {
@@ -446,13 +462,14 @@ function Ensure-Dir {
   $label = To-RelativeDisplay $Path
   Add-UniqueListItem $ManagedPaths $label
   if (Test-Path -LiteralPath $Path) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Container)) { throw "DESTINATION_TYPE_CONFLICT: Expected directory but found file: $label" }
     Add-UniqueListItem $Skipped $label
     Register-Artifact -Dest $Path -Kind directory -SourcePath $null -SourceHash $null -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup
     return
   }
   Add-UniqueListItem $Planned $label
   if ($Apply) {
-    New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $Path | Out-Null
+    New-LizardTransactionalDirectory -Path $Path | Out-Null
     Add-UniqueListItem $Created $label
     Register-Artifact -Dest $Path -Kind directory -SourcePath $null -SourceHash $null -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup -LayerWritten
   }
@@ -468,7 +485,7 @@ function Copy-IfMissing {
   Add-UniqueListItem $ManagedPaths $label
   $parent = Split-Path -Parent $Dest
   if (-not (Test-Path -LiteralPath $parent)) {
-    if ($Apply) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $parent | Out-Null }
+    if ($Apply) { New-LizardTransactionalDirectory -Path $parent | Out-Null }
   }
   $destExists = Test-Path -LiteralPath $Dest
   $shouldReplace = if ($destExists) { Should-ReplacePath -Dest $Dest -ExpectedSourceHash $sourceHash } else { $false }
@@ -479,7 +496,7 @@ function Copy-IfMissing {
   }
   Add-UniqueListItem $Planned $label
   if ($Apply) {
-    Copy-SafeItem -AuthorizedRoot $TargetRoot -Source $Source -Destination $Dest -Force:$shouldReplace
+    Copy-LizardTransactionalFile -Source $Source -Destination $Dest -Force:$shouldReplace
     Add-UniqueListItem $Created $label
     Register-Artifact -Dest $Dest -Kind file -SourcePath $sourcePath -SourceHash $sourceHash -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup -LayerWritten
   }
@@ -507,7 +524,7 @@ function Write-IfMissing {
   Add-UniqueListItem $ManagedPaths $label
   $parent = Split-Path -Parent $Dest
   if (-not (Test-Path -LiteralPath $parent)) {
-    if ($Apply) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $parent | Out-Null }
+    if ($Apply) { New-LizardTransactionalDirectory -Path $parent | Out-Null }
   }
   $destExists = Test-Path -LiteralPath $Dest
   $shouldReplace = if ($destExists) { Should-ReplacePath -Dest $Dest -ExpectedSourceHash $sourceHash } else { $false }
@@ -518,7 +535,7 @@ function Write-IfMissing {
   }
   Add-UniqueListItem $Planned $label
   if ($Apply) {
-    Set-SafeContent -AuthorizedRoot $TargetRoot -Path $Dest -Value $Content
+    Set-LizardTransactionalContent -Path $Dest -Value $Content
     Add-UniqueListItem $Created $label
     Register-Artifact -Dest $Dest -Kind file -SourcePath $SourcePath -SourceHash $sourceHash -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup -LayerWritten
   }
@@ -617,8 +634,9 @@ function Write-InstallManifest {
   $doc['merge_needed'] = @($MergeNeeded.ToArray())
   $doc['merge_suggestions'] = @($MergeSuggestions.ToArray())
   $doc['conflicts'] = @($Conflicts.ToArray())
+  if ($Apply -and $null -ne $TransactionContext) { $doc['transaction_operation_id'] = [string]$TransactionContext.operation_id }
   if ($Apply) {
-    Set-SafeContent -AuthorizedRoot $TargetRoot -Path $manifestPath -Value ($doc | ConvertTo-Json -Depth 10)
+    Set-LizardTransactionalContent -Path $manifestPath -Value ($doc | ConvertTo-Json -Depth 10)
     Add-UniqueListItem $Created $label
     Add-UniqueListItem $OwnedPaths $label
   } else {
@@ -642,6 +660,34 @@ foreach ($adapterName in $SelectedHarnesses) {
 $AdapterComposition = Resolve-LizardAdapterComposition -Adapters @($AdapterEntries.ToArray())
 $EffectiveInstructionMap = @{}
 foreach ($effective in @($AdapterComposition.effective_instructions)) { $EffectiveInstructionMap[[string]$effective.name] = $effective }
+
+if ($Apply -and -not $InternalPreflight) {
+  $preflightParams = @{
+    TargetPath = $TargetRoot
+    Profile = $Profile
+    InternalPreflight = $true
+  }
+  if ($Harnesses -and $Harnesses.Count -gt 0) { $preflightParams['Harnesses'] = $Harnesses }
+  if ($Packs -and $Packs.Count -gt 0) { $preflightParams['Packs'] = $Packs }
+  if ($Force) { $preflightParams['Force'] = $true }
+  if ($ForceManaged) { $preflightParams['ForceManaged'] = $true }
+  & $PSCommandPath @preflightParams | Out-Null
+}
+
+$TransactionContext = $null
+$OwnsTransaction = $false
+if ($Apply) {
+  if ($JoinTransaction) {
+    if ([string]::IsNullOrWhiteSpace($TransactionId)) { throw 'TRANSACTION_ID_REQUIRED: -JoinTransaction requires -TransactionId.' }
+    $TransactionContext = Join-LizardTransaction -TargetRoot $TargetRoot -OperationId $TransactionId -FailAfterMutation $TestFailAfterMutation
+  } else {
+    if (-not [string]::IsNullOrWhiteSpace($TransactionId)) { throw 'TRANSACTION_JOIN_REQUIRED: -TransactionId requires -JoinTransaction.' }
+    $TransactionContext = Start-LizardTransaction -TargetRoot $TargetRoot -OperationName 'install' -FailAfterMutation $TestFailAfterMutation
+    $OwnsTransaction = $true
+  }
+}
+
+try {
 
 Write-Host "lizard-agent-layer $Mode"
 Write-Host "Target: $TargetRoot"
@@ -706,6 +752,11 @@ foreach ($adapterName in $SelectedHarnesses) {
 Write-InstallManifest
 Write-PlanReport
 
+if ($Apply -and $OwnsTransaction) {
+  $TransactionResult = Complete-LizardTransaction
+  Write-Host "Transaction: $($TransactionResult.operation_id) ($($TransactionResult.mutation_count) mutations committed)"
+}
+
 Write-Host "Summary"
 Write-Host "Planned: $($Planned.Count)"
 foreach ($item in $Planned) { Write-Host "  + $item" }
@@ -732,4 +783,12 @@ if (-not $Apply) {
 if ($Conflicts.Count -gt 0) {
   Write-Host "Ownership conflicts:"
   foreach ($item in $Conflicts) { Write-Host "  ! $item" }
+}
+} catch {
+  $installError = $_
+  if ($Apply -and $null -ne $TransactionContext) {
+    try { Undo-LizardTransaction | Out-Null }
+    catch { Write-Warning "Transaction rollback requires recovery: $($_.Exception.Message)" }
+  }
+  throw $installError
 }

@@ -197,15 +197,18 @@ Run-Step 'L2 worktree and verifier gates' {
   if (-not (Test-Path -LiteralPath $l2WorktreePath)) { throw 'Expected L2 assisted worktree to exist after approved apply.' }
   $worktreeReport = Get-Content -LiteralPath (Join-Path $l2WorktreeOutputDir 'loop-worktree-report.json') -Raw | ConvertFrom-Json
   if ($worktreeReport.auto_merge -ne $false) { throw 'L2 worktree report must keep auto_merge false.' }
+  $lifecyclePath = Join-Path $l2WorktreeOutputDir 'loop-worktree-lifecycle.json'
+  if (-not (Test-Path -LiteralPath $lifecyclePath)) { throw 'Expected worktree lifecycle contract.' }
+  if ([string]::IsNullOrWhiteSpace([string]$worktreeReport.operation_id)) { throw 'Expected worktree operation ID.' }
 
-  $missingVerifierOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -WorktreePath $l2WorktreePath -Branch $branch -OutputDir $l2VerifyMissingOutputDir 2>&1
+  $missingVerifierOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch $branch -OutputDir $l2VerifyMissingOutputDir 2>&1
   $missingVerifierExit = $LASTEXITCODE
   $missingVerifierOutput | Out-String | Write-Host
   if ($missingVerifierExit -eq 0) { throw 'Expected L2 verifier without Verifier to fail.' }
   $missingVerifierReport = Get-Content -LiteralPath (Join-Path $l2VerifyMissingOutputDir 'loop-verify-report.json') -Raw | ConvertFrom-Json
   if (@($missingVerifierReport.failures) -notcontains 'Verifier is required.') { throw 'Expected missing verifier failure in report.' }
 
-  $mismatchOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -WorktreePath $l2WorktreePath -Branch 'lizard/l2/wrong-branch' -Verifier smoke-verifier -OutputDir $l2VerifyMismatchOutputDir 2>&1
+  $mismatchOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch 'lizard/l2/wrong-branch' -Verifier smoke-verifier -OutputDir $l2VerifyMismatchOutputDir 2>&1
   $mismatchExit = $LASTEXITCODE
   $mismatchOutput | Out-String | Write-Host
   if ($mismatchExit -eq 0) { throw 'Expected L2 verifier branch mismatch to fail.' }
@@ -213,21 +216,22 @@ Run-Step 'L2 worktree and verifier gates' {
   if ($mismatchReport.branch_matches -ne $false) { throw 'Expected verifier branch_matches false for mismatch.' }
   if ($mismatchReport.same_git_common_dir -ne $true) { throw 'Expected mismatch verifier to still identify same repository.' }
 
-  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -WorktreePath $l2WorktreePath -Branch $branch -Verifier smoke-verifier -Status NEEDS_REVIEW -Summary 'Smoke verifier packet generated.' -OutputDir $l2VerifyOutputDir -Apply | Out-String | Write-Host
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch $branch -Verifier smoke-verifier -Status NEEDS_REVIEW -Summary 'Smoke verifier packet generated.' -OutputDir $l2VerifyOutputDir -Apply | Out-String | Write-Host
   $verifyReport = Get-Content -LiteralPath (Join-Path $l2VerifyOutputDir 'loop-verify-report.json') -Raw | ConvertFrom-Json
   if ($verifyReport.branch_matches -ne $true) { throw 'Expected verifier branch binding to pass.' }
   if ($verifyReport.same_git_common_dir -ne $true) { throw 'Expected verifier repository binding to pass.' }
   if ($verifyReport.verifier_file_safe -ne $true) { throw 'Expected verifier file path to be safe.' }
   $targetVerifier = Join-Path $l2Target '.agent\loops\loop-verifier-report.md'
   if (-not (Test-Path -LiteralPath $targetVerifier)) { throw 'Expected target verifier report.' }
+  if (-not (Test-Path -LiteralPath (Join-Path $l2Target '.agent\loops\loop-verifier-report.evidence.json'))) { throw 'Expected target verifier evidence envelope.' }
   $verifierText = Get-Content -LiteralPath $targetVerifier -Raw
   foreach ($expected in @('Auto-merge: forbidden', 'Human merge review required: true', 'Merge allowed automatically: false')) {
     if ($verifierText -notmatch [regex]::Escape($expected)) { throw "Expected verifier report to contain: $expected" }
   }
 
-  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-worktree-cleanup.ps1') -TargetPath $l2Target -WorktreePath $l2WorktreePath -Branch $branch -RemoveBranch -OutputDir $l2CleanupPreviewOutputDir | Out-String | Write-Host
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-worktree-cleanup.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch $branch -RemoveBranch -OutputDir $l2CleanupPreviewOutputDir | Out-String | Write-Host
   if (-not (Test-Path -LiteralPath $l2WorktreePath)) { throw 'L2 cleanup preview removed the worktree.' }
-  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-worktree-cleanup.ps1') -TargetPath $l2Target -WorktreePath $l2WorktreePath -Branch $branch -RemoveBranch -Force -OutputDir $l2CleanupOutputDir -Apply -HumanApproved | Out-String | Write-Host
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\loop-worktree-cleanup.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch $branch -RemoveBranch -Force -OutputDir $l2CleanupOutputDir -Apply -HumanApproved | Out-String | Write-Host
   if (Test-Path -LiteralPath $l2WorktreePath) { throw 'Expected L2 cleanup apply to remove the worktree.' }
   $cleanupReport = Get-Content -LiteralPath (Join-Path $l2CleanupOutputDir 'loop-worktree-cleanup-report.json') -Raw | ConvertFrom-Json
   if ($cleanupReport.removed -ne $true) { throw 'Expected cleanup report removed true.' }

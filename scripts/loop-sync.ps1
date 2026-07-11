@@ -6,13 +6,15 @@ param(
   [switch]$ForceTemplates,
   [switch]$Strict,
   [switch]$Json,
-  [string]$OutputDir
+  [string]$OutputDir,
+  [int]$TestFailAfterMutation = 0
 )
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 $EffectiveOutputDir = if ([string]::IsNullOrWhiteSpace($OutputDir)) { Join-Path $LayerRoot ".tmp\loops\sync-$stamp" } elseif ([System.IO.Path]::IsPathRooted($OutputDir)) { $OutputDir } else { Join-Path (Get-Location).Path $OutputDir }
@@ -23,7 +25,7 @@ function Is-UnderPath {
   if ($full.Equals($rootFull, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
   return $full.StartsWith(($rootFull + [System.IO.Path]::DirectorySeparatorChar), [System.StringComparison]::OrdinalIgnoreCase)
 }
-if (-not $Apply -and (Is-UnderPath -Path $EffectiveOutputDir -Root $TargetRoot)) { throw 'OutputDir would write inside the target during preview. Choose a path outside the target or use -Apply.' }
+if (Is-UnderPath -Path $EffectiveOutputDir -Root $TargetRoot) { throw 'OutputDir must stay outside the target.' }
 $EffectiveOutputDir = Initialize-SafeDirectory -Path $EffectiveOutputDir
 
 $Failures = New-Object System.Collections.Generic.List[string]
@@ -51,8 +53,8 @@ function Copy-Template {
   Add-Unique $Planned $DestRel
   if ($Apply) {
     $parent = Split-Path -Parent $dest
-    if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $parent | Out-Null }
-    Copy-SafeItem -AuthorizedRoot $TargetRoot -Source $source -Destination $dest -Force:$CanOverwrite
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-LizardTransactionalDirectory -Path $parent | Out-Null }
+    Copy-LizardTransactionalFile -Source $source -Destination $dest -Force:$CanOverwrite
     Add-Unique $Written $DestRel
   }
 }
@@ -80,6 +82,10 @@ $verifierRel = $null
 if (($patternDoc.PSObject.Properties.Name -contains 'worktreePolicyFile') -and -not [string]::IsNullOrWhiteSpace([string]$patternDoc.worktreePolicyFile)) { $worktreePolicyRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.worktreePolicyFile) 'worktreePolicyFile' }
 if (($patternDoc.PSObject.Properties.Name -contains 'assistedPlanFile') -and -not [string]::IsNullOrWhiteSpace([string]$patternDoc.assistedPlanFile)) { $assistedPlanRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.assistedPlanFile) 'assistedPlanFile' }
 if (($patternDoc.PSObject.Properties.Name -contains 'verifierFile') -and -not [string]::IsNullOrWhiteSpace([string]$patternDoc.verifierFile)) { $verifierRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.verifierFile) 'verifierFile' }
+$syncTransaction = $null
+if ($Apply -and $Strict -and $Warnings.Count -gt 0) { throw "STRICT_SYNC_BLOCKED: $($Warnings -join '; ')" }
+if ($Apply) { $syncTransaction = Start-LizardTransaction -TargetRoot $TargetRoot -OperationName 'loop-sync' -FailAfterMutation $TestFailAfterMutation }
+try {
 Copy-Template 'templates\loops\LOOP.md' '.agent\loops\LOOP.md' ([bool]$ForceTemplates)
 Copy-Template 'templates\loops\loop-budget.md' $budgetRel ([bool]$ForceTemplates)
 Copy-Template 'templates\loops\loop-run-log.md' $runLogRel ([bool]$ForceTemplates)
@@ -116,11 +122,21 @@ $updatedManifest = [ordered]@{
   denied_actions = @($patternDoc.deniedActions)
   human_gates = @($patternDoc.humanGates)
   managed_paths = @($managedPaths)
+  transaction_operation_id = if ($syncTransaction) { [string]$syncTransaction.operation_id } else { $null }
 }
 Add-Unique $Planned '.agent\loops\lizard-agent-layer.loop-install.json'
 if ($Apply) {
-  Set-SafeContent -AuthorizedRoot $TargetRoot -Path $manifestPath -Value ($updatedManifest | ConvertTo-Json -Depth 10)
+  if ($Failures.Count -gt 0) { throw "LOOP_SYNC_PREFLIGHT_FAILED: $($Failures -join '; ')" }
+  Set-LizardTransactionalContent -Path $manifestPath -Value ($updatedManifest | ConvertTo-Json -Depth 10)
   Add-Unique $Written '.agent\loops\lizard-agent-layer.loop-install.json'
+  Complete-LizardTransaction | Out-Null
+}
+} catch {
+  $loopSyncError = $_
+  if ($Apply -and (Test-Path -LiteralPath (Join-Path $TargetRoot '.lizard-agent-layer.lock'))) {
+    try { Undo-LizardTransaction | Out-Null } catch { Write-Warning "Loop sync rollback requires recovery: $($_.Exception.Message)" }
+  }
+  throw $loopSyncError
 }
 
 $report = [ordered]@{

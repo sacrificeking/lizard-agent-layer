@@ -6,13 +6,15 @@ param(
   [switch]$Force,
   [switch]$WritePlan,
   [string]$PlanPath,
-  [string]$OutputDir
+  [string]$OutputDir,
+  [int]$TestFailAfterMutation = 0
 )
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $VersionPath = Join-Path $LayerRoot 'VERSION'
 $LayerVersion = if (Test-Path -LiteralPath $VersionPath) { (Get-Content -LiteralPath $VersionPath -Raw).Trim() } else { '0.0.0-dev' }
@@ -36,10 +38,10 @@ function Is-UnderPath {
   return $full.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)
 }
 
-function Assert-PreviewOutputOutsideTarget {
+function Assert-OutputOutsideTarget {
   param([string]$Path, [string]$Label)
-  if (-not $Apply -and $Path -and (Is-UnderPath -Path $Path -Root $TargetRoot)) {
-    throw "$Label would write inside the target during preview. Choose a path outside the target or re-run with -Apply."
+  if ($Path -and (Is-UnderPath -Path $Path -Root $TargetRoot)) {
+    throw "$Label must stay outside the target."
   }
 }
 
@@ -77,8 +79,8 @@ function Copy-Or-Skip {
   Add-Unique $Planned $rel
   if ($Apply) {
     $parent = Split-Path -Parent $Dest
-    if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $parent | Out-Null }
-    Copy-SafeItem -AuthorizedRoot $TargetRoot -Source $Source -Destination $Dest -Force:$Force
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-LizardTransactionalDirectory -Path $parent | Out-Null }
+    Copy-LizardTransactionalFile -Source $Source -Destination $Dest -Force:$Force
     Add-Unique $Written $rel
   }
 }
@@ -92,8 +94,8 @@ function Write-Or-Skip {
   Add-Unique $Planned $rel
   if ($Apply) {
     $parent = Split-Path -Parent $Dest
-    if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $parent | Out-Null }
-    Set-SafeContent -AuthorizedRoot $TargetRoot -Path $Dest -Value $Content
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-LizardTransactionalDirectory -Path $parent | Out-Null }
+    Set-LizardTransactionalContent -Path $Dest -Value $Content
     Add-Unique $Written $rel
   }
 }
@@ -102,8 +104,8 @@ $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 $EffectiveOutputDir = Resolve-UserPath -Path $OutputDir -Fallback (Join-Path $LayerRoot ".tmp\loops\init-$stamp")
 $ShouldWritePlan = $WritePlan.IsPresent -or -not [string]::IsNullOrWhiteSpace($PlanPath)
 $EffectivePlanPath = if ($ShouldWritePlan) { Resolve-UserPath -Path $PlanPath -Fallback (Join-Path $EffectiveOutputDir 'loop-init-plan.md') } else { $null }
-Assert-PreviewOutputOutsideTarget -Path $EffectiveOutputDir -Label 'OutputDir'
-Assert-PreviewOutputOutsideTarget -Path $EffectivePlanPath -Label 'PlanPath'
+Assert-OutputOutsideTarget -Path $EffectiveOutputDir -Label 'OutputDir'
+Assert-OutputOutsideTarget -Path $EffectivePlanPath -Label 'PlanPath'
 $EffectiveOutputDir = Initialize-SafeDirectory -Path $EffectiveOutputDir
 if ($EffectivePlanPath) {
   $planParent = Split-Path -Parent $EffectivePlanPath
@@ -116,12 +118,6 @@ $Written = New-Object System.Collections.Generic.List[string]
 $Skipped = New-Object System.Collections.Generic.List[string]
 $Managed = New-Object System.Collections.Generic.List[string]
 $loopsRoot = Join-Path $TargetRoot '.agent\loops'
-if (-not (Test-Path -LiteralPath $loopsRoot)) {
-  Add-Unique $Planned '.agent\loops'
-  if ($Apply) { New-SafeDirectory -AuthorizedRoot $TargetRoot -Path $loopsRoot | Out-Null; Add-Unique $Written '.agent\loops' }
-} else {
-  Add-Unique $Skipped '.agent\loops'
-}
 
 $stateFileRel = Assert-SafeRelativeTargetPath -Path ([string]$PatternDoc.stateFile) -Label 'stateFile'
 $budgetFileRel = Assert-SafeRelativeTargetPath -Path ([string]$PatternDoc.budgetFile) -Label 'budgetFile'
@@ -138,6 +134,17 @@ if (($PatternDoc.PSObject.Properties.Name -contains 'assistedPlanFile') -and -no
 }
 if (($PatternDoc.PSObject.Properties.Name -contains 'verifierFile') -and -not [string]::IsNullOrWhiteSpace([string]$PatternDoc.verifierFile)) {
   $verifierRel = Assert-SafeRelativeTargetPath -Path ([string]$PatternDoc.verifierFile) -Label 'verifierFile'
+}
+
+$loopTransaction = $null
+if ($Apply) { $loopTransaction = Start-LizardTransaction -TargetRoot $TargetRoot -OperationName 'loop-init' -FailAfterMutation $TestFailAfterMutation }
+try {
+if (-not (Test-Path -LiteralPath $loopsRoot)) {
+  Add-Unique $Planned '.agent\loops'
+  if ($Apply) { New-LizardTransactionalDirectory -Path $loopsRoot | Out-Null; Add-Unique $Written '.agent\loops' }
+} else {
+  if (-not (Test-Path -LiteralPath $loopsRoot -PathType Container)) { throw 'DESTINATION_TYPE_CONFLICT: .agent/loops must be a directory.' }
+  Add-Unique $Skipped '.agent\loops'
 }
 
 Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\LOOP.md') (Join-Path $loopsRoot 'LOOP.md')
@@ -175,8 +182,17 @@ $manifest = [ordered]@{
   denied_actions = @($PatternDoc.deniedActions)
   human_gates = @($PatternDoc.humanGates)
   managed_paths = @($manifestManaged.ToArray())
+  transaction_operation_id = if ($loopTransaction) { [string]$loopTransaction.operation_id } else { $null }
 }
 Write-Or-Skip $manifestPath ($manifest | ConvertTo-Json -Depth 10)
+if ($Apply) { Complete-LizardTransaction | Out-Null }
+} catch {
+  $loopInitError = $_
+  if ($Apply -and (Test-Path -LiteralPath (Join-Path $TargetRoot '.lizard-agent-layer.lock'))) {
+    try { Undo-LizardTransaction | Out-Null } catch { Write-Warning "Loop init rollback requires recovery: $($_.Exception.Message)" }
+  }
+  throw $loopInitError
+}
 
 $planLines = New-Object System.Collections.Generic.List[string]
 $planLines.Add('# lizard-agent-layer loop init plan') | Out-Null

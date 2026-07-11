@@ -151,6 +151,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\matrix.ps1
 - [Manifest diff](docs/manifest-diff.md)
 - [Update targets](docs/update-target.md)
 - [Loop engineering](docs/loop-engineering.md)
+- [L2 lifecycle and verifier evidence](docs/loop-evidence.md)
+- [Target transactions and recovery](docs/transactions.md)
 - [Target analysis](docs/target-analysis.md)
 - [Adapter matrix](docs/adapter-matrix.md)
 - [CI](docs/ci.md)

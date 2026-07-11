@@ -3,6 +3,8 @@ param(
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [string]$WorktreePath,
   [string]$Branch,
+  [string]$LifecyclePath,
+  [switch]$AllowLegacyUnbound,
   [switch]$RemoveBranch,
   [switch]$Force,
   [switch]$Apply,
@@ -15,6 +17,7 @@ $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.LoopEvidence.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 
@@ -52,7 +55,29 @@ $EffectiveOutputDir = Initialize-SafeDirectory -Path $EffectiveOutputDir
 
 $failures = @()
 $warnings = @()
-if ([string]::IsNullOrWhiteSpace($WorktreePath)) { $failures = Add-Item $failures 'WorktreePath is required.' }
+$lifecycleEnvelope = $null
+$lifecyclePayload = $null
+$effectiveLifecyclePath = $null
+if (-not [string]::IsNullOrWhiteSpace($LifecyclePath)) {
+  $effectiveLifecyclePath = Resolve-UserPath -Path $LifecyclePath -Fallback $LifecyclePath
+  try {
+    $lifecycleEnvelope = Read-LizardEvidenceEnvelope -Path $effectiveLifecyclePath -SchemaVersion 1
+    $lifecyclePayload = $lifecycleEnvelope.payload
+    if ([string]$lifecyclePayload.status -ne 'CREATED') { $failures = Add-Item $failures "Lifecycle status must be CREATED, got '$($lifecyclePayload.status)'." }
+    if (-not (Same-Path ([string]$lifecyclePayload.target_root) $TargetRoot)) { $failures = Add-Item $failures 'Lifecycle target root does not match TargetPath.' }
+    if (-not [string]::IsNullOrWhiteSpace($WorktreePath) -and -not (Same-Path -A $WorktreePath -B ([string]$lifecyclePayload.worktree_root))) { $failures = Add-Item $failures 'WorktreePath does not match lifecycle contract.' }
+    else { $WorktreePath = [string]$lifecyclePayload.worktree_root }
+    if (-not [string]::IsNullOrWhiteSpace($Branch) -and $Branch -ne [string]$lifecyclePayload.branch) { $failures = Add-Item $failures 'Branch does not match lifecycle contract.' }
+    else { $Branch = [string]$lifecyclePayload.branch }
+  } catch {
+    $failures = Add-Item $failures "Lifecycle contract rejected: $($_.Exception.Message)"
+  }
+} elseif ($Apply -and -not $AllowLegacyUnbound) {
+  $failures = Add-Item $failures 'Apply requires -LifecyclePath. Use -AllowLegacyUnbound only for reviewed legacy worktrees.'
+} else {
+  $warnings = Add-Item $warnings 'Cleanup is not bound to a lifecycle contract.'
+}
+if ([string]::IsNullOrWhiteSpace($WorktreePath)) { $failures = Add-Item $failures 'WorktreePath is required directly or through LifecyclePath.' }
 if ($Apply -and -not $HumanApproved) { $failures = Add-Item $failures 'Apply requires -HumanApproved for L2 worktree cleanup.' }
 
 $EffectiveWorktreePath = if ([string]::IsNullOrWhiteSpace($WorktreePath)) { $null } else { Resolve-UserPath -Path $WorktreePath -Fallback $WorktreePath }
@@ -113,6 +138,10 @@ if ($targetCommonDir -and $worktreeCommonDir) {
   $sameCommonDir = Same-Path $targetCommonDir $worktreeCommonDir
   if (-not $sameCommonDir) { $failures = Add-Item $failures 'Worktree does not belong to the same git repository as TargetPath.' }
 }
+if ($lifecyclePayload) {
+  if (-not (Same-Path -A $targetCommonDir -B ([string]$lifecyclePayload.git_common_dir))) { $failures = Add-Item $failures 'Target git common directory does not match lifecycle contract.' }
+  if (-not (Same-Path -A $worktreeCommonDir -B ([string]$lifecyclePayload.worktree_common_dir))) { $failures = Add-Item $failures 'Worktree git common directory does not match lifecycle contract.' }
+}
 if (-not [string]::IsNullOrWhiteSpace($Branch) -and -not [string]::IsNullOrWhiteSpace($currentBranch)) {
   $branchMatches = $currentBranch.Equals($Branch, [System.StringComparison]::Ordinal)
   if (-not $branchMatches) { $failures = Add-Item $failures "Worktree branch mismatch. Expected '$Branch', got '$currentBranch'." }
@@ -146,6 +175,10 @@ $report = [pscustomobject]@{
   status = $status
   target = $TargetRoot
   target_git_root = $targetGitRoot
+  operation_id = if ($lifecyclePayload) { [string]$lifecyclePayload.operation_id } else { $null }
+  lifecycle_path = $effectiveLifecyclePath
+  lifecycle_hash = if ($lifecycleEnvelope) { [string]$lifecycleEnvelope.payload_hash } else { $null }
+  lifecycle_bound = ($null -ne $lifecyclePayload)
   worktree_path = $EffectiveWorktreePath
   worktree_git_root = $worktreeGitRoot
   branch = $Branch
@@ -172,6 +205,8 @@ $lines += ''
 $lines += ('- Mode: `{0}`' -f $mode)
 $lines += ('- Status: `{0}`' -f $status)
 $lines += ('- Target: `{0}`' -f $TargetRoot)
+$lines += ('- Operation ID: `{0}`' -f $report.operation_id)
+$lines += ('- Lifecycle bound: `{0}`' -f $report.lifecycle_bound)
 $lines += ('- Worktree path: `{0}`' -f $EffectiveWorktreePath)
 $lines += ('- Branch: `{0}`' -f $Branch)
 $lines += ('- Observed branch: `{0}`' -f $currentBranch)
