@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-07-11T09:36:53.8232306Z",
+    "generated_at":  "2026-07-11T16:50:36.5820862Z",
     "layer_version":  "1.4.1",
-    "artifact_count":  90,
-    "total_bytes":  93149,
-    "token_estimate":  23280,
+    "artifact_count":  91,
+    "total_bytes":  96102,
+    "token_estimate":  24018,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -333,11 +333,11 @@
                       {
                           "kind":  "protocol",
                           "path":  "protocols/secret-handling.md",
-                          "sha256":  "1a3468f9045afefe493308816b2fcc44b1b0c7cf75db162b9fced80f20c0a588",
-                          "bytes":  364,
-                          "lines":  8,
-                          "words":  59,
-                          "token_estimate":  91
+                          "sha256":  "e423b1031f07cb3a37077827560dce3933535c9e8372b309aaf97cea98bbd93a",
+                          "bytes":  553,
+                          "lines":  9,
+                          "words":  82,
+                          "token_estimate":  138
                       },
                       {
                           "kind":  "profile",
@@ -761,6 +761,15 @@
                           "lines":  30,
                           "words":  88,
                           "token_estimate":  253
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/merge-suggestions-report.schema.json",
+                          "sha256":  "1ccb8343c9c37a6597e1348a0e11931144ec5ea203e6947054792d0a3f4c073a",
+                          "bytes":  2764,
+                          "lines":  51,
+                          "words":  261,
+                          "token_estimate":  691
                       },
                       {
                           "kind":  "schema",

@@ -4,7 +4,8 @@ param(
   [string[]]$Harnesses,
   [string]$OutputDir,
   [switch]$Json,
-  [switch]$AllowTargetReportWrite
+  [switch]$AllowTargetReportWrite,
+  [switch]$IncludeExistingContext
 )
 
 $ErrorActionPreference = "Stop"
@@ -77,23 +78,31 @@ function Split-Lines {
 }
 
 function New-AppendPatch {
-  param([string]$RelativePath, [string]$ExistingContent, [string]$Block)
+  param([string]$RelativePath, [string]$ExistingContent, [string]$Block, [bool]$WithExistingContext)
   $oldContent = $ExistingContent.TrimEnd("`r", "`n")
   $oldLines = Split-Lines $oldContent
   $blockLines = Split-Lines $Block
-  $newCount = $oldLines.Count + $(if ($oldLines.Count -gt 0) { 1 } else { 0 }) + $blockLines.Count
   $oldCount = $oldLines.Count
   $patchPath = Convert-ToPatchPath $RelativePath
   $lines = New-Object System.Collections.Generic.List[string]
   $lines.Add("diff --git a/$patchPath b/$patchPath") | Out-Null
   $lines.Add("--- a/$patchPath") | Out-Null
   $lines.Add("+++ b/$patchPath") | Out-Null
-  if ($oldCount -eq 0) {
-    $lines.Add("@@ -0,0 +1,$newCount @@") | Out-Null
+
+  if ($WithExistingContext) {
+    $newCount = $oldCount + $(if ($oldCount -gt 0) { 1 } else { 0 }) + $blockLines.Count
+    if ($oldCount -eq 0) {
+      $lines.Add("@@ -0,0 +1,$newCount @@") | Out-Null
+    } else {
+      $lines.Add("@@ -1,$oldCount +1,$newCount @@") | Out-Null
+      foreach ($line in $oldLines) { $lines.Add(" $line") | Out-Null }
+      $lines.Add('+') | Out-Null
+    }
   } else {
-    $lines.Add("@@ -1,$oldCount +1,$newCount @@") | Out-Null
-    foreach ($line in $oldLines) { $lines.Add(" $line") | Out-Null }
-    $lines.Add('+') | Out-Null
+    $additionCount = $blockLines.Count + $(if ($oldCount -gt 0) { 1 } else { 0 })
+    $newStart = if ($oldCount -gt 0) { $oldCount + 1 } else { 1 }
+    $lines.Add(("@@ -{0},0 +{1},{2} @@" -f $oldCount, $newStart, $additionCount)) | Out-Null
+    if ($oldCount -gt 0) { $lines.Add('+') | Out-Null }
   }
   foreach ($line in $blockLines) { $lines.Add("+$line") | Out-Null }
   return ($lines -join "`n") + "`n"
@@ -144,9 +153,12 @@ foreach ($harness in $SelectedHarnesses) {
   $message = "$dstRel is missing; installer can create it directly."
   $patchFile = $null
   $blockFile = $null
+  $instructionHash = $null
+  $existingContentIncluded = $false
   $block = New-MergeBlock -Harness $harness -InstructionPath $dstRel -SidecarPath $sidecarRel
 
   if (Test-Path -LiteralPath $targetInstructionPath) {
+    $instructionHash = (Get-FileHash -LiteralPath $targetInstructionPath -Algorithm SHA256).Hash.ToLowerInvariant()
     $existing = Get-Content -LiteralPath $targetInstructionPath -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
     if ($existing -match 'lizard-agent-layer') {
       $status = 'already-wired'
@@ -157,7 +169,8 @@ foreach ($harness in $SelectedHarnesses) {
       $baseName = Convert-ToSafeFileName "$harness-$dstRel"
       $patchFile = Join-Path $OutputDir "$baseName.patch"
       $blockFile = Join-Path $OutputDir "$baseName.block.md"
-      Set-SafeContent -AuthorizedRoot $OutputDir -Path $patchFile -Value (New-AppendPatch -RelativePath $dstRel -ExistingContent $existing -Block $block)
+      $existingContentIncluded = $IncludeExistingContext.IsPresent
+      Set-SafeContent -AuthorizedRoot $OutputDir -Path $patchFile -Value (New-AppendPatch -RelativePath $dstRel -ExistingContent $existing -Block $block -WithExistingContext $existingContentIncluded)
       Set-SafeContent -AuthorizedRoot $OutputDir -Path $blockFile -Value $block
       $patchFiles.Add($patchFile) | Out-Null
       $blockFiles.Add($blockFile) | Out-Null
@@ -170,6 +183,8 @@ foreach ($harness in $SelectedHarnesses) {
   $result['sidecar_path'] = $sidecarRel
   $result['status'] = $status
   $result['message'] = $message
+  $result['instruction_sha256'] = $instructionHash
+  $result['existing_content_included'] = $existingContentIncluded
   $result['patch_file'] = $patchFile
   $result['block_file'] = $blockFile
   $result['suggested_block'] = $block
@@ -186,6 +201,9 @@ $lines.Add(('- Target: `{0}`' -f $TargetRoot)) | Out-Null
 $lines.Add(('- Layer version: `{0}`' -f $LayerVersion)) | Out-Null
 $lines.Add(('- Profile: `{0}`' -f $Profile)) | Out-Null
 $lines.Add(('- Harnesses: `{0}`' -f ($SelectedHarnesses -join ', '))) | Out-Null
+$reportSensitivity = if ($IncludeExistingContext) { 'contains-target-context' } else { 'metadata-only' }
+$lines.Add(('- Sensitivity: `{0}`' -f $reportSensitivity)) | Out-Null
+$lines.Add(('- Existing instruction content included: `{0}`' -f $IncludeExistingContext.IsPresent)) | Out-Null
 $lines.Add('') | Out-Null
 $mergeNeeded = @($results.ToArray() | Where-Object { $_['status'] -eq 'merge-needed' })
 $alreadyWired = @($results.ToArray() | Where-Object { $_['status'] -eq 'already-wired' })
@@ -202,6 +220,7 @@ foreach ($result in @($results.ToArray())) {
   $lines.Add(('- Status: `{0}`' -f $result['status'])) | Out-Null
   $lines.Add(('- Sidecar: `{0}`' -f $result['sidecar_path'])) | Out-Null
   $lines.Add(('- Message: {0}' -f $result['message'])) | Out-Null
+  if ($result['instruction_sha256']) { $lines.Add(('- Instruction SHA-256: `{0}`' -f $result['instruction_sha256'])) | Out-Null }
   if ($result['patch_file']) { $lines.Add(('- Patch: `{0}`' -f $result['patch_file'])) | Out-Null }
   if ($result['block_file']) { $lines.Add(('- Block: `{0}`' -f $result['block_file'])) | Out-Null }
   if ($result['status'] -eq 'merge-needed') {
@@ -219,11 +238,15 @@ Add-MarkdownList $lines 'Block files' @($blockFiles.ToArray())
 Set-SafeContent -AuthorizedRoot $OutputDir -Path $reportPath -Value ($lines -join "`n")
 
 $jsonDoc = New-Object System.Collections.Specialized.OrderedDictionary
+$jsonDoc['schema_version'] = 1
+$jsonDoc['report_kind'] = 'merge-suggestions'
 $jsonDoc['generated_at'] = (Get-Date).ToUniversalTime().ToString('o')
 $jsonDoc['target'] = $TargetRoot
 $jsonDoc['layer_version'] = $LayerVersion
 $jsonDoc['profile'] = $Profile
 $jsonDoc['harnesses'] = @($SelectedHarnesses)
+$jsonDoc['sensitivity'] = $reportSensitivity
+$jsonDoc['include_existing_context'] = $IncludeExistingContext.IsPresent
 $jsonDoc['output_dir'] = $OutputDir
 $jsonDoc['report_path'] = $reportPath
 $jsonDoc['patch_files'] = @($patchFiles.ToArray())
@@ -241,6 +264,7 @@ Write-Host "Target: $TargetRoot"
 Write-Host "Profile: $Profile"
 Write-Host "Harnesses: $($SelectedHarnesses -join ', ')"
 Write-Host "Output: $OutputDir"
+Write-Host "Sensitivity: $reportSensitivity"
 Write-Host "Report: $reportPath"
 Write-Host "JSON: $jsonPath"
 Write-Host "Merge needed: $($mergeNeeded.Count)"

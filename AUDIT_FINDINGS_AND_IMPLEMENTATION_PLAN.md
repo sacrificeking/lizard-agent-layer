@@ -65,6 +65,15 @@ Finding counts:
 - **Remaining validation:** run the committed workflow on GitHub-hosted Windows, Ubuntu, and macOS after an explicitly approved push; local documentation must not represent that remote evidence as complete
 - **Release note:** Windows-only child-host assumptions are removed and schemas now determine acceptance. Report-contract standardization and remaining behavioral/governance packages continue separately.
 
+### Package 5A — Report privacy and preview boundaries
+
+- **Status:** Implemented locally on 2026-07-11
+- **Scope:** D3; F-011 completion and F-013
+- **Evidence:** metadata-only merge patches, source SHA-256 binding, explicit `-IncludeExistingContext` compatibility mode, sensitivity labels, executable report schema, and adversarial canary scans across console/Markdown/JSON/patch/block output
+- **Passing gates:** report schema fixture, generated-report schema checks, 33/33 schema bindings, 11/11 schema mutations, eight focused suites, packs, drift, quality, smoke, and 15/15 matrix combinations
+- **Remaining validation:** remote three-OS execution after an explicitly approved push
+- **Release note:** Existing project instructions no longer flow into secondary report artifacts by default; context-inclusive patches are explicit and sensitivity-labelled.
+
 ## Findings Register
 
 ### F-001 — Linked directories can redirect writes outside the target
@@ -280,7 +289,7 @@ Finding counts:
 - **Category:** Installer Safety; Documentation and DX
 - **Priority:** P2
 - **Severity:** Medium
-- **Status:** Implemented locally; cross-platform execution pending
+- **Status:** Implemented locally with shared target-exclusion gates and report-specific adversarial coverage; remote three-OS execution pending
 - **Confidence:** High
 - **Evidence:** `scripts/install.ps1:192-205,385-389` and `scripts/update-target.ps1:216-229` accept output paths inside the target. Fixtures confirmed that preview mode can create target-local plan/report files.
 - **Impact:** Automation relying on preview as a target no-op can dirty the target repository.
@@ -320,7 +329,7 @@ Finding counts:
 - **Category:** Report Safety and Developer Experience
 - **Priority:** P2
 - **Severity:** Medium
-- **Status:** Observed
+- **Status:** Implemented locally; complete Windows CI passing, remote three-OS execution pending
 - **Confidence:** High
 - **Evidence:** `scripts/merge-suggestions.ps1:77-96,146-157` includes every original instruction line in generated append patches.
 - **Impact:** Private project instructions are copied into secondary report artifacts that may be shared separately.
@@ -642,6 +651,7 @@ B2 Integrity diff + structured evidence
 #### D3 — Preview and report-boundary consistency
 
 - **Priority:** P2
+- **Status:** Implemented locally; complete Windows CI passing, remote three-OS execution pending
 - **Goal:** Make preview a target no-op by default and minimize copied target content.
 - **Files:** Installer, updater, report/merge generators, docs.
 - **Dependencies:** A1

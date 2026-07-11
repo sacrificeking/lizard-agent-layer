@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "report_kind": "merge-suggestions",
+  "generated_at": "2026-07-11T00:00:00Z",
+  "target": "fixture-target",
+  "layer_version": "1.4.1",
+  "profile": "minimal",
+  "harnesses": ["generic-agents-md"],
+  "sensitivity": "metadata-only",
+  "include_existing_context": false,
+  "output_dir": "fixture-output",
+  "report_path": "fixture-output/merge-suggestions.md",
+  "patch_files": ["fixture-output/generic-agents-md-AGENTS.md.patch"],
+  "block_files": ["fixture-output/generic-agents-md-AGENTS.md.block.md"],
+  "results": [
+    {
+      "harness": "generic-agents-md",
+      "instruction_path": "AGENTS.md",
+      "sidecar_path": "AGENTS.lizard-agent-layer.md",
+      "status": "merge-needed",
+      "message": "Review the generated sidecar and block.",
+      "instruction_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "existing_content_included": false,
+      "patch_file": "fixture-output/generic-agents-md-AGENTS.md.patch",
+      "block_file": "fixture-output/generic-agents-md-AGENTS.md.block.md",
+      "suggested_block": "## lizard-agent-layer"
+    }
+  ]
+}

@@ -11,6 +11,7 @@
     { "schema": "schemas/maturity-levels.schema.json", "include": ["registry/maturity-levels.json"] },
     { "schema": "schemas/risk-signals.schema.json", "include": ["registry/risk-signals.json"] },
     { "schema": "schemas/manifest-migrations.schema.json", "include": ["registry/manifest-migrations.json"] },
-    { "schema": "schemas/drift-baseline.schema.json", "include": ["registry/drift-baseline.json"] }
+    { "schema": "schemas/drift-baseline.schema.json", "include": ["registry/drift-baseline.json"] },
+    { "schema": "schemas/merge-suggestions-report.schema.json", "include": ["tests/schema/fixtures/merge-suggestions-report.valid.json"] }
   ]
 }

@@ -63,6 +63,20 @@
       "base": "registry/risk-signals.json",
       "mutations": [{ "op": "replace", "path": "/signals/0/severity", "value": "unknown" }],
       "expected_keyword": "enum"
+    },
+    {
+      "name": "merge-report-sensitivity-contract",
+      "schema": "schemas/merge-suggestions-report.schema.json",
+      "base": "tests/schema/fixtures/merge-suggestions-report.valid.json",
+      "mutations": [{ "op": "replace", "path": "/include_existing_context", "value": true }],
+      "expected_keyword": "const"
+    },
+    {
+      "name": "merge-report-unsafe-instruction-path",
+      "schema": "schemas/merge-suggestions-report.schema.json",
+      "base": "tests/schema/fixtures/merge-suggestions-report.valid.json",
+      "mutations": [{ "op": "replace", "path": "/results/0/instruction_path", "value": "../../private.md" }],
+      "expected_keyword": "pattern"
     }
   ]
 }

@@ -32,13 +32,19 @@ Machine-readable output:
 pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -Json
 ```
 
+Compatibility mode with complete existing instruction context in patch files:
+
+```powershell
+pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -IncludeExistingContext
+```
+
 ## Output
 
 The output directory contains:
 
 - `merge-suggestions.md`: human-readable review report.
 - `merge-suggestions.json`: machine-readable report metadata.
-- `*.patch`: append-only patch suggestions for existing instruction files.
+- `*.patch`: zero-context append suggestions by default; apply with tooling that supports zero-context unified diffs, or use the copy-ready block.
 - `*.block.md`: copy-ready Markdown blocks for manual merges.
 
 ## Statuses
@@ -50,3 +56,5 @@ The output directory contains:
 ## Safety behavior
 
 The script only writes to the selected output directory. It never writes `.agent/`, sidecars, harness instruction files, or skill mirrors into the target project.
+
+Default output is `metadata-only`: it records the instruction path and SHA-256 but never copies existing project instructions into Markdown, JSON, patch, block, or console output. `-IncludeExistingContext` is an explicit compatibility mode that includes existing content only in the generated patch and labels the report `contains-target-context`. Treat those patch files as sensitive project material.

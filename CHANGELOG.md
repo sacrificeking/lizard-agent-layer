@@ -4,6 +4,8 @@
 
 ### Added
 
+- Metadata-only merge report schema and adversarial canary scans across patch, Markdown, JSON, and console output.
+
 - Shared `scripts/Lizard.SafeFs.psm1` guard for canonical destination containment, linked-ancestor rejection, safe directory creation, and guarded copy/content writes.
 - Focused unit and adversarial safety suites covering ordinary paths, root equality, traversal, Windows junctions or Unix symlinks, force modes, harness mirrors, and preview report boundaries.
 - Machine-readable focused-test reports under `.tmp/tests/` and a mandatory focused-safety CI step.
@@ -18,6 +20,8 @@
 - Windows, Ubuntu, and macOS PowerShell 7 CI jobs plus a Windows PowerShell 5.1 compatibility job.
 
 ### Changed
+
+- Merge suggestion patches now omit existing project instruction content by default and bind the source by SHA-256; `-IncludeExistingContext` preserves explicitly labelled compatibility behavior.
 
 - Routed installer, updater, manifest, loop lifecycle, report, matrix, drift, quality, and CI writes through explicit authorized roots with immediate pre-mutation rechecks.
 - Report-producing commands now reject target-local output by default where preview/no-op behavior applies; `-AllowTargetReportWrite` is an explicit compatibility escape hatch on supported commands.

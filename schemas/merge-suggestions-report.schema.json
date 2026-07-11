@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/merge-suggestions-report.schema.json",
+  "title": "lizard-agent-layer merge suggestions report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "report_kind", "generated_at", "target", "layer_version", "profile", "harnesses", "sensitivity", "include_existing_context", "output_dir", "report_path", "patch_files", "block_files", "results"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "report_kind": { "const": "merge-suggestions" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "target": { "type": "string", "minLength": 1 },
+    "layer_version": { "type": "string", "minLength": 1 },
+    "profile": { "type": "string", "minLength": 1 },
+    "harnesses": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true },
+    "sensitivity": { "enum": ["metadata-only", "contains-target-context"] },
+    "include_existing_context": { "type": "boolean" },
+    "output_dir": { "type": "string", "minLength": 1 },
+    "report_path": { "type": "string", "minLength": 1 },
+    "patch_files": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "block_files": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["harness", "instruction_path", "sidecar_path", "status", "message", "instruction_sha256", "existing_content_included", "patch_file", "block_file", "suggested_block"],
+        "properties": {
+          "harness": { "type": "string" },
+          "instruction_path": { "type": "string", "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(^|/)\\.\\.(/|$)).+$" },
+          "sidecar_path": { "type": "string", "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(^|/)\\.\\.(/|$)).+$" },
+          "status": { "enum": ["merge-needed", "already-wired", "create-by-installer"] },
+          "message": { "type": "string" },
+          "instruction_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+          "existing_content_included": { "type": "boolean" },
+          "patch_file": { "type": ["string", "null"] },
+          "block_file": { "type": ["string", "null"] },
+          "suggested_block": { "type": "string" }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "include_existing_context": { "const": true } }, "required": ["include_existing_context"] },
+      "then": { "properties": { "sensitivity": { "const": "contains-target-context" } } },
+      "else": { "properties": { "sensitivity": { "const": "metadata-only" } } }
+    }
+  ]
+}
