@@ -226,6 +226,12 @@ $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop-state.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop-budget.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop-constraints.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop-registry.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\manifest-migrations.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\risk-signals.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\drift-baseline.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\verifier-evidence.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\worktree-lifecycle.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\quality-rubric.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\maturity-levels.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\risk-signals.json')
@@ -270,18 +276,33 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory | ForEach-
   if ([string]::IsNullOrWhiteSpace($values['description'])) { Fail "Skill '$folderName' has empty description." }
 }
 
-foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1', 'manifest-diff.ps1', 'update-target.ps1', 'loop-init.ps1', 'loop-audit.ps1', 'loop-report.ps1', 'loop-sync.ps1', 'loop-cost.ps1', 'loop-worktree.ps1', 'loop-verify.ps1', 'loop-worktree-cleanup.ps1')) {
+foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1', 'manifest-diff.ps1', 'update-target.ps1', 'transaction-recover.ps1', 'loop-init.ps1', 'loop-audit.ps1', 'loop-report.ps1', 'loop-sync.ps1', 'loop-cost.ps1', 'loop-worktree.ps1', 'loop-verify.ps1', 'loop-worktree-cleanup.ps1')) {
   $path = Join-Path $LayerRoot "scripts\$script"
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing script $script."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }
   catch { Fail "PowerShell parse failure in ${script}: $($_.Exception.Message)" }
 }
 
-foreach ($relative in @('scripts\Lizard.SafeFs.psm1', 'scripts\Lizard.Manifest.psm1', 'tests\TestHelpers.psm1', 'tests\run-focused.ps1', 'tests\unit\safe-fs.tests.ps1', 'tests\integration\manifest-v3.tests.ps1', 'tests\adversarial\install-containment.tests.ps1', 'tests\adversarial\version-gates.tests.ps1')) {
+foreach ($relative in @('scripts\Lizard.SafeFs.psm1', 'scripts\Lizard.Manifest.psm1', 'scripts\Lizard.Host.psm1', 'scripts\Lizard.Transaction.psm1', 'scripts\Lizard.LoopEvidence.psm1', 'tests\TestHelpers.psm1', 'tests\run-focused.ps1', 'tests\unit\safe-fs.tests.ps1', 'tests\unit\host.tests.ps1', 'tests\integration\manifest-v3.tests.ps1', 'tests\integration\transaction.tests.ps1', 'tests\adversarial\install-containment.tests.ps1', 'tests\adversarial\version-gates.tests.ps1', 'tests\adversarial\loop-evidence.tests.ps1')) {
   $path = Join-Path $LayerRoot $relative
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing safety artifact $relative."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }
   catch { Fail "PowerShell parse failure in ${relative}: $($_.Exception.Message)" }
+}
+
+$schemaValidator = Join-Path $LayerRoot 'tools\schema-validator\validate.mjs'
+$ajvPackage = Join-Path $LayerRoot 'node_modules\ajv\package.json'
+$nodeCommand = Get-Command node -ErrorAction SilentlyContinue
+if (-not $nodeCommand) {
+  Fail 'SCHEMA_VALIDATOR_NODE_MISSING: Node.js 20 or newer is required for executable schema validation.'
+} elseif (-not (Test-Path -LiteralPath $ajvPackage -PathType Leaf)) {
+  Fail 'SCHEMA_VALIDATOR_DEPENDENCY_MISSING: Run npm ci before validation.'
+} elseif (-not (Test-Path -LiteralPath $schemaValidator -PathType Leaf)) {
+  Fail 'Missing tools/schema-validator/validate.mjs.'
+} else {
+  $schemaOutput = & $nodeCommand.Source $schemaValidator --root $LayerRoot 2>&1 | Out-String
+  if ($LASTEXITCODE -ne 0) { Fail "Executable JSON Schema validation failed: $schemaOutput" }
+  elseif ($schemaOutput) { Write-Host $schemaOutput.Trim() }
 }
 
 if ($Warnings.Count -gt 0) {

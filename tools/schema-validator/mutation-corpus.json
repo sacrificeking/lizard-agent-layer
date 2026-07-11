@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "name": "profile-required-field",
+      "schema": "schemas/lizard-agent-layer.schema.json",
+      "base": "profiles/minimal.json",
+      "mutations": [{ "op": "remove", "path": "/riskLevel" }],
+      "expected_keyword": "required"
+    },
+    {
+      "name": "profile-nested-type",
+      "schema": "schemas/lizard-agent-layer.schema.json",
+      "base": "profiles/minimal.json",
+      "mutations": [{ "op": "replace", "path": "/modelProfiles", "value": [] }],
+      "expected_keyword": "type"
+    },
+    {
+      "name": "profile-enum",
+      "schema": "schemas/lizard-agent-layer.schema.json",
+      "base": "profiles/minimal.json",
+      "mutations": [{ "op": "replace", "path": "/riskLevel", "value": "extreme" }],
+      "expected_keyword": "enum"
+    },
+    {
+      "name": "profile-unknown-field",
+      "schema": "schemas/lizard-agent-layer.schema.json",
+      "base": "profiles/minimal.json",
+      "mutations": [{ "op": "add", "path": "/unexpected", "value": true }],
+      "expected_keyword": "additionalProperties"
+    },
+    {
+      "name": "adapter-unsafe-path",
+      "schema": "schemas/adapter.schema.json",
+      "base": "adapters/codex/adapter.json",
+      "mutations": [{ "op": "replace", "path": "/instruction/dst", "value": "../../escape.md" }],
+      "expected_keyword": "pattern"
+    },
+    {
+      "name": "loop-cadence-type",
+      "schema": "schemas/loop.schema.json",
+      "base": "loops/daily-triage.json",
+      "mutations": [{ "op": "replace", "path": "/cadence", "value": [] }],
+      "expected_keyword": "type"
+    },
+    {
+      "name": "loop-nested-required",
+      "schema": "schemas/loop.schema.json",
+      "base": "loops/daily-triage.json",
+      "mutations": [{ "op": "remove", "path": "/cadence/notes" }],
+      "expected_keyword": "required"
+    },
+    {
+      "name": "loop-nested-unknown",
+      "schema": "schemas/loop.schema.json",
+      "base": "loops/daily-triage.json",
+      "mutations": [{ "op": "add", "path": "/cadence/unexpected", "value": true }],
+      "expected_keyword": "additionalProperties"
+    },
+    {
+      "name": "risk-severity-enum",
+      "schema": "schemas/risk-signals.schema.json",
+      "base": "registry/risk-signals.json",
+      "mutations": [{ "op": "replace", "path": "/signals/0/severity", "value": "unknown" }],
+      "expected_keyword": "enum"
+    }
+  ]
+}

@@ -19,7 +19,8 @@ Portable agent infrastructure for projects that need consistent AI-assisted deve
 - Standalone merge suggestion reports with patch and copy-block artifacts.
 - Target analyzer for profile, harness, skill, pack, monorepo, non-Node, and risk recommendations.
 - Adapter matrix tests for every profile/harness combination.
-- Local CI runner plus GitHub Actions workflow for validate, packs, drift, quality, smoke, and matrix gates.
+- Local CI runner plus Windows, Ubuntu, and macOS GitHub Actions gates for PowerShell 7, with a Windows PowerShell 5.1 compatibility job.
+- Executable Draft 2020-12 contracts for declarative configuration, generated manifests, and loop evidence.
 - Quality registry with scoring, risk labels, maturity levels, drift detection, and Markdown/JSON reports.
 - Doctor, validation, upgrade, manifest-sync, manifest diff, update-target, scoring, and smoke-test scripts.
 
@@ -31,102 +32,105 @@ Portable agent infrastructure for projects that need consistent AI-assisted deve
 
 ## Quick start
 
+PowerShell 7 (`pwsh`) is the portable default. Repository validation additionally requires Node.js 20 or newer and one initial `npm ci`. Windows PowerShell 5.1 remains supported as a compatibility host.
+
 Analyze a target first:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project
 ```
 
 Write a reviewable install plan without touching the target project:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs frontend-product -WritePlan
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs frontend-product -WritePlan
 ```
 
 Write a profile-only plan when packs are not needed:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -WritePlan
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -WritePlan
 ```
 
 Generate concrete merge patches for existing instruction files:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard
+pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard
 ```
 
 Preview the recommended or chosen profile:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard
 ```
 
 Override harnesses if needed:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,cursor
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,cursor
 ```
 
 Apply after reviewing the plan and merge patches:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Apply
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Apply
 ```
 
 Audit a target project:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\doctor.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\doctor.ps1 -TargetPath D:\path\to\project
 ```
 
 Run a local pack report:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\pack-report.ps1 -Strict
+pwsh -NoProfile -File .\scripts\pack-report.ps1 -Strict
 ```
 
 Run a local drift report:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\drift-check.ps1
+pwsh -NoProfile -File .\scripts\drift-check.ps1
 ```
 
 Run an installed-target manifest diff:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project -Strict
+pwsh -NoProfile -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project -Strict
 ```
 
 Generate a reviewable update plan for an installed target:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project
 ```
 
 Apply the reviewed update conservatively:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply
 ```
 
 Run a local quality report:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\score-layer.ps1
+pwsh -NoProfile -File .\scripts\score-layer.ps1
 ```
 
 Run local CI for this repository:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\ci.ps1
+npm ci
+pwsh -NoProfile -File .\scripts\ci.ps1
 ```
 
 Validate individual gates:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\smoke.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\matrix.ps1
+pwsh -NoProfile -File .\scripts\validate.ps1
+pwsh -NoProfile -File .\tests\smoke.ps1
+pwsh -NoProfile -File .\scripts\matrix.ps1
 ```
 
 ## Safety stance
@@ -156,6 +160,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\matrix.ps1
 - [Target analysis](docs/target-analysis.md)
 - [Adapter matrix](docs/adapter-matrix.md)
 - [CI](docs/ci.md)
+- [Schema validation](docs/schema-validation.md)
 - [Drift intelligence](docs/drift-intelligence.md)
 - [Safety model](docs/safety-model.md)
 - [Skill authoring](docs/skill-authoring.md)

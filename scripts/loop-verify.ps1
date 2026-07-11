@@ -37,15 +37,15 @@ function Same-Path {
   if ([string]::IsNullOrWhiteSpace($A) -or [string]::IsNullOrWhiteSpace($B)) { return $false }
   $left = [System.IO.Path]::GetFullPath($A).TrimEnd([char[]]@('\', '/'))
   $right = [System.IO.Path]::GetFullPath($B).TrimEnd([char[]]@('\', '/'))
-  return $left.Equals($right, [System.StringComparison]::OrdinalIgnoreCase)
+  return $left.Equals($right, (Get-LizardPathComparison))
 }
 function Is-UnderPath {
   param([string]$Path, [string]$Root)
   if ([string]::IsNullOrWhiteSpace($Path) -or [string]::IsNullOrWhiteSpace($Root)) { return $false }
   $full = [System.IO.Path]::GetFullPath($Path).TrimEnd([char[]]@('\', '/'))
   $rootFull = [System.IO.Path]::GetFullPath($Root).TrimEnd([char[]]@('\', '/'))
-  if ($full.Equals($rootFull, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
-  return $full.StartsWith(($rootFull + [System.IO.Path]::DirectorySeparatorChar), [System.StringComparison]::OrdinalIgnoreCase)
+  if ($full.Equals($rootFull, (Get-LizardPathComparison))) { return $true }
+  return $full.StartsWith(($rootFull + [System.IO.Path]::DirectorySeparatorChar), (Get-LizardPathComparison))
 }
 function Is-SafeRelativePath {
   param([string]$Path)
@@ -215,7 +215,7 @@ $evidenceTargetPath = $null
 $verifierFileSafe = $false
 $normalizedVerifierRel = $verifierRel.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
 $expectedVerifierPrefix = '.agent' + [System.IO.Path]::DirectorySeparatorChar + 'loops' + [System.IO.Path]::DirectorySeparatorChar
-if (-not (Is-SafeRelativePath $verifierRel) -or -not $normalizedVerifierRel.StartsWith($expectedVerifierPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+if (-not (Is-SafeRelativePath $verifierRel) -or -not $normalizedVerifierRel.StartsWith($expectedVerifierPrefix, (Get-LizardPathComparison))) {
   $failures = Add-ResultItem $failures "Verifier file path is unsafe: $verifierRel"
 } else {
   try {

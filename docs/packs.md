@@ -21,13 +21,13 @@ Use packs when a project needs more precision than `minimal`, `standard`, or `su
 Preview a profile with one pack:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs frontend-product
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs frontend-product
 ```
 
 Preview a high-risk Supabase finance app with multiple packs:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile supabase-react-finance -Packs frontend-product,supabase-react,finance-app,security-hardening -WritePlan
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile supabase-react-finance -Packs frontend-product,supabase-react,finance-app,security-hardening -WritePlan
 ```
 
 The installer merges pack values into the selected profile before it plans or applies:
@@ -44,7 +44,7 @@ The installer merges pack values into the selected profile before it plans or ap
 `scripts/analyze-target.ps1` emits `recommendedPacks` and appends `-Packs ...` to the preview command when signals match known bundles.
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project -Json
+pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project -Json
 ```
 
 Treat analyzer recommendations as a high-quality starting point. Add or remove packs when the repository has unusual constraints.
@@ -54,13 +54,13 @@ Treat analyzer recommendations as a high-quality starting point. Add or remove p
 Run the pack gate directly:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\pack-report.ps1 -Strict
+pwsh -NoProfile -File .\scripts\pack-report.ps1 -Strict
 ```
 
 Run the full local CI gate:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\ci.ps1
+pwsh -NoProfile -File .\scripts\ci.ps1
 ```
 
 `validate.ps1` verifies pack shape and references. `pack-report.ps1 -Strict` checks pack coverage, missing skills, invalid harnesses, invalid model profiles, and suspiciously empty bundle fields.
@@ -87,7 +87,7 @@ Target projects can define local packs without changing this repository:
 Install an overlay pack by name:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs project-overlay
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs project-overlay
 ```
 
 Overlay packs can extend built-in packs:

@@ -25,7 +25,8 @@ function Get-LizardStringSha256 {
 
 function Get-LizardArtifactMap {
   param($Manifest)
-  $map = New-Object 'System.Collections.Generic.Dictionary[string,object]' ([System.StringComparer]::OrdinalIgnoreCase)
+  $comparer = if ($PSVersionTable.PSObject.Properties.Name -contains 'Platform' -and $PSVersionTable.Platform -eq 'Unix') { [System.StringComparer]::Ordinal } else { [System.StringComparer]::OrdinalIgnoreCase }
+  $map = New-Object 'System.Collections.Generic.Dictionary[string,object]' $comparer
   if ($null -eq $Manifest -or -not ($Manifest.PSObject.Properties.Name -contains 'artifacts')) { return $map }
   foreach ($artifact in @($Manifest.artifacts)) {
     if ($null -eq $artifact -or [string]::IsNullOrWhiteSpace([string]$artifact.path)) { continue }

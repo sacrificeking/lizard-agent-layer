@@ -31,15 +31,15 @@ function Is-UnderPath {
   param([string]$Path, [string]$Root)
   $full = [System.IO.Path]::GetFullPath($Path).TrimEnd([char[]]@('\', '/'))
   $rootFull = [System.IO.Path]::GetFullPath($Root).TrimEnd([char[]]@('\', '/'))
-  if ($full.Equals($rootFull, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
-  return $full.StartsWith(($rootFull + [System.IO.Path]::DirectorySeparatorChar), [System.StringComparison]::OrdinalIgnoreCase)
+  if ($full.Equals($rootFull, (Get-LizardPathComparison))) { return $true }
+  return $full.StartsWith(($rootFull + [System.IO.Path]::DirectorySeparatorChar), (Get-LizardPathComparison))
 }
 function Same-Path {
   param([string]$A, [string]$B)
   if ([string]::IsNullOrWhiteSpace($A) -or [string]::IsNullOrWhiteSpace($B)) { return $false }
   $left = [System.IO.Path]::GetFullPath($A).TrimEnd([char[]]@('\', '/'))
   $right = [System.IO.Path]::GetFullPath($B).TrimEnd([char[]]@('\', '/'))
-  return $left.Equals($right, [System.StringComparison]::OrdinalIgnoreCase)
+  return $left.Equals($right, (Get-LizardPathComparison))
 }
 function Normalize-GitPath {
   param([string]$Path, [string]$BasePath)

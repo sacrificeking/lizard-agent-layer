@@ -20,13 +20,13 @@ An interrupted process leaves `.lizard-agent-layer.lock` and `.lizard-agent-laye
 Preview recovery:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\transaction-recover.ps1 -TargetPath <project>
+pwsh -NoProfile -File .\scripts\transaction-recover.ps1 -TargetPath <project>
 ```
 
 Apply rollback after confirming the recorded owner process is no longer active:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\transaction-recover.ps1 -TargetPath <project> -Apply -HumanApproved
+pwsh -NoProfile -File .\scripts\transaction-recover.ps1 -TargetPath <project> -Apply -HumanApproved
 ```
 
 `-Force` is required if the recorded PID is still running. Use it only after verifying that the PID is unrelated or the original operation cannot complete.

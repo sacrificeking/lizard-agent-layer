@@ -1,17 +1,17 @@
-﻿# Adapter Matrix
+# Adapter Matrix
 
 `scripts/matrix.ps1` installs every selected profile/harness pair into scratch targets and runs `doctor.ps1 -Strict` against each result.
 
 ## Full matrix
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\matrix.ps1
+pwsh -NoProfile -File .\scripts\matrix.ps1
 ```
 
 ## Focused matrix
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\matrix.ps1 -Profiles standard,supabase-react-finance -Harnesses codex,claude-code,gemini
+pwsh -NoProfile -File .\scripts\matrix.ps1 -Profiles standard,supabase-react-finance -Harnesses codex,claude-code,gemini
 ```
 
 ## Output

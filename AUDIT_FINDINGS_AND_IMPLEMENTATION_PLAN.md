@@ -56,6 +56,15 @@ Finding counts:
 - **Remaining validation:** cross-platform lock, process, Git-path, symlink, and PowerShell-host execution belongs to package 4
 - **Release note:** P1 failure resilience and L2 evidence contracts are implemented; release readiness still depends on portability, executable schema validation, and the remaining P2/P3 packages.
 
+### Package 4 — Portable hosts and executable contracts
+
+- **Status:** Implemented locally on 2026-07-11; remote three-OS workflow execution pending
+- **Scope:** A3 continuation, C1, D1; F-009 and F-010
+- **Evidence:** `scripts/Lizard.Host.psm1`, portable path comparisons, host regression tests, pinned Ajv Draft 2020-12 tooling, schema bindings, invalid-mutation corpus, generated manifest/evidence contract tests, and the four-job GitHub Actions workflow
+- **Passing gates:** static schema corpus 32/32, mutation corpus 9/9, and seven focused unit/integration/adversarial suites on Windows PowerShell 5.1
+- **Remaining validation:** run the committed workflow on GitHub-hosted Windows, Ubuntu, and macOS after an explicitly approved push; local documentation must not represent that remote evidence as complete
+- **Release note:** Windows-only child-host assumptions are removed and schemas now determine acceptance. Report-contract standardization and remaining behavioral/governance packages continue separately.
+
 ## Findings Register
 
 ### F-001 — Linked directories can redirect writes outside the target
@@ -231,7 +240,7 @@ Finding counts:
 - **Category:** Portability; Tests; Developer Experience
 - **Priority:** P2
 - **Severity:** Medium
-- **Status:** Observed
+- **Status:** Implemented locally; Windows PowerShell 5.1 gates pass, remote PowerShell 7 three-OS execution pending
 - **Confidence:** High
 - **Evidence:** Production scripts and tests repeatedly invoke `powershell.exe`; `.github/workflows/lizard-agent-layer-ci.yml` runs only `windows-latest`.
 - **Impact:** Executable discovery, case sensitivity, permissions, encoding, path separators, and link behavior may fail on macOS or Linux.
@@ -251,7 +260,7 @@ Finding counts:
 - **Category:** Architecture; Maintainability; Governance
 - **Priority:** P2
 - **Severity:** Medium
-- **Status:** Observed
+- **Status:** Core contracts implemented locally; standardized report contracts remain in the later reporting package
 - **Confidence:** High
 - **Evidence:** `scripts/validate.ps1:206-218` parses schema JSON but validates instances through partial hand-written checks rather than Draft 2020-12 schemas.
 - **Impact:** Incorrect nested types, unexpected fields, and incompatible schema changes can pass validation and reach installers.
@@ -454,6 +463,7 @@ B2 Integrity diff + structured evidence
 #### A3 — Split and strengthen the test harness
 
 - **Priority:** P1
+- **Status:** In progress; seven focused suites and machine-readable results implemented, remaining findings will extend the same harness
 - **Goal:** Make every confirmed failure class a permanent regression test.
 - **Files:** New `tests/unit/`, `tests/integration/`, `tests/adversarial/`; refactor `tests/smoke.ps1`.
 - **Steps:**
@@ -579,6 +589,7 @@ B2 Integrity diff + structured evidence
 #### C1 — PowerShell 7 and three-OS support
 
 - **Priority:** P1
+- **Status:** Implemented locally; remote three-OS workflow evidence pending
 - **Goal:** Establish real host portability.
 - **Files:** Child process invocation, path helpers, workflow, tests, docs.
 - **Steps:** Replace hard-coded `powershell.exe`; normalize portable path behavior; add Windows/Ubuntu/macOS jobs; retain 5.1 compatibility.
@@ -606,6 +617,7 @@ B2 Integrity diff + structured evidence
 #### D1 — Executable JSON Schema validation
 
 - **Priority:** P2
+- **Status:** Implemented locally for declarative configuration, registries, manifests, and loop evidence; report schemas remain scheduled
 - **Goal:** Make published schemas the actual accepted contracts.
 - **Files:** Validator, schemas, JSON instances, CI.
 - **Dependencies:** A3; manifest v3 schema from A2.
@@ -707,17 +719,17 @@ The forecast assumes that every correction receives permanent positive and negat
 
 - [x] Every destination is canonically resolved and authorized immediately before mutation.
 - [ ] Junction and symlink fixtures prove zero writes outside approved roots.
-- [ ] Existing customized instructions, protocols, memory, and skills remain preserved.
+- [x] Existing customized instructions, protocols, memory, and skills remain preserved.
 - [x] `ForceManaged` refreshes only exact, unchanged, layer-owned artifacts.
-- [ ] Fault injection after each installer/update mutation is recoverable.
-- [ ] Per-target locking prevents concurrent writers.
+- [x] Fault injection after installer/update/loop mutations is recoverable.
+- [x] Per-target locking prevents concurrent writers.
 - [x] Manifest diff verifies content, ownership, adapter identity, and every mirror.
 - [x] Undeclared adapter destination collisions fail before writes.
 - [x] Future-version targets and unapproved downgrades stop before writes.
-- [ ] Worktree create, verify, and cleanup share one lifecycle contract.
-- [ ] Verifier reports bind to revision, diff, commands, exits, and evidence hashes.
+- [x] Worktree create, verify, and cleanup share one lifecycle contract.
+- [x] Verifier reports bind to revision, diff, commands, exits, and evidence hashes.
 - [x] Preview commands leave target content and Git status unchanged by default.
-- [ ] JSON instances pass real Draft 2020-12 schema validation.
+- [x] Core declarative and generated JSON instances pass real Draft 2020-12 schema validation.
 - [ ] Behavioral maturity cannot be satisfied by keywords alone.
 - [ ] Full validate, packs, drift, quality, smoke, matrix, and adversarial gates pass on Windows, Ubuntu, and macOS.
 - [ ] Recovery, migration, and troubleshooting instructions pass a clean-machine onboarding test.

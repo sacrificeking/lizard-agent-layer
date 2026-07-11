@@ -22,8 +22,8 @@ function Is-UnderPath {
   param([string]$Path, [string]$Root)
   $full = [System.IO.Path]::GetFullPath($Path).TrimEnd([char[]]@('\', '/'))
   $rootFull = [System.IO.Path]::GetFullPath($Root).TrimEnd([char[]]@('\', '/'))
-  if ($full.Equals($rootFull, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
-  return $full.StartsWith(($rootFull + [System.IO.Path]::DirectorySeparatorChar), [System.StringComparison]::OrdinalIgnoreCase)
+  if ($full.Equals($rootFull, (Get-LizardPathComparison))) { return $true }
+  return $full.StartsWith(($rootFull + [System.IO.Path]::DirectorySeparatorChar), (Get-LizardPathComparison))
 }
 if (Is-UnderPath -Path $EffectiveOutputDir -Root $TargetRoot) { throw 'OutputDir must stay outside the target.' }
 $EffectiveOutputDir = Initialize-SafeDirectory -Path $EffectiveOutputDir

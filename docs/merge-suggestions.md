@@ -1,4 +1,4 @@
-﻿# Merge Suggestions
+# Merge Suggestions
 
 `scripts/merge-suggestions.ps1` generates review artifacts for existing harness instruction files without modifying the target project.
 
@@ -11,25 +11,25 @@ Install plans tell you that a merge is needed. Merge suggestions go one step fur
 Default output under `.tmp/merge-suggestions/`:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard
+pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard
 ```
 
 Custom output directory:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -OutputDir .\.tmp\merge-review\project
+pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -OutputDir .\.tmp\merge-review\project
 ```
 
 Harness override:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini
+pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini
 ```
 
 Machine-readable output:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -Json
+pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -Json
 ```
 
 ## Output

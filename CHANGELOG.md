@@ -13,6 +13,9 @@
 - Per-target transaction locks, write-ahead mutation journals, exact replacement backups, crash recovery tooling, and fault-injection coverage for install, update, loop init/sync, and verifier writes.
 - Hashed L2 worktree lifecycle and verifier-evidence envelopes with operation, repository, branch, HEAD, Git-state, command, output, and evidence-file identity.
 - Adversarial lifecycle tests for nested worktrees, tampering, self-verification, command failure, detached HEAD, stale evidence, unbound cleanup, and rollback.
+- Pinned Draft 2020-12 validation tooling, bindings for all declarative JSON families, and a deterministic invalid-mutation corpus.
+- Portable current-host discovery with regression coverage for child PowerShell processes.
+- Windows, Ubuntu, and macOS PowerShell 7 CI jobs plus a Windows PowerShell 5.1 compatibility job.
 
 ### Changed
 
@@ -25,6 +28,8 @@
 - `upgrade.ps1` now routes installed targets through the same plan-first update and history workflow.
 - L2 creation, verification, audit, and cleanup now share one persisted lifecycle contract; new cleanup applies require that contract unless reviewed legacy mode is explicit.
 - `PASS` and `WARN` verifier packets now require independent roles and successful executable evidence; `NEEDS_REVIEW` remains a non-verdict mode.
+- Generated install manifests, worktree lifecycle envelopes, and verifier evidence are now tested against their published schemas.
+- Documentation uses `pwsh` as the portable default while retaining Windows PowerShell 5.1 compatibility.
 
 ## 1.4.1 - 2026-07-10
 

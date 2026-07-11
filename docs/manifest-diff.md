@@ -1,4 +1,4 @@
-﻿# Manifest Diff
+# Manifest Diff
 
 `manifest-diff.ps1` compares an installed target project against the current `lizard-agent-layer` source.
 
@@ -7,19 +7,19 @@ Use it before upgrades, after pack changes, and before adapting a high-risk targ
 ## Usage
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project
 ```
 
 Strict mode exits non-zero when drift is detected:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project -Strict
+pwsh -NoProfile -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project -Strict
 ```
 
 Machine-readable output:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project -Json
+pwsh -NoProfile -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project -Json
 ```
 
 ## What It Compares

@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-07-11T04:58:02.7383168Z",
+    "generated_at":  "2026-07-11T09:36:53.8232306Z",
     "layer_version":  "1.4.1",
-    "artifact_count":  86,
-    "total_bytes":  86166,
-    "token_estimate":  21533,
+    "artifact_count":  90,
+    "total_bytes":  93149,
+    "token_estimate":  23280,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -666,38 +666,47 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/adapter.schema.json",
-                          "sha256":  "ea09d4bb207abfff88cedbc65b9af25b9b3ab1bd9eb4098f420d3a2c4cc726c0",
-                          "bytes":  1418,
-                          "lines":  45,
-                          "words":  123,
-                          "token_estimate":  354
+                          "sha256":  "c44985ca06271648ffc14d66fb2bd0366c56ce8e77198d7c43f85584f4d158c8",
+                          "bytes":  1672,
+                          "lines":  52,
+                          "words":  135,
+                          "token_estimate":  418
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/drift-baseline.schema.json",
+                          "sha256":  "2b246f7b6034b2865a5d5d78146924cfcb9a1dadfd337ef7984862a0cdcaea3b",
+                          "bytes":  1351,
+                          "lines":  33,
+                          "words":  131,
+                          "token_estimate":  338
                       },
                       {
                           "kind":  "schema",
                           "path":  "schemas/install-manifest.schema.json",
-                          "sha256":  "f6848900ae4a8b843cf97a352fc6b7b6e47a0b1f192182d2bb32bbf9992db194",
-                          "bytes":  2572,
-                          "lines":  63,
-                          "words":  235,
-                          "token_estimate":  643
+                          "sha256":  "4675f74783c247cc4da745feb6214f754da2f4d86a1dd96d8a2fdb0e65abd24f",
+                          "bytes":  4559,
+                          "lines":  105,
+                          "words":  450,
+                          "token_estimate":  1140
                       },
                       {
                           "kind":  "schema",
                           "path":  "schemas/lizard-agent-layer.schema.json",
-                          "sha256":  "f4db211d4236dcbada59744d35da22b33d19065051c1317da9e5f76c59c7a757",
-                          "bytes":  1029,
+                          "sha256":  "170890aa523933617dabd6f5d152960507173890732085e2c232bcc246122a85",
+                          "bytes":  1069,
                           "lines":  25,
-                          "words":  109,
-                          "token_estimate":  257
+                          "words":  111,
+                          "token_estimate":  267
                       },
                       {
                           "kind":  "schema",
                           "path":  "schemas/loop.schema.json",
-                          "sha256":  "318c7e8709c11d66440d92b71772298cd6468430d1ecfd6033d9bbf3e9cdc8b8",
-                          "bytes":  1900,
-                          "lines":  46,
-                          "words":  207,
-                          "token_estimate":  475
+                          "sha256":  "eb6eaae15790d623c89359057acae6c53379cdbe9e9b89d4604c764758007430",
+                          "bytes":  2271,
+                          "lines":  53,
+                          "words":  223,
+                          "token_estimate":  568
                       },
                       {
                           "kind":  "schema",
@@ -719,6 +728,15 @@
                       },
                       {
                           "kind":  "schema",
+                          "path":  "schemas/loop-registry.schema.json",
+                          "sha256":  "7566a91c68fd16d8ca6c224980f534c18d208c3f431878f6d5487bae41eebbfc",
+                          "bytes":  943,
+                          "lines":  27,
+                          "words":  80,
+                          "token_estimate":  236
+                      },
+                      {
+                          "kind":  "schema",
                           "path":  "schemas/loop-state.schema.json",
                           "sha256":  "14d571bc2b5dcc7b2a0291a9aee57a2f12e11169a053401bb2be01d108aa42f4",
                           "bytes":  1136,
@@ -728,9 +746,18 @@
                       },
                       {
                           "kind":  "schema",
+                          "path":  "schemas/manifest-migrations.schema.json",
+                          "sha256":  "54327c43219deb98a514acb755a39f27bc5f6d21c04a84552d79bffe850b1759",
+                          "bytes":  1098,
+                          "lines":  28,
+                          "words":  92,
+                          "token_estimate":  275
+                      },
+                      {
+                          "kind":  "schema",
                           "path":  "schemas/maturity-levels.schema.json",
-                          "sha256":  "0369052721c2acd8b09514c5440ee4ef0bc71c6b109f39deca9a53b68317a8c9",
-                          "bytes":  1010,
+                          "sha256":  "4dc69bef37af3dcfdb0e61379f5b49073da077a95687560d9d348e21e389494a",
+                          "bytes":  1011,
                           "lines":  30,
                           "words":  88,
                           "token_estimate":  253
@@ -738,29 +765,38 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/model-profile.schema.json",
-                          "sha256":  "19ced8ef3275e6c11274043147ea80fbd56b884653450937226765cd93f108a2",
-                          "bytes":  674,
+                          "sha256":  "0878896a0569985eef6994e320174fb9f5d8d9924a3e8cf19d20f6eeb661792a",
+                          "bytes":  714,
                           "lines":  18,
-                          "words":  72,
-                          "token_estimate":  168
+                          "words":  74,
+                          "token_estimate":  178
                       },
                       {
                           "kind":  "schema",
                           "path":  "schemas/pack.schema.json",
-                          "sha256":  "52668a2e03f34715016571fc2a1d6e27a5fc96b30fe6fe5a321efb36aa12ee63",
-                          "bytes":  1098,
+                          "sha256":  "85a0ed997f171350d720dd18139ed27c068045149e3dfd04b0be2f4075d1e334",
+                          "bytes":  1138,
                           "lines":  23,
-                          "words":  128,
-                          "token_estimate":  275
+                          "words":  130,
+                          "token_estimate":  285
                       },
                       {
                           "kind":  "schema",
                           "path":  "schemas/quality-registry.schema.json",
-                          "sha256":  "d06d7ee12b29a5d4b72ed1787d1188f2e1b59033c44b64e39b460f69f7ec7405",
-                          "bytes":  1197,
+                          "sha256":  "933593d15f8134face96d3d875e935378a5b37511b7069d4f2f3218512b626db",
+                          "bytes":  1199,
                           "lines":  39,
                           "words":  111,
                           "token_estimate":  300
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/risk-signals.schema.json",
+                          "sha256":  "9ccce6af8d0050191ed4929e735bbb8f00fac4a927425f8e797143587935a16d",
+                          "bytes":  856,
+                          "lines":  26,
+                          "words":  74,
+                          "token_estimate":  214
                       },
                       {
                           "kind":  "schema",

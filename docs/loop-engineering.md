@@ -29,20 +29,20 @@ Patterns live in `loops/*.json` and are listed in `loops/registry.json`.
 Install the reusable skills first:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs loop-engineering -WritePlan
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs loop-engineering -Apply
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs loop-engineering -WritePlan
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs loop-engineering -Apply
 ```
 
 Create the target loop runtime with a preview plan:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern daily-triage -WritePlan
+pwsh -NoProfile -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern daily-triage -WritePlan
 ```
 
 Apply after reviewing the plan:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern daily-triage -Apply
+pwsh -NoProfile -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern daily-triage -Apply
 ```
 
 The target receives `.agent/loops/LOOP.md`, state, budget, run-log, constraints, and `lizard-agent-layer.loop-install.json`.
@@ -52,26 +52,26 @@ The target receives `.agent/loops/LOOP.md`, state, budget, run-log, constraints,
 Audit an installed loop:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-audit.ps1 -TargetPath D:\path\to\project -Strict
+pwsh -NoProfile -File .\scripts\loop-audit.ps1 -TargetPath D:\path\to\project -Strict
 ```
 
 Generate a human-readable report:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-report.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\loop-report.ps1 -TargetPath D:\path\to\project
 ```
 
 Sync loop metadata after a layer update without overwriting project state:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-sync.ps1 -TargetPath D:\path\to\project
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-sync.ps1 -TargetPath D:\path\to\project -Apply
+pwsh -NoProfile -File .\scripts\loop-sync.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\loop-sync.ps1 -TargetPath D:\path\to\project -Apply
 ```
 
 Estimate cost and model budget:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-cost.ps1 -Pattern daily-triage -Level L1 -Cadence 1d
+pwsh -NoProfile -File .\scripts\loop-cost.ps1 -Pattern daily-triage -Level L1 -Cadence 1d
 ```
 
 ## Safety and updateability
@@ -100,13 +100,13 @@ L2 is not autonomy. It is a controlled assisted workflow for one human-approved 
 8. Clean up the isolated worktree only with `loop-worktree-cleanup.ps1 -Apply -HumanApproved`.
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern minimal-fix-assist -WritePlan
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern minimal-fix-assist -Apply
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123 -Apply -HumanApproved
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-verify.ps1 -TargetPath D:\path\to\project -LifecyclePath D:\path\to\reports\loop-worktree-lifecycle.json -Implementer implementer-name -Verifier reviewer-name -Status PASS -VerificationCommand "npm test" -Apply
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -LifecyclePath D:\path\to\reports\loop-worktree-lifecycle.json -RemoveBranch
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -LifecyclePath D:\path\to\reports\loop-worktree-lifecycle.json -RemoveBranch -Apply -HumanApproved
+pwsh -NoProfile -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern minimal-fix-assist -WritePlan
+pwsh -NoProfile -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern minimal-fix-assist -Apply
+pwsh -NoProfile -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123
+pwsh -NoProfile -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123 -Apply -HumanApproved
+pwsh -NoProfile -File .\scripts\loop-verify.ps1 -TargetPath D:\path\to\project -LifecyclePath D:\path\to\reports\loop-worktree-lifecycle.json -Implementer implementer-name -Verifier reviewer-name -Status PASS -VerificationCommand "npm test" -Apply
+pwsh -NoProfile -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -LifecyclePath D:\path\to\reports\loop-worktree-lifecycle.json -RemoveBranch
+pwsh -NoProfile -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -LifecyclePath D:\path\to\reports\loop-worktree-lifecycle.json -RemoveBranch -Apply -HumanApproved
 ```
 
 L2 never auto-merges, pushes, releases, deploys, changes dependencies, edits migrations, or touches secrets without separate explicit approval. The verifier rejects unsafe report paths, wrong repositories, non-root worktree paths, branch mismatches, self-review, failed commands, tampered lifecycle data, and stale Git state before it can write the target verifier report. See [L2 Lifecycle And Verifier Evidence](loop-evidence.md).

@@ -43,19 +43,19 @@ Critical risk signals fail the strict gate. High and medium signals stay visible
 Run the scorer locally:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\score-layer.ps1
+pwsh -NoProfile -File .\scripts\score-layer.ps1
 ```
 
 Run it as a strict gate:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\score-layer.ps1 -Strict
+pwsh -NoProfile -File .\scripts\score-layer.ps1 -Strict
 ```
 
 Use a stricter threshold for hardening work:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\score-layer.ps1 -Strict -MinScore 80
+pwsh -NoProfile -File .\scripts\score-layer.ps1 -Strict -MinScore 80
 ```
 
 ## Maturity path

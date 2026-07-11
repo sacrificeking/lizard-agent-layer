@@ -21,9 +21,9 @@
           "requiresTests": { "type": "boolean" },
           "description": { "type": "string" }
         },
-        "additionalProperties": true
+        "additionalProperties": false
       }
     }
   },
-  "additionalProperties": true
+  "additionalProperties": false
 }

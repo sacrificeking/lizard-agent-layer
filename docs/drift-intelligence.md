@@ -24,19 +24,19 @@ It intentionally does not track generated `.tmp/` reports.
 Check drift against the committed baseline:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\drift-check.ps1 -Strict
+pwsh -NoProfile -File .\scripts\drift-check.ps1 -Strict
 ```
 
 Generate a report without failing:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\drift-check.ps1
+pwsh -NoProfile -File .\scripts\drift-check.ps1
 ```
 
 Update the baseline after intentional behavior changes:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\drift-check.ps1 -UpdateBaseline
+pwsh -NoProfile -File .\scripts\drift-check.ps1 -UpdateBaseline
 ```
 
 ## Reports

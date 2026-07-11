@@ -1,4 +1,4 @@
-﻿name: lizard-agent-layer CI
+name: lizard-agent-layer CI
 
 on:
   pull_request:
@@ -12,15 +12,54 @@ permissions:
   contents: read
 
 jobs:
-  validate-smoke-matrix:
-    name: Validate, smoke, and matrix
-    runs-on: windows-latest
-    timeout-minutes: 20
+  powershell-7:
+    name: PowerShell 7 (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+          - macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install schema validator
+        run: npm ci
+
       - name: Run CI gates
         shell: pwsh
-        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\ci.ps1
+        run: ./scripts/ci.ps1
+
+  windows-powershell-5:
+    name: Windows PowerShell 5.1
+    runs-on: windows-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install schema validator
+        shell: powershell
+        run: npm.cmd ci
+
+      - name: Run CI gates
+        shell: powershell
+        run: .\scripts\ci.ps1

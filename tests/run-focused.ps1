@@ -7,6 +7,7 @@ Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
 
 $tests = @(
   'tests\unit\safe-fs.tests.ps1',
+  'tests\unit\host.tests.ps1',
   'tests\adversarial\install-containment.tests.ps1',
   'tests\integration\manifest-v3.tests.ps1',
   'tests\adversarial\version-gates.tests.ps1',

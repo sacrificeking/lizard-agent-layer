@@ -23,13 +23,13 @@ Dependency, build, coverage, and cache directories are skipped during recursive 
 ## Usage
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project
 ```
 
 Machine-readable output:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project -Json
+pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project -Json
 ```
 
 ## Interpretation

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/manifest-migrations.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["currentSchemaVersion", "minimumReadableSchemaVersion", "maximumReadableSchemaVersion", "migrations"],
+  "properties": {
+    "currentSchemaVersion": { "type": "integer", "minimum": 1 },
+    "minimumReadableSchemaVersion": { "type": "integer", "minimum": 1 },
+    "maximumReadableSchemaVersion": { "type": "integer", "minimum": 1 },
+    "migrations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to", "mode", "ambiguousOwnership", "description"],
+        "properties": {
+          "from": { "type": "integer", "minimum": 1 },
+          "to": { "type": "integer", "minimum": 1 },
+          "mode": { "enum": ["conservative"] },
+          "ambiguousOwnership": { "enum": ["user-owned", "adopted"] },
+          "description": { "type": "string", "minLength": 10 }
+        }
+      }
+    }
+  }
+}

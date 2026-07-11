@@ -33,9 +33,9 @@ function Is-UnderPath {
   param([string]$Path, [string]$Root)
   $full = [System.IO.Path]::GetFullPath($Path).TrimEnd([char[]]@('\', '/'))
   $rootFull = [System.IO.Path]::GetFullPath($Root).TrimEnd([char[]]@('\', '/'))
-  if ($full.Equals($rootFull, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+  if ($full.Equals($rootFull, (Get-LizardPathComparison))) { return $true }
   $prefix = $rootFull + [System.IO.Path]::DirectorySeparatorChar
-  return $full.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)
+  return $full.StartsWith($prefix, (Get-LizardPathComparison))
 }
 
 function Assert-OutputOutsideTarget {
@@ -60,7 +60,7 @@ function To-TargetRel {
   $full = [System.IO.Path]::GetFullPath($Path)
   $rootFull = [System.IO.Path]::GetFullPath($TargetRoot).TrimEnd([char[]]@('\', '/'))
   $prefix = $rootFull + [System.IO.Path]::DirectorySeparatorChar
-  if ($full.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) { return $full.Substring($prefix.Length) }
+  if ($full.StartsWith($prefix, (Get-LizardPathComparison))) { return $full.Substring($prefix.Length) }
   return $Path
 }
 

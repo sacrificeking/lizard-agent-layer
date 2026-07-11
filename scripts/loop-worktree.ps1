@@ -37,8 +37,8 @@ function Is-UnderPath {
   param([string]$Path, [string]$Root)
   $full = [System.IO.Path]::GetFullPath($Path).TrimEnd([char[]]@('\', '/'))
   $rootFull = [System.IO.Path]::GetFullPath($Root).TrimEnd([char[]]@('\', '/'))
-  if ($full.Equals($rootFull, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
-  return $full.StartsWith(($rootFull + [System.IO.Path]::DirectorySeparatorChar), [System.StringComparison]::OrdinalIgnoreCase)
+  if ($full.Equals($rootFull, (Get-LizardPathComparison))) { return $true }
+  return $full.StartsWith(($rootFull + [System.IO.Path]::DirectorySeparatorChar), (Get-LizardPathComparison))
 }
 function Add-Item { param([string[]]$Array, [string]$Value) if ($Value) { return @($Array + $Value) } return $Array }
 
@@ -111,7 +111,7 @@ if ($Apply -and $failures.Count -eq 0) {
     $observedHeadOutput = & git -C $EffectiveWorktreePath rev-parse HEAD 2>&1
     if ($LASTEXITCODE -ne 0) { $failures = Add-Item $failures "Created worktree HEAD could not be read: $observedHeadOutput" }
     else { $observedHead = [string]($observedHeadOutput | Select-Object -First 1) }
-    if ($targetCommonDir -and $worktreeCommonDir -and -not $targetCommonDir.Equals($worktreeCommonDir, [System.StringComparison]::OrdinalIgnoreCase)) {
+    if ($targetCommonDir -and $worktreeCommonDir -and -not $targetCommonDir.Equals($worktreeCommonDir, (Get-LizardPathComparison))) {
       $failures = Add-Item $failures 'Created worktree does not share the target repository common directory.'
     }
     if ($observedBranch -ne $Branch) { $failures = Add-Item $failures "Created worktree branch mismatch. Expected '$Branch', got '$observedBranch'." }

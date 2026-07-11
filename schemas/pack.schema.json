@@ -5,7 +5,7 @@
   "type": "object",
   "required": ["name", "description", "riskLevel", "projectSize", "skills"],
   "properties": {
-    "name": { "type": "string" },
+    "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
     "description": { "type": "string" },
     "extends": { "oneOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] },
     "riskLevel": { "enum": ["low", "medium", "high"] },
@@ -18,5 +18,5 @@
     "recommendedForSignals": { "type": "array", "items": { "type": "string" } },
     "notes": { "type": "string" }
   },
-  "additionalProperties": true
+  "additionalProperties": false
 }

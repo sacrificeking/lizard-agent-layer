@@ -19,8 +19,30 @@
     "layer_version": { "type": "string" },
     "minimum_reader_schema_version": { "type": "integer", "minimum": 2, "maximum": 3 },
     "writer_schema_version": { "const": 3 },
+    "migrated_from_schema_version": { "type": "integer", "minimum": 1, "maximum": 2 },
     "profile": { "type": "string" },
+    "requested_packs": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "pack_sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "source", "path"],
+        "properties": {
+          "name": { "type": "string" },
+          "source": { "enum": ["builtin", "target-overlay"] },
+          "path": { "type": "string" }
+        }
+      }
+    },
+    "packs": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "installed_at": { "type": "string", "format": "date-time" },
+    "target_root": { "type": "string", "minLength": 1 },
+    "memory_mode": { "enum": ["curated", "private-episodic", "off"] },
+    "risk_level": { "enum": ["low", "medium", "high"] },
     "harnesses": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "model_profiles": { "type": "object", "additionalProperties": { "type": "string" } },
+    "skills": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
     "adapters": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
     "adapter_aliases": {
       "type": "array",
@@ -56,7 +78,27 @@
         },
         "additionalProperties": false
       }
-    }
+    },
+    "managed_paths": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "owned_paths": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "merge_needed": { "type": "array", "items": { "type": "string" } },
+    "merge_suggestions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["harness", "instruction_path", "sidecar_path", "action", "suggested_block"],
+        "properties": {
+          "harness": { "type": "string" },
+          "instruction_path": { "type": "string" },
+          "sidecar_path": { "type": "string" },
+          "action": { "type": "string" },
+          "suggested_block": { "type": "string" }
+        }
+      }
+    },
+    "conflicts": { "type": "array", "items": { "type": "string" } },
+    "transaction_operation_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" }
   },
-  "additionalProperties": true
+  "additionalProperties": false
 }

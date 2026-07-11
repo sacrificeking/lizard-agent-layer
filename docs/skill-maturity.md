@@ -70,7 +70,7 @@ The installer copies complete skill packages into `.agent/skills/` and harness-s
 Run:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\score-layer.ps1
+pwsh -NoProfile -File .\scripts\score-layer.ps1
 ```
 
 The report lists score, health, maturity, and risk for every skill.

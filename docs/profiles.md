@@ -1,4 +1,4 @@
-﻿# Profiles
+# Profiles
 
 Profiles describe how much agent infrastructure a target project should receive.
 
@@ -19,7 +19,7 @@ For high-risk React/Vite/Supabase finance applications. Installs Codex, Claude C
 Use `-Harnesses` with `scripts/install.ps1` to override profile defaults:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,cursor
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,cursor
 ```
 
 Available adapters:

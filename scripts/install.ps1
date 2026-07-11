@@ -227,7 +227,7 @@ $ManagedPaths = New-Object System.Collections.Generic.List[string]
 $OwnedPaths = New-Object System.Collections.Generic.List[string]
 $InstalledAdapters = New-Object System.Collections.Generic.List[string]
 $Conflicts = New-Object System.Collections.Generic.List[string]
-$ArtifactRecords = New-Object 'System.Collections.Generic.Dictionary[string,object]' ([System.StringComparer]::OrdinalIgnoreCase)
+$ArtifactRecords = New-Object 'System.Collections.Generic.Dictionary[string,object]' (Get-LizardPathComparer)
 
 function Add-UniqueListItem {
   param($List, [string]$Value)
@@ -279,7 +279,7 @@ function Get-LayerSourcePath {
   $full = [System.IO.Path]::GetFullPath($Source)
   $root = $LayerRoot.TrimEnd([char[]]@('\', '/'))
   $prefix = $root + [System.IO.Path]::DirectorySeparatorChar
-  if ($full.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+  if ($full.StartsWith($prefix, (Get-LizardPathComparison))) {
     return $full.Substring($prefix.Length).Replace('\', '/')
   }
   return $full

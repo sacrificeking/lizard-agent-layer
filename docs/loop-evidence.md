@@ -22,7 +22,7 @@ The evidence envelope records lifecycle hash, reviewed HEAD, dirty state, tracke
 Example:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-verify.ps1 `
+pwsh -NoProfile -File .\scripts\loop-verify.ps1 `
   -TargetPath <project> `
   -LifecyclePath <reports>\loop-worktree-lifecycle.json `
   -Implementer implementation-agent `

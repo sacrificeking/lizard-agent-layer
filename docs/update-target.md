@@ -1,4 +1,4 @@
-﻿# Update Targets
+# Update Targets
 
 `update-target.ps1` is the plan-first workflow for keeping an installed target project aligned with the current `lizard-agent-layer` repo.
 
@@ -9,7 +9,7 @@ It reads the target's `.agent/lizard-agent-layer.install.json`, preserves the in
 Generate a reviewable update plan without changing the target project:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project
 ```
 
 The preview writes reports under `.tmp/updates/<timestamp>/` in this layer repo by default:
@@ -28,7 +28,7 @@ Custom `-OutputDir` and `-PlanPath` values must remain outside the target by def
 After reviewing the plan, apply the update while preserving existing target files:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply
 ```
 
 Apply mode re-runs `install.ps1` using the installed profile, requested packs, and harnesses. It then runs `manifest-diff.ps1 -Strict` and appends one JSONL entry to:
@@ -44,7 +44,7 @@ That history file records the previous version, current version, profile, reques
 Use this only after reviewing the generated update plan:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply -ForceManaged
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply -ForceManaged
 ```
 
 `-ForceManaged` refreshes only exact manifest-v3 entries whose current hash still matches their installed hash and whose ownership is `layer-owned`. User-owned, adopted, locally modified, legacy-ambiguous, missing-identity, or conflicting files remain untouched and are listed in the install plan and manifest conflicts.
@@ -56,7 +56,7 @@ Schema v2 targets migrate conservatively on apply. Because v2 cannot prove per-f
 Schemas newer than the current reader, unsupported old schemas, and malformed versions stop before report or target writes. A target created by a newer layer version can still produce a preview plan, but apply requires both explicit switches:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply -AllowDowngrade -HumanApproved
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply -AllowDowngrade -HumanApproved
 ```
 
 Applied update history records the old and new manifest schemas plus downgrade approval state. `upgrade.ps1` delegates installed targets to this same workflow.
@@ -66,7 +66,7 @@ Applied update history records the old and new manifest schemas plus downgrade a
 You can intentionally adjust the installed contract during an update:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Profile supabase-react-finance -Packs frontend-product,supabase-react,finance-app,security-hardening -Harnesses codex,claude-code,gemini
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Profile supabase-react-finance -Packs frontend-product,supabase-react,finance-app,security-hardening -Harnesses codex,claude-code,gemini
 ```
 
 Run that as preview first, review the plan, then add `-Apply` when the contract is correct.
@@ -85,7 +85,7 @@ Run that as preview first, review the plan, then add `-Apply` when the contract 
 Use `-Json` for automation:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Json
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Json
 ```
 
 The JSON report includes mode, installed/current layer versions, selected profile, harnesses, requested packs, plan path, output directory, and pre/post manifest diff summaries.

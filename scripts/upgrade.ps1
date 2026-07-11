@@ -9,6 +9,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.Host.psm1') -Force
+$PowerShellHost = Get-LizardPowerShellHostPath
+$PowerShellFilePrefix = Get-LizardPowerShellFilePrefix
 $TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
 $manifestPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.install.json'
 $profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
@@ -45,7 +48,7 @@ Write-Host "This conservative upgrade repairs missing generated files. Existing 
 Write-Host ""
 
 $workflowScript = if (Test-Path -LiteralPath $manifestPath) { 'update-target.ps1' } else { 'install.ps1' }
-$argsList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $ScriptDir $workflowScript), '-TargetPath', $TargetRoot)
+$argsList = @($PowerShellFilePrefix) + @((Join-Path $ScriptDir $workflowScript), '-TargetPath', $TargetRoot)
 if ($workflowScript -eq 'install.ps1') {
   $argsList += @('-Profile', $profile)
   if ($selectedHarnesses -and $selectedHarnesses.Count -gt 0) { $argsList += '-Harnesses'; $argsList += ($selectedHarnesses -join ',') }
@@ -56,4 +59,4 @@ if ($workflowScript -eq 'install.ps1') {
   if ($HumanApproved) { $argsList += '-HumanApproved' }
 }
 if ($Apply) { $argsList += '-Apply' }
-& powershell.exe @argsList
+& $PowerShellHost @argsList

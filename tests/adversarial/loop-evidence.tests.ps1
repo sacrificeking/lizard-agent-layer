@@ -55,6 +55,7 @@ try {
   $create = Invoke-TestPowerShell -ScriptPath $worktreeScript -Arguments @('-TargetPath', $target, '-ItemId', 'evidence-test', '-Branch', $branch, '-WorktreePath', $worktree, '-OutputDir', $createOutput, '-Apply', '-HumanApproved')
   Assert-Equal 0 $create.exit_code "Worktree creation failed: $($create.output)"
   Assert-True (Test-Path -LiteralPath $lifecyclePath) 'Worktree creation must write lifecycle contract.'
+  Assert-JsonSchemaValid -LayerRoot $RepoRoot -SchemaPath 'schemas/worktree-lifecycle.schema.json' -InstancePath $lifecyclePath -Message 'Created lifecycle evidence must satisfy its published schema.'
   $lifecycle = Read-LizardEvidenceEnvelope -Path $lifecyclePath -SchemaVersion 1
   Assert-Equal 'CREATED' $lifecycle.payload.status 'Lifecycle status must be CREATED.'
   Assert-Equal $branch $lifecycle.payload.branch 'Lifecycle branch mismatch.'
@@ -70,6 +71,7 @@ try {
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$passReport.git_state_hash)) 'Verifier must bind final git state hash.'
   Assert-Equal 0 ([int]$passReport.command_results[0].exit_code) 'Verification command must record exit zero.'
   $targetEvidence = Join-Path $target '.agent\loops\loop-verifier-report.evidence.json'
+  Assert-JsonSchemaValid -LayerRoot $RepoRoot -SchemaPath 'schemas/verifier-evidence.schema.json' -InstancePath $targetEvidence -Message 'Sealed verifier evidence must satisfy its published schema.'
   $sealedEvidence = Read-LizardEvidenceEnvelope -Path $targetEvidence -SchemaVersion 1
   Assert-Equal $passReport.evidence_packet_hash $sealedEvidence.payload_hash 'Target evidence packet hash mismatch.'
   $sealedHashBeforeFailures = (Get-FileHash -LiteralPath $targetEvidence -Algorithm SHA256).Hash

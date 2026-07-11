@@ -5,7 +5,7 @@
 Start with a read-only recommendation for profile, risk level, harnesses, skills, and packs.
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project
 ```
 
 Use `-Json` when another script should consume the recommendation.
@@ -21,7 +21,7 @@ Use packs to add reusable project-shape logic on top of the chosen profile. The 
 Example:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs frontend-product -WritePlan
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs frontend-product -WritePlan
 ```
 
 See [Packs](packs.md) for the current bundle catalog.
@@ -31,13 +31,13 @@ See [Packs](packs.md) for the current bundle catalog.
 Generate a human-readable plan before touching the target project.
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -WritePlan
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -WritePlan
 ```
 
 Use `-PlanPath` to choose the report location:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -WritePlan -PlanPath .\.tmp\plans\project-plan.md
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -WritePlan -PlanPath .\.tmp\plans\project-plan.md
 ```
 
 Preview mode still does not create `.agent/`, sidecars, or harness files in the target. The plan is the only explicit write.
@@ -47,7 +47,7 @@ Preview mode still does not create `.agent/`, sidecars, or harness files in the 
 When a target already has `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, or a Cursor rule, generate patch artifacts for review.
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard
+pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard
 ```
 
 Use `-OutputDir` to choose where reports, patch files, and copy-block files are written.
@@ -55,7 +55,7 @@ Use `-OutputDir` to choose where reports, patch files, and copy-block files are 
 ## 6. Preview first
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard
 ```
 
 Preview mode prints planned creates, existing skips, harness files, skill mirrors, manual merge needs, and merge suggestion counts.
@@ -63,13 +63,13 @@ Preview mode prints planned creates, existing skips, harness files, skill mirror
 ## 7. Optionally override harnesses
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,cursor
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,cursor
 ```
 
 ## 8. Apply when the plan is acceptable
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Apply
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Apply
 ```
 
 If an existing instruction file such as `AGENTS.md` already exists, the installer writes a sidecar and records merge suggestions instead of modifying the original file.
@@ -77,7 +77,7 @@ If an existing instruction file such as `AGENTS.md` already exists, the installe
 ## 9. Audit the target
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\doctor.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\doctor.ps1 -TargetPath D:\path\to\project
 ```
 
 Use `-Strict` in CI or release-style checks.
@@ -87,7 +87,7 @@ Use `-Strict` in CI or release-style checks.
 After installing or upgrading a target, compare the install manifest against the current layer:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project -Strict
+pwsh -NoProfile -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project -Strict
 ```
 
 ## 11. Update an installed target
@@ -95,13 +95,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\manifest-diff.
 After this layer repository has a newer release, generate a reviewable update plan for the integrated project:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project
 ```
 
 Review `update-plan.md`. If the selected profile, packs, harnesses, and manifest differences look correct, apply conservatively:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply
 ```
 
 Use `-Apply -ForceManaged` only when the plan shows generated layer artifacts should be replaced from the current layer.
@@ -111,29 +111,29 @@ Use `-Apply -ForceManaged` only when the plan shows generated layer artifacts sh
 Install loop skills through the pack, then initialize a pattern-specific runtime after reviewing the plan:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs loop-engineering -Apply
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern daily-triage -WritePlan
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern daily-triage -Apply
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs loop-engineering -Apply
+pwsh -NoProfile -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern daily-triage -WritePlan
+pwsh -NoProfile -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern daily-triage -Apply
 ```
 
 Audit, report, sync, or estimate budget with:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-audit.ps1 -TargetPath D:\path\to\project -Strict
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-report.ps1 -TargetPath D:\path\to\project
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-sync.ps1 -TargetPath D:\path\to\project
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-cost.ps1 -Pattern daily-triage -Level L1 -Cadence 1d
+pwsh -NoProfile -File .\scripts\loop-audit.ps1 -TargetPath D:\path\to\project -Strict
+pwsh -NoProfile -File .\scripts\loop-report.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\loop-sync.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\loop-cost.ps1 -Pattern daily-triage -Level L1 -Cadence 1d
 ```
 
 For L2 assisted fixes, initialize `minimal-fix-assist`, preview the worktree, require `-Apply -HumanApproved` before any worktree is created, verify against the exact branch/worktree, and clean up with the same human gate:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern minimal-fix-assist -WritePlan
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123 -Apply -HumanApproved
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-verify.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -Verifier reviewer-name -Status NEEDS_REVIEW -Apply
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -RemoveBranch
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -RemoveBranch -Apply -HumanApproved
+pwsh -NoProfile -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern minimal-fix-assist -WritePlan
+pwsh -NoProfile -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123
+pwsh -NoProfile -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123 -Apply -HumanApproved
+pwsh -NoProfile -File .\scripts\loop-verify.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -Verifier reviewer-name -Status NEEDS_REVIEW -Apply
+pwsh -NoProfile -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -RemoveBranch
+pwsh -NoProfile -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -WorktreePath D:\path\to\worktree -Branch lizard/l2/fix-123 -RemoveBranch -Apply -HumanApproved
 ```
 
 See [Loop engineering](loop-engineering.md) for the readiness model and safety rules.
@@ -143,13 +143,13 @@ See [Loop engineering](loop-engineering.md) for the readiness model and safety r
 Run the full local CI gate:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\ci.ps1
+pwsh -NoProfile -File .\scripts\ci.ps1
 ```
 
 Or run individual gates:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\smoke.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\matrix.ps1
+pwsh -NoProfile -File .\scripts\validate.ps1
+pwsh -NoProfile -File .\tests\smoke.ps1
+pwsh -NoProfile -File .\scripts\matrix.ps1
 ```

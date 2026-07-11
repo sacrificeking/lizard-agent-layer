@@ -39,6 +39,7 @@ try {
   Assert-Equal 0 $install.exit_code 'Fresh v3 install with a pre-existing file must succeed.'
   $manifest = Read-Manifest $ownedTarget
   Assert-Equal 3 ([int]$manifest.schema_version) 'Installer must emit manifest schema v3.'
+  Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/install-manifest.schema.json' -InstancePath (Join-Path $ownedTarget '.agent\lizard-agent-layer.install.json') -Message 'Fresh installer output must satisfy manifest schema v3.'
   $userArtifact = Find-Artifact $manifest '.agent/protocols/permissions.md'
   Assert-Equal 'user-owned' ([string]$userArtifact.ownership) 'Pre-existing files must remain user-owned.'
   $layerArtifact = Find-Artifact $manifest '.agent/protocols/handoff.md'
@@ -104,6 +105,7 @@ try {
   Assert-True ((Get-Content -LiteralPath $legacyFile -Raw) -match 'legacy-customization') 'Ambiguous v2 content must remain untouched.'
   $migrated = Read-Manifest $legacyTarget
   Assert-Equal 3 ([int]$migrated.schema_version) 'Legacy manifest must migrate to v3.'
+  Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/install-manifest.schema.json' -InstancePath $legacyManifestPath -Message 'Migrated installer output must satisfy manifest schema v3.'
   Assert-Equal 2 ([int]$migrated.migrated_from_schema_version) 'Migration provenance must record schema v2.'
   Assert-Equal 'user-owned' ([string](Find-Artifact $migrated '.agent/protocols/permissions.md').ownership) 'Ambiguous legacy content must migrate as user-owned.'
 

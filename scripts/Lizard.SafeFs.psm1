@@ -249,6 +249,8 @@ Export-ModuleMember -Function @(
   'Assert-PathOutsideRoot',
   'ConvertTo-LizardFullPath',
   'Copy-SafeItem',
+  'Get-LizardPathComparer',
+  'Get-LizardPathComparison',
   'Initialize-SafeDirectory',
   'New-SafeDirectory',
   'Resolve-SafeRoot',

@@ -2,24 +2,32 @@
 
 `lizard-agent-layer` has one canonical local gate runner and one GitHub Actions workflow.
 
+Install the pinned validator dependencies once after checkout or lockfile changes:
+
+```powershell
+npm ci
+```
+
+Node.js 20 or newer is required. PowerShell 7 is the portable default; Windows PowerShell 5.1 is retained as a compatibility host.
+
 ## Local runner
 
 Run all gates:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\ci.ps1
+pwsh -NoProfile -File .\scripts\ci.ps1
 ```
 
 Fast local check without smoke or matrix:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\ci.ps1 -SkipSmoke -SkipMatrix
+pwsh -NoProfile -File .\scripts\ci.ps1 -SkipSmoke -SkipMatrix
 ```
 
 Fail if the working tree is dirty after checks:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\ci.ps1 -StrictGitStatus
+pwsh -NoProfile -File .\scripts\ci.ps1 -StrictGitStatus
 ```
 
 The runner writes JSON reports under `.tmp/ci/`.
@@ -28,11 +36,12 @@ The runner writes JSON reports under `.tmp/ci/`.
 
 The workflow lives at `.github/workflows/lizard-agent-layer-ci.yml` and runs on pull requests, pushes to `main` or `master`, and manual dispatches.
 
-The workflow executes the canonical local CI runner, which includes validate, packs, drift, quality, smoke, and matrix gates by default.
+The workflow executes the canonical local CI runner on Windows, Ubuntu, and macOS with PowerShell 7. A separate Windows job executes the same gates with Windows PowerShell 5.1. All jobs use the committed npm lockfile.
 
 The runner includes:
 
 - `scripts/validate.ps1`
+- `tools/schema-validator/validate.mjs --mutation-corpus ...`
 - `tests/run-focused.ps1`
 - `scripts/pack-report.ps1 -Strict`
 - `scripts/drift-check.ps1 -Strict`
@@ -45,10 +54,14 @@ The runner includes:
 Before cutting a release or adapting a target project, run:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\ci.ps1
+pwsh -NoProfile -File .\scripts\ci.ps1
 ```
 
 For quick iteration, `-SkipMatrix` is acceptable while developing, but the full matrix should pass before a version commit.
+
+## Schema contract gate
+
+`scripts/validate.ps1` runs the pinned Ajv Draft 2020-12 validator against every bound profile, pack, adapter, model profile, loop, and registry document. CI then runs a separate mutation corpus that proves wrong types, missing fields, invalid enums, unknown fields, unsafe paths, and unsupported shapes fail deterministically. Focused integration tests also validate generated manifest and loop-evidence instances.
 
 ## Quality gate
 
@@ -71,4 +84,4 @@ The smoke test includes pack install checks, target pack overlay checks, loop-en
 
 ## Focused safety gate
 
-`tests/run-focused.ps1` runs before the broader smoke suite and writes `.tmp/tests/focused-test-report.json`. Its unit and adversarial fixtures exercise path containment, root equality, traversal, linked ancestors, force modes, adapter mirrors, and preview target no-op behavior. Windows uses junction fixtures; PowerShell on Linux and macOS uses symbolic-link fixtures.
+`tests/run-focused.ps1` runs before the broader smoke suite and writes `.tmp/tests/focused-test-report.json`. Its unit, integration, and adversarial fixtures exercise host discovery, path containment, root equality, traversal, linked ancestors, ownership, transactions, version gates, loop evidence, force modes, adapter mirrors, and preview target no-op behavior. Windows uses junction fixtures; PowerShell on Linux and macOS uses symbolic-link fixtures.

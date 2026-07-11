@@ -12,7 +12,10 @@ $ErrorActionPreference = "Stop"
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Host.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
+$PowerShellHost = Get-LizardPowerShellHostPath
+$PowerShellFilePrefix = Get-LizardPowerShellFilePrefix
 $StartedAt = Get-Date
 $Results = New-Object System.Collections.Generic.List[object]
 
@@ -52,38 +55,41 @@ Write-Host "StrictGitStatus: $($StrictGitStatus.IsPresent)"
 Write-Host ""
 
 Invoke-CiStep 'validate' {
-  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\validate.ps1') -LayerRoot $LayerRoot
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\validate.ps1') -LayerRoot $LayerRoot
+}
+Invoke-CiStep 'schema mutations' {
+  & node (Join-Path $LayerRoot 'tools\schema-validator\validate.mjs') --root $LayerRoot --mutation-corpus 'tools/schema-validator/mutation-corpus.json'
 }
 Invoke-CiStep 'focused safety' {
-  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'tests\run-focused.ps1') -LayerRoot $LayerRoot
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'tests\run-focused.ps1') -LayerRoot $LayerRoot
 }
 if (-not $SkipPacks) {
   Invoke-CiStep 'packs' {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\pack-report.ps1') -LayerRoot $LayerRoot -Strict
+    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\pack-report.ps1') -LayerRoot $LayerRoot -Strict
   }
 }
 
 if (-not $SkipDrift) {
   Invoke-CiStep 'drift' {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\drift-check.ps1') -LayerRoot $LayerRoot -Strict
+    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\drift-check.ps1') -LayerRoot $LayerRoot -Strict
   }
 }
 
 if (-not $SkipQuality) {
   Invoke-CiStep 'quality' {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\score-layer.ps1') -LayerRoot $LayerRoot -Strict
+    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\score-layer.ps1') -LayerRoot $LayerRoot -Strict
   }
 }
 
 if (-not $SkipSmoke) {
   Invoke-CiStep 'smoke' {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'tests\smoke.ps1') -LayerRoot $LayerRoot
+    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'tests\smoke.ps1') -LayerRoot $LayerRoot
   }
 }
 
 if (-not $SkipMatrix) {
   Invoke-CiStep 'matrix' {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $LayerRoot 'scripts\matrix.ps1') -LayerRoot $LayerRoot
+    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\matrix.ps1') -LayerRoot $LayerRoot
   }
 }
 

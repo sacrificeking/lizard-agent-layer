@@ -20,6 +20,9 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Host.psm1') -Force
+$PowerShellHost = Get-LizardPowerShellHostPath
+$PowerShellFilePrefix = Get-LizardPowerShellFilePrefix
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $manifestPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.install.json'
 $profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
@@ -59,9 +62,8 @@ function Format-ListValue {
 function Format-CommandLine {
   param([bool]$AsApply, [bool]$AsForce)
   $parts = New-Object System.Collections.Generic.List[string]
-  $parts.Add('powershell.exe') | Out-Null
+  $parts.Add('pwsh') | Out-Null
   $parts.Add('-NoProfile') | Out-Null
-  $parts.Add('-ExecutionPolicy Bypass') | Out-Null
   $parts.Add('-File .\scripts\update-target.ps1') | Out-Null
   $parts.Add(('-TargetPath "{0}"' -f $TargetRoot)) | Out-Null
   if (-not [string]::IsNullOrWhiteSpace($SelectedProfile)) { $parts.Add(('-Profile {0}' -f $SelectedProfile)) | Out-Null }
@@ -89,10 +91,8 @@ function Add-MarkdownList {
 
 function Invoke-ManifestDiff {
   param([string]$DiffOutputDir, [switch]$Strict)
-  $argsList = @(
-    '-NoProfile',
-    '-ExecutionPolicy', 'Bypass',
-    '-File', (Join-Path $ScriptDir 'manifest-diff.ps1'),
+  $argsList = @($PowerShellFilePrefix) + @(
+    (Join-Path $ScriptDir 'manifest-diff.ps1'),
     '-TargetPath', $TargetRoot,
     '-LayerRoot', $LayerRoot,
     '-OutputDir', $DiffOutputDir,
@@ -100,7 +100,7 @@ function Invoke-ManifestDiff {
   )
   if ($Strict) { $argsList += '-Strict' }
   $global:LASTEXITCODE = 0
-  $text = & powershell.exe @argsList | Out-String
+  $text = & $PowerShellHost @argsList | Out-String
   if ($LASTEXITCODE -ne 0) { throw "manifest-diff.ps1 failed with exit code $LASTEXITCODE. Output: $text" }
   if ([string]::IsNullOrWhiteSpace($text)) { throw 'manifest-diff.ps1 returned no JSON output.' }
   $report = $text | ConvertFrom-Json
@@ -262,10 +262,8 @@ if ($Apply) {
   $updateTransaction = Start-LizardTransaction -TargetRoot $TargetRoot -OperationName 'update' -FailAfterMutation $TestFailAfterMutation
   $transactionOperationId = [string]$updateTransaction.operation_id
   try {
-    $installArgs = @(
-      '-NoProfile',
-      '-ExecutionPolicy', 'Bypass',
-      '-File', (Join-Path $ScriptDir 'install.ps1'),
+    $installArgs = @($PowerShellFilePrefix) + @(
+      (Join-Path $ScriptDir 'install.ps1'),
       '-TargetPath', $TargetRoot,
       '-Profile', $SelectedProfile,
       '-WritePlan',
@@ -279,7 +277,7 @@ if ($Apply) {
     if ($ForceManaged) { $installArgs += '-ForceManaged' }
     if ($TestFailAfterMutation -gt 0) { $installArgs += '-TestFailAfterMutation'; $installArgs += [string]$TestFailAfterMutation }
     $global:LASTEXITCODE = 0
-    $installOutput = & powershell.exe @installArgs | Out-String
+    $installOutput = & $PowerShellHost @installArgs | Out-String
     if (-not $Json) { Write-Host $installOutput }
     if ($LASTEXITCODE -ne 0) { throw "install.ps1 failed with exit code $LASTEXITCODE." }
     Join-LizardTransaction -TargetRoot $TargetRoot -OperationId $transactionOperationId | Out-Null
