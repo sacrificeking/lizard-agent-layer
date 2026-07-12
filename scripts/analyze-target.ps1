@@ -85,6 +85,7 @@ if (Has-Path 'DESIGN.md') { Add-Signal 'design-system'; Add-Reason 'DESIGN.md ex
 if (Has-Path 'AGENTS.md') { Add-Signal 'existing-agents'; Add-Reason 'AGENTS.md already exists; install should use sidecar merge behavior.' }
 if (Has-Path 'CLAUDE.md') { Add-Signal 'existing-claude'; Add-Reason 'CLAUDE.md already exists; install should use sidecar merge behavior.' }
 if (Has-Path 'GEMINI.md') { Add-Signal 'existing-gemini'; Add-Reason 'GEMINI.md already exists; install should use sidecar merge behavior.' }
+if (Has-Path '.github\copilot-instructions.md') { Add-Signal 'github-copilot'; Add-Reason '.github/copilot-instructions.md exists; install should use sidecar merge behavior.' }
 if (Has-Path '.cursor') { Add-Signal 'cursor'; Add-Reason '.cursor directory exists.' }
 if (Has-Path 'pnpm-workspace.yaml' -or Has-Path 'turbo.json' -or Has-Path 'nx.json' -or Has-Path 'lerna.json' -or Has-Path 'rush.json') { Add-Signal 'monorepo'; Add-Reason 'Workspace or monorepo config exists.' }
 if (Has-Path 'pyproject.toml' -or Has-Path 'requirements.txt' -or Has-Path 'poetry.lock') { Add-Signal 'python'; Add-Reason 'Python project markers exist.' }
@@ -134,17 +135,18 @@ foreach ($h in @('generic-agents-md')) { $harnesses.Add($h) | Out-Null }
 if ($signals.Contains('python') -or $signals.Contains('rust') -or $signals.Contains('go') -or $signals.Contains('java') -or $signals.Contains('dotnet') -or $signals.Contains('monorepo')) {
   $profile = 'standard'
   $risk = 'medium'
-  $harnesses.Clear(); foreach ($h in @('codex', 'claude-code', 'gemini')) { $harnesses.Add($h) | Out-Null }
+  $harnesses.Clear(); foreach ($h in @('codex', 'claude-code', 'gemini', 'github-copilot')) { $harnesses.Add($h) | Out-Null }
 }if ($signals.Contains('react') -or $signals.Contains('vite') -or $signals.Contains('typescript') -or $signals.Contains('supabase')) {
   $profile = 'standard'
   $risk = 'medium'
-  $harnesses.Clear(); foreach ($h in @('codex', 'claude-code', 'gemini')) { $harnesses.Add($h) | Out-Null }
+  $harnesses.Clear(); foreach ($h in @('codex', 'claude-code', 'gemini', 'github-copilot')) { $harnesses.Add($h) | Out-Null }
 }
 if (($signals.Contains('supabase') -and ($signals.Contains('react') -or $signals.Contains('vite'))) -or ($signals.Contains('finance') -and $signals.Contains('database-migrations'))) {
   $profile = 'supabase-react-finance'
   $risk = 'high'
-  $harnesses.Clear(); foreach ($h in @('codex', 'claude-code', 'gemini')) { $harnesses.Add($h) | Out-Null }
+  $harnesses.Clear(); foreach ($h in @('codex', 'claude-code', 'gemini', 'github-copilot')) { $harnesses.Add($h) | Out-Null }
 }
+if ($signals.Contains('github-copilot') -and -not $harnesses.Contains('github-copilot')) { $harnesses.Add('github-copilot') | Out-Null }
 if ($signals.Contains('cursor') -and -not $harnesses.Contains('cursor')) { $harnesses.Add('cursor') | Out-Null }
 
 switch ($profile) {

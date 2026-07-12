@@ -8,7 +8,7 @@
 | PowerShell 7 on Windows | Primary portable host |
 | PowerShell 7 on Ubuntu | Primary portable host; symbolic-link fixtures |
 | PowerShell 7 on macOS | Primary portable host; symbolic-link fixtures |
-| Node.js 20+ | Required for executable Draft 2020-12 validation |
+| Node.js 22+ | Required for executable Draft 2020-12 validation |
 
 The GitHub workflow runs the complete gate set on the four PowerShell host identities. A local Windows pass is not evidence that remote Unix jobs have run.
 

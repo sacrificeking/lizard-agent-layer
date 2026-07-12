@@ -16,8 +16,13 @@ try {
   Assert-False ($missing.exit_code -eq 0) 'Contract-sensitive change without declaration must fail.'
   Assert-True ($missing.output -match 'lacks a changed declaration') 'Missing declaration failure must be explicit.'
 
+  $missingDeclarationOutput = Join-Path $fixture 'missing-declaration'
+  $missingDeclaration = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-LayerRoot', $LayerRoot, '-ChangedPaths', 'scripts/Lizard.SafeFs.psm1,changes/does-not-exist.json', '-OutputDir', $missingDeclarationOutput, '-Strict')
+  Assert-False ($missingDeclaration.exit_code -eq 0) 'An explicitly named missing declaration must fail.'
+  Assert-True ($missingDeclaration.output -match 'Changed declaration is missing') 'Explicit missing declaration failure must be clear.'
+
   $filesystemOutput = Join-Path $fixture 'filesystem'
-  $filesystem = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-LayerRoot', $LayerRoot, '-ChangedPaths', 'scripts/Lizard.SafeFs.psm1,changes/2026-07-10-filesystem-safety.json', '-OutputDir', $filesystemOutput, '-Strict')
+  $filesystem = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-LayerRoot', $LayerRoot, '-ChangedPaths', 'scripts/Lizard.SafeFs.psm1,changes/public-1-0-0-baseline.json', '-OutputDir', $filesystemOutput, '-Strict')
   Assert-Equal 0 $filesystem.exit_code "Filesystem declaration must cover its contract: $($filesystem.output)"
   $filesystemReportPath = Join-Path $filesystemOutput 'contract-check-report.json'
   $filesystemReport = Get-Content -LiteralPath $filesystemReportPath -Raw | ConvertFrom-Json
@@ -25,7 +30,7 @@ try {
   Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/contract-check-report.schema.json' -InstancePath $filesystemReportPath -Message 'Contract check report must satisfy its schema.'
 
   $manifestOutput = Join-Path $fixture 'manifest'
-  $manifest = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-LayerRoot', $LayerRoot, '-ChangedPaths', 'schemas/install-manifest.schema.json,changes/2026-07-10-manifest-integrity.json', '-OutputDir', $manifestOutput, '-Strict')
+  $manifest = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-LayerRoot', $LayerRoot, '-ChangedPaths', 'schemas/install-manifest.schema.json,changes/public-1-0-0-baseline.json', '-OutputDir', $manifestOutput, '-Strict')
   Assert-Equal 0 $manifest.exit_code "Manifest declaration must include ownership and schema decisions: $($manifest.output)"
 
   $docsOutput = Join-Path $fixture 'docs-only'

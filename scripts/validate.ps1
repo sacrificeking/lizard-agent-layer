@@ -223,9 +223,6 @@ $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\quality-registry.schema.jso
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\maturity-levels.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\pack.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop-state.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop-budget.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop-constraints.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop-registry.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\manifest-migrations.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\risk-signals.schema.json')
@@ -303,7 +300,7 @@ $schemaValidator = Join-Path $LayerRoot 'tools\schema-validator\validate.mjs'
 $ajvPackage = Join-Path $LayerRoot 'node_modules\ajv\package.json'
 $nodeCommand = Get-Command node -ErrorAction SilentlyContinue
 if (-not $nodeCommand) {
-  Fail 'SCHEMA_VALIDATOR_NODE_MISSING: Node.js 20 or newer is required for executable schema validation.'
+  Fail 'SCHEMA_VALIDATOR_NODE_MISSING: Node.js 22 or newer is required for executable schema validation.'
 } elseif (-not (Test-Path -LiteralPath $ajvPackage -PathType Leaf)) {
   Fail 'SCHEMA_VALIDATOR_DEPENDENCY_MISSING: Run npm ci before validation.'
 } elseif (-not (Test-Path -LiteralPath $schemaValidator -PathType Leaf)) {

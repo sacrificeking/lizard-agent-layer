@@ -61,7 +61,7 @@ pwsh -NoProfile -File .\scripts\loop-run.ps1 -TargetPath <project> -Action Statu
 
 ## Schema Validator Missing
 
-`SCHEMA_VALIDATOR_NODE_MISSING` requires Node.js 20 or newer. `SCHEMA_VALIDATOR_DEPENDENCY_MISSING` requires:
+`SCHEMA_VALIDATOR_NODE_MISSING` requires Node.js 22 or newer. `SCHEMA_VALIDATOR_DEPENDENCY_MISSING` requires:
 
 ```powershell
 npm ci

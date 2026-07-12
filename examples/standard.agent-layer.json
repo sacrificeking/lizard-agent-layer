@@ -5,7 +5,7 @@
   "projectSize": "medium",
   "riskLevel": "medium",
   "memoryMode": "curated",
-  "harnesses": ["codex", "claude-code", "gemini"],
+  "harnesses": ["codex", "claude-code", "gemini", "github-copilot"],
   "modelProfiles": {
     "implementation": "gpt-5-codex",
     "review": "claude-sonnet",

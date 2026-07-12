@@ -8,18 +8,18 @@ For small scripts, libraries, or experiments. Installs generic instructions by d
 
 ## standard
 
-For normal product repositories. Installs Codex, Claude Code, and Gemini adapters by default, plus release, dependency upgrade, git safety, and research audit workflows.
+For normal product repositories. Installs Codex, Claude Code, Gemini, and GitHub Copilot adapters by default, plus release, dependency upgrade, git safety, and research audit workflows.
 
 ## supabase-react-finance
 
-For high-risk React/Vite/Supabase finance applications. Installs Codex, Claude Code, and Gemini adapters by default, plus frontend, design system, Supabase, edge functions, data quality, release, git safety, dependency, and research audit skills.
+For high-risk React/Vite/Supabase finance applications. Installs Codex, Claude Code, Gemini, and GitHub Copilot adapters by default, plus frontend, design system, Supabase, edge functions, data quality, release, git safety, dependency, and research audit skills.
 
 ## Harness override
 
 Use `-Harnesses` with `scripts/install.ps1` to override profile defaults:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,cursor
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot,cursor
 ```
 
 Available adapters:
@@ -28,6 +28,7 @@ Available adapters:
 - `claude-code`
 - `gemini`
 - `cursor`
+- `github-copilot`
 - `generic-agents-md`
 
 ## Model profiles

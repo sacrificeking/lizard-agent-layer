@@ -1,0 +1,15 @@
+{
+  "name": "github-copilot",
+  "description": "GitHub Copilot repository custom instructions using .github/copilot-instructions.md.",
+  "compatibility": {
+    "instructionGroup": "github-copilot-instructions",
+    "precedence": 100
+  },
+  "instruction": {
+    "src": "copilot-instructions.lizard.md",
+    "dst": ".github/copilot-instructions.md",
+    "sidecar": ".github/copilot-instructions.lizard-agent-layer.md",
+    "mergePolicy": "sidecar-if-exists"
+  },
+  "skillMirrors": []
+}

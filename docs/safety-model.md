@@ -38,6 +38,7 @@ Interrupted operations remain locked and recoverable through `scripts/transactio
 
 - Adapters are declarative manifests under `adapters/<name>/adapter.json`.
 - Adapters may mirror skills into harness-specific folders.
+- GitHub Copilot instructions use a dedicated `.github/copilot-instructions.md` adapter and preserve existing repository instructions through sidecars.
 - Duplicate or overlapping destinations fail before mutation unless instruction adapters declare a shared compatibility group with unique precedence.
 - Generic `AGENTS.md` is intended for tools without a dedicated adapter, not as a default companion to Codex.
 

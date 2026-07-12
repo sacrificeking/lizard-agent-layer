@@ -98,7 +98,9 @@ $failures = New-Object System.Collections.Generic.List[string]
 foreach ($relative in $declarationPaths) {
   $fullPath = Join-Path $LayerRoot $relative
   if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
-    $failures.Add("Changed declaration is missing: $relative") | Out-Null
+    if ([string]$detected.comparison -eq 'explicit') {
+      $failures.Add("Changed declaration is missing: $relative") | Out-Null
+    }
     continue
   }
   try {

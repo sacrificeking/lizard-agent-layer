@@ -8,7 +8,7 @@ Install the pinned validator dependencies once after checkout or lockfile change
 npm ci
 ```
 
-Node.js 20 or newer is required. PowerShell 7 is the portable default; Windows PowerShell 5.1 is retained as a compatibility host.
+Node.js 22 or newer is required; Node.js 24 LTS is the release and GitHub Actions baseline. PowerShell 7 is the portable default; Windows PowerShell 5.1 is retained as a compatibility host.
 
 ## Local runner
 
@@ -36,7 +36,7 @@ The runner writes JSON reports under `.tmp/ci/`.
 
 The workflow lives at `.github/workflows/lizard-agent-layer-ci.yml` and runs on pull requests, pushes to `main` or `master`, and manual dispatches.
 
-The workflow executes the canonical local CI runner on Windows, Ubuntu, and macOS with PowerShell 7. A separate Windows job executes the same gates with Windows PowerShell 5.1. All jobs use the committed npm lockfile.
+The workflow executes the canonical local CI runner on Windows, Ubuntu, and macOS with PowerShell 7. A separate Windows job executes the same gates with Windows PowerShell 5.1. All jobs use the committed npm lockfile. Checkout and Node setup actions are pinned to verified full release commit SHAs, checkout credentials are not persisted, package-manager caching is disabled, and the workflow token has read-only repository contents permission.
 
 The runner includes:
 

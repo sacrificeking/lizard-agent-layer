@@ -3,7 +3,7 @@
   "report_kind": "merge-suggestions",
   "generated_at": "2026-07-11T00:00:00Z",
   "target": "fixture-target",
-  "layer_version": "1.4.1",
+  "layer_version": "1.0.0",
   "profile": "minimal",
   "harnesses": ["generic-agents-md"],
   "sensitivity": "metadata-only",

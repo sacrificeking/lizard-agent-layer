@@ -4,7 +4,7 @@
   "provenance": {
     "owner": "lizard-agent-layer maintainers",
     "reviewed_at": "2026-07-12T00:00:00Z",
-    "review_record": "AUDIT_FINDINGS_AND_IMPLEMENTATION_PLAN.md"
+    "review_record": "docs/adr/0008-loop-lifecycle-and-no-auto-merge.md"
   },
   "compatibility": {
     "hosts": ["windows-powershell-5.1", "windows-pwsh", "linux-pwsh", "macos-pwsh"],

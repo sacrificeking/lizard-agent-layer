@@ -8,7 +8,7 @@ The analyzer currently detects:
 
 - Node, React, Vite, TypeScript, Next.js, and Supabase dependencies.
 - Supabase directories, Edge Functions, and migrations.
-- Existing instruction files such as `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`.
+- Existing instruction files such as `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md`.
 - Cursor usage through `.cursor/`.
 - Finance, market, crypto, DeFi, stock, DCA, and yield markers in repository paths.
 - Design-system signal through `DESIGN.md`.

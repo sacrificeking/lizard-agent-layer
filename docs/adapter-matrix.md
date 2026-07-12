@@ -11,7 +11,7 @@ pwsh -NoProfile -File .\scripts\matrix.ps1
 ## Focused matrix
 
 ```powershell
-pwsh -NoProfile -File .\scripts\matrix.ps1 -Profiles standard,supabase-react-finance -Harnesses codex,claude-code,gemini
+pwsh -NoProfile -File .\scripts\matrix.ps1 -Profiles standard,supabase-react-finance -Harnesses codex,claude-code,gemini,github-copilot
 ```
 
 ## Output
@@ -25,5 +25,7 @@ Use the matrix whenever a profile, adapter manifest, skill mirror, installer beh
 The installer expands every selected adapter before writing. Undeclared equal or overlapping destinations fail preflight. A shared instruction destination is permitted only when all participants declare the same compatibility group and distinct precedence values.
 
 `generic-agents-md` and `codex` both target `AGENTS.md`; they declare the `agents-md` group and Codex has higher precedence. The manifest records Codex as the effective adapter and Generic as a compatibility alias. Reversing selection order produces the same result.
+
+`github-copilot` has a distinct destination at `.github/copilot-instructions.md`. Existing Copilot instructions receive a dedicated sidecar and metadata-only merge guidance.
 
 Focused tests evaluate every built-in adapter pair in both orders. `doctor.ps1 -Strict` and `manifest-diff.ps1 -Strict` require the exact effective instruction or sidecar hash instead of accepting a shared keyword.

@@ -1,10 +1,10 @@
 {
   "name": "lizard-agent-layer-tooling",
-  "version": "1.4.1",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "schema:validate": "node tools/schema-validator/validate.mjs",

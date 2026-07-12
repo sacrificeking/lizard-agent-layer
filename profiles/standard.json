@@ -5,7 +5,7 @@
   "projectSize": "medium",
   "riskLevel": "medium",
   "memoryMode": "curated",
-  "harnesses": ["codex", "claude-code", "gemini"],
+  "harnesses": ["codex", "claude-code", "gemini", "github-copilot"],
   "modelProfiles": {
     "implementation": "gpt-5-codex",
     "review": "claude-sonnet",
@@ -13,5 +13,5 @@
   },
   "skills": ["git-safety", "release", "dependency-upgrade", "research-audit"],
   "verification": ["run project tests before release", "inspect git status before commits"],
-  "notes": "Default product-repo profile with multi-harness Codex, Claude, and Gemini instructions."
+  "notes": "Default product-repo profile with Codex, Claude Code, Gemini, and GitHub Copilot instructions."
 }

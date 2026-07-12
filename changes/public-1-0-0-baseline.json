@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "public-1-0-0-baseline",
+  "date": "2026-07-12",
+  "summary": "Establish the complete public 1.0.0 contract baseline for installation, adapters, safety, quality, and assisted loop execution.",
+  "changed_paths": [
+    ".github/workflows/*",
+    "adapters/*/adapter.json",
+    "scripts/*.ps1",
+    "scripts/*.psm1",
+    "schemas/*.schema.json",
+    "tools/schema-validator/*",
+    "registry/*.json",
+    "profiles/*.json",
+    "examples/*.json",
+    "loops/*.json",
+    "templates/*",
+    "templates/loops/*",
+    "skills/*/*",
+    "tests/*.ps1",
+    "tests/*/*.ps1",
+    "package.json",
+    "package-lock.json"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0002-filesystem-and-report-containment.md",
+    "docs/adr/0003-ownership-and-manifest-identity.md",
+    "docs/adr/0004-adapter-composition-and-precedence.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0006-transaction-and-recovery-semantics.md",
+    "docs/adr/0007-report-boundaries-and-privacy.md",
+    "docs/adr/0008-loop-lifecycle-and-no-auto-merge.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "This is the first public baseline; no previously published target migration is required."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "The baseline defines the supported public contract without replacing a prior public release."
+  }
+}

@@ -17,6 +17,7 @@ $tests = @(
   'tests\adversarial\version-gates.tests.ps1',
   'tests\integration\transaction.tests.ps1',
   'tests\integration\documentation-recovery.tests.ps1',
+  'tests\integration\public-readiness.tests.ps1',
   'tests\integration\loop-runtime.tests.ps1',
   'tests\adversarial\loop-evidence.tests.ps1'
 )

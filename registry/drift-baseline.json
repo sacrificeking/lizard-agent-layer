@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-07-12T09:32:20.4145055Z",
-    "layer_version":  "1.4.1",
-    "artifact_count":  107,
-    "total_bytes":  119339,
-    "token_estimate":  29836,
+    "generated_at":  "2026-07-12T11:01:02.9352828Z",
+    "layer_version":  "1.0.0",
+    "artifact_count":  106,
+    "total_bytes":  118207,
+    "token_estimate":  29554,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -95,6 +95,24 @@
                           "lines":  20,
                           "words":  71,
                           "token_estimate":  169
+                      },
+                      {
+                          "kind":  "adapter",
+                          "path":  "adapters/github-copilot/adapter.json",
+                          "sha256":  "377bccaf88b6f652483ff928854104b843fa84bdc3842a1e7b2b75fbd9e3945b",
+                          "bytes":  484,
+                          "lines":  16,
+                          "words":  32,
+                          "token_estimate":  121
+                      },
+                      {
+                          "kind":  "adapter",
+                          "path":  "adapters/github-copilot/copilot-instructions.lizard.md",
+                          "sha256":  "c52b41a811a8deb58204579a6ede2fada23f012f4e764bf7d456eaab22f92150",
+                          "bytes":  1237,
+                          "lines":  22,
+                          "words":  157,
+                          "token_estimate":  310
                       },
                       {
                           "kind":  "skill",
@@ -207,11 +225,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/loop-verifier/evidence.json",
-                          "sha256":  "ad6d45b2d4c6081b04ed1ff5cc3aedc62eb1cbd2bc0d0d289160f6c089bb2eaa",
-                          "bytes":  994,
+                          "sha256":  "1bc125cced78f94948d7a4e32f6455f9d99449e78866b699e2e95fb07dc5cc40",
+                          "bytes":  1002,
                           "lines":  30,
                           "words":  74,
-                          "token_estimate":  249
+                          "token_estimate":  251
                       },
                       {
                           "kind":  "skill",
@@ -297,11 +315,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/worktree-isolation/evidence.json",
-                          "sha256":  "32d9c7216dcfc13a70a36a124d185f399c1944b783f6b6d1721dfb60391822ff",
-                          "bytes":  1011,
+                          "sha256":  "36cf94c12dc8ba64c472ebb6ea9725223c551ac282e6a2df91ee9e955b6d3e05",
+                          "bytes":  1019,
                           "lines":  30,
                           "words":  77,
-                          "token_estimate":  253
+                          "token_estimate":  255
                       },
                       {
                           "kind":  "skill",
@@ -369,20 +387,20 @@
                       {
                           "kind":  "profile",
                           "path":  "profiles/standard.json",
-                          "sha256":  "bb02ccef2f02f777c1ce3e5b4d570888f8e2a7a2703cc8b2d0f7e3961c7246fb",
-                          "bytes":  614,
+                          "sha256":  "ed87b51539d238938e5d0e7c26b3ad59da035a5a6b4a8451183c1de66629e67d",
+                          "bytes":  639,
                           "lines":  18,
-                          "words":  54,
-                          "token_estimate":  153
+                          "words":  57,
+                          "token_estimate":  159
                       },
                       {
                           "kind":  "profile",
                           "path":  "profiles/supabase-react-finance.json",
-                          "sha256":  "5ee87ce58fa6e9a7caf81a292b508a6b6d2e41a33b6471ca5ffde210337ed622",
-                          "bytes":  968,
+                          "sha256":  "ee49d9c32af5d66b35c14599bd74e1e15956c1f693975e1cfa3eef60fb6b76b7",
+                          "bytes":  986,
                           "lines":  35,
-                          "words":  83,
-                          "token_estimate":  242
+                          "words":  84,
+                          "token_estimate":  246
                       },
                       {
                           "kind":  "model-profile",
@@ -800,24 +818,6 @@
                       },
                       {
                           "kind":  "schema",
-                          "path":  "schemas/loop-budget.schema.json",
-                          "sha256":  "a491a0cd14800aeaae355763872f76fa8bc6423ac9cfb32e6f35d6e0027e3669",
-                          "bytes":  910,
-                          "lines":  19,
-                          "words":  85,
-                          "token_estimate":  227
-                      },
-                      {
-                          "kind":  "schema",
-                          "path":  "schemas/loop-constraints.schema.json",
-                          "sha256":  "193848b72df2ca9b917dd191ba10f25dcc89b764cd036310d0b4c61539755477",
-                          "bytes":  866,
-                          "lines":  19,
-                          "words":  84,
-                          "token_estimate":  216
-                      },
-                      {
-                          "kind":  "schema",
                           "path":  "schemas/loop-registry.schema.json",
                           "sha256":  "7566a91c68fd16d8ca6c224980f534c18d208c3f431878f6d5487bae41eebbfc",
                           "bytes":  943,
@@ -869,15 +869,6 @@
                           "lines":  44,
                           "words":  273,
                           "token_estimate":  673
-                      },
-                      {
-                          "kind":  "schema",
-                          "path":  "schemas/loop-state.schema.json",
-                          "sha256":  "14d571bc2b5dcc7b2a0291a9aee57a2f12e11169a053401bb2be01d108aa42f4",
-                          "bytes":  1136,
-                          "lines":  32,
-                          "words":  109,
-                          "token_estimate":  284
                       },
                       {
                           "kind":  "schema",

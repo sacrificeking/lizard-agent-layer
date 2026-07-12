@@ -95,14 +95,14 @@
     {
       "name": "contract-change-requires-decision-record",
       "schema": "schemas/contract-change.schema.json",
-      "base": "changes/2026-07-12-contract-governance.json",
+      "base": "changes/public-1-0-0-baseline.json",
       "mutations": [{ "op": "replace", "path": "/decision_records", "value": [] }],
       "expected_keyword": "minItems"
     },
     {
       "name": "contract-change-migration-disposition",
       "schema": "schemas/contract-change.schema.json",
-      "base": "changes/2026-07-12-contract-governance.json",
+      "base": "changes/public-1-0-0-baseline.json",
       "mutations": [{ "op": "replace", "path": "/migration/disposition", "value": "silent" }],
       "expected_keyword": "enum"
     },
