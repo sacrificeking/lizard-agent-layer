@@ -161,7 +161,7 @@ if (-not $legacyIntegrityUnknown) {
     foreach ($artifact in @($manifest.artifacts)) {
       $relative = ConvertTo-LizardArtifactPath ([string]$artifact.path)
       if ([string]::IsNullOrWhiteSpace($relative)) { Add-Diff 'invalid-artifact-path' '<empty>' 'Artifact path is empty.'; continue }
-      try { $targetArtifactPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', '\')) }
+      try { $targetArtifactPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', [System.IO.Path]::DirectorySeparatorChar)) }
       catch { Add-Diff 'unsafe-artifact-path' $relative $_.Exception.Message; continue }
 
       $kind = [string]$artifact.kind
@@ -183,9 +183,9 @@ if (-not $legacyIntegrityUnknown) {
       if (-not [string]::IsNullOrWhiteSpace($sourcePathValue) -and -not $sourcePathValue.StartsWith('generated:', [System.StringComparison]::OrdinalIgnoreCase)) {
         try {
           if ($sourcePathValue.StartsWith('.lizard-agent-layer/', [System.StringComparison]::OrdinalIgnoreCase)) {
-            $sourceFullPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $sourcePathValue.Replace('/', '\'))
+            $sourceFullPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $sourcePathValue.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
           } else {
-            $sourceFullPath = Resolve-SafeTargetDestination -AuthorizedRoot $LayerRoot -DestinationPath (Join-Path $LayerRoot $sourcePathValue.Replace('/', '\'))
+            $sourceFullPath = Resolve-SafeTargetDestination -AuthorizedRoot $LayerRoot -DestinationPath (Join-Path $LayerRoot $sourcePathValue.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
           }
           if (-not (Test-Path -LiteralPath $sourceFullPath -PathType Leaf)) { Add-Diff 'missing-source' $relative "Source file is missing: $sourcePathValue" }
           else {
@@ -213,7 +213,7 @@ if (-not $legacyIntegrityUnknown) {
     $identityArtifacts = @($manifest.artifacts | Where-Object { [string]$_.adapter_id -eq [string]$adapterId -and [string]$_.mirror_group -like 'adapter-instruction:*' })
     $identityValid = $false
     foreach ($identity in $identityArtifacts) {
-      $identityPath = Join-Path $TargetRoot ([string]$identity.path).Replace('/', '\')
+      $identityPath = Join-Path $TargetRoot ([string]$identity.path).Replace('/', [System.IO.Path]::DirectorySeparatorChar)
       if ((Test-Path -LiteralPath $identityPath -PathType Leaf) -and (Get-LizardSha256 $identityPath) -eq [string]$identity.source_hash) { $identityValid = $true; break }
     }
     if (-not $identityValid) { Add-Diff 'adapter-identity-mismatch' ([string]$adapterId) 'No installed instruction or sidecar matches the exact adapter source hash.' }

@@ -40,7 +40,8 @@ function New-DirectoryLink {
 function Remove-DirectoryLink {
   param([string]$Path)
   if (-not (Test-Path -LiteralPath $Path)) { return }
-  [System.IO.Directory]::Delete($Path)
+  if (Test-LizardWindows) { [System.IO.Directory]::Delete($Path) }
+  else { Remove-Item -LiteralPath $Path -Force }
 }
 
 function Get-CurrentPowerShellPath {

@@ -45,7 +45,7 @@ try {
   Assert-True ($lockText -match ('(?s)^\s*\{\s*"name"\s*:\s*"lizard-agent-layer-tooling"\s*,\s*"version"\s*:\s*"' + $escapedVersion + '"')) 'package-lock.json version must match VERSION.'
   Assert-True ($lockText -match ('(?s)"packages"\s*:\s*\{\s*""\s*:\s*\{\s*"name"\s*:\s*"lizard-agent-layer-tooling"\s*,\s*"version"\s*:\s*"' + $escapedVersion + '"')) 'Root lock package version must match VERSION.'
   Assert-Equal 1 ([regex]::Matches($changelog, '(?m)^## [0-9]+\.[0-9]+\.[0-9]+')).Count 'Public changelog must contain exactly one release.'
-  Assert-True ($changelog -match '(?m)^## 1\.0\.0 - 2026-07-12$') 'Public changelog must contain the 1.0.0 release.'
+  Assert-True ($changelog -match '(?m)^## 1\.0\.0 - 2026-07-12\r?$') 'Public changelog must contain the 1.0.0 release.'
 
   foreach ($removed in @(
     'AUDIT_FINDINGS_AND_IMPLEMENTATION_PLAN.md', 'docs/roadmap.md',

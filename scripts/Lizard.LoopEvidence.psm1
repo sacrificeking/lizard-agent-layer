@@ -11,7 +11,9 @@ function Get-LizardEvidenceSha256 {
 
 function Get-LizardEvidencePayloadHash {
   param([Parameter(Mandatory = $true)]$Payload)
-  return Get-LizardEvidenceSha256 -Value ($Payload | ConvertTo-Json -Depth 20 -Compress)
+  $json = $Payload | ConvertTo-Json -Depth 20 -Compress
+  $normalized = $json | ConvertFrom-Json
+  return Get-LizardEvidenceSha256 -Value ($normalized | ConvertTo-Json -Depth 20 -Compress)
 }
 
 function New-LizardEvidenceEnvelope {

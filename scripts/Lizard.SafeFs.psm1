@@ -83,6 +83,12 @@ function Test-LizardReparsePoint {
 
   if (($Item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { return $true }
   if ($Item.PSObject.Properties.Name -contains 'LinkType' -and -not [string]::IsNullOrWhiteSpace([string]$Item.LinkType)) { return $true }
+  if ($Item.PSObject.Properties.Name -contains 'LinkTarget' -and -not [string]::IsNullOrWhiteSpace([string]$Item.LinkTarget)) { return $true }
+  if ($Item.PSObject.Properties.Name -contains 'Target' -and -not [string]::IsNullOrWhiteSpace([string]$Item.Target)) { return $true }
+  if ($PSVersionTable.PSObject.Properties.Name -contains 'Platform' -and $PSVersionTable.Platform -eq 'Unix') {
+    try { if ($null -ne [System.IO.Directory]::ResolveLinkTarget([string]$Item.FullName, $false)) { return $true } } catch {}
+    try { if ($null -ne [System.IO.File]::ResolveLinkTarget([string]$Item.FullName, $false)) { return $true } } catch {}
+  }
   return $false
 }
 
