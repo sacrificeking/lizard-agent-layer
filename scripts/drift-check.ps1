@@ -41,12 +41,18 @@ function Get-ArtifactKind {
 
 function Read-TextMetrics {
   param([string]$Path)
-  $text = Get-Content -LiteralPath $Path -Raw -ErrorAction SilentlyContinue
+  $text = [System.IO.File]::ReadAllText($Path)
   if ($null -eq $text) { $text = '' }
-  $lineCount = if ($text.Length -eq 0) { 0 } else { @($text -split "`r?`n").Count }
-  $wordCount = ([regex]::Matches($text, '\S+')).Count
-  $tokenEstimate = [Math]::Ceiling([Math]::Max(1, $text.Length) / 4)
-  [ordered]@{ lines = $lineCount; words = $wordCount; token_estimate = [int]$tokenEstimate }
+  $canonical = $text.Replace("`r`n", "`n").Replace("`r", "`n")
+  $lineCount = if ($canonical.Length -eq 0) { 0 } else { @($canonical -split "`n").Count }
+  $wordCount = ([regex]::Matches($canonical, '\S+')).Count
+  $tokenEstimate = [Math]::Ceiling([Math]::Max(1, $canonical.Length) / 4)
+  $encoding = New-Object System.Text.UTF8Encoding($false)
+  $bytes = $encoding.GetBytes($canonical)
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try { $hash = ([System.BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant() }
+  finally { $sha.Dispose() }
+  [ordered]@{ sha256 = $hash; bytes = [int64]$bytes.Length; lines = $lineCount; words = $wordCount; token_estimate = [int]$tokenEstimate }
 }
 
 function New-ArtifactRecord {
@@ -56,8 +62,8 @@ function New-ArtifactRecord {
   [ordered]@{
     kind = Get-ArtifactKind $relative
     path = $relative
-    sha256 = (Get-FileHash -LiteralPath $File.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-    bytes = [int64]$File.Length
+    sha256 = [string]$metrics.sha256
+    bytes = [int64]$metrics.bytes
     lines = [int]$metrics.lines
     words = [int]$metrics.words
     token_estimate = [int]$metrics.token_estimate

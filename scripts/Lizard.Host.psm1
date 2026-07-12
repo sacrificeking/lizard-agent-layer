@@ -1,7 +1,7 @@
 Set-StrictMode -Version 2.0
 
 function Test-LizardWindowsHost {
-  if ($PSVersionTable.PSObject.Properties.Name -contains 'Platform') { return $PSVersionTable.Platform -eq 'Win32NT' }
+  if ($PSVersionTable.ContainsKey('Platform')) { return $PSVersionTable['Platform'] -eq 'Win32NT' }
   return $true
 }
 

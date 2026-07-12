@@ -1,14 +1,14 @@
 Set-StrictMode -Version 2.0
 
 function Get-LizardPathComparison {
-  if ($PSVersionTable.PSObject.Properties.Name -contains 'Platform' -and $PSVersionTable.Platform -eq 'Unix') {
+  if ($PSVersionTable.ContainsKey('Platform') -and $PSVersionTable['Platform'] -eq 'Unix') {
     return [System.StringComparison]::Ordinal
   }
   return [System.StringComparison]::OrdinalIgnoreCase
 }
 
 function Get-LizardPathComparer {
-  if ($PSVersionTable.PSObject.Properties.Name -contains 'Platform' -and $PSVersionTable.Platform -eq 'Unix') {
+  if ($PSVersionTable.ContainsKey('Platform') -and $PSVersionTable['Platform'] -eq 'Unix') {
     return [System.StringComparer]::Ordinal
   }
   return [System.StringComparer]::OrdinalIgnoreCase
@@ -85,7 +85,7 @@ function Test-LizardReparsePoint {
   if ($Item.PSObject.Properties.Name -contains 'LinkType' -and -not [string]::IsNullOrWhiteSpace([string]$Item.LinkType)) { return $true }
   if ($Item.PSObject.Properties.Name -contains 'LinkTarget' -and -not [string]::IsNullOrWhiteSpace([string]$Item.LinkTarget)) { return $true }
   if ($Item.PSObject.Properties.Name -contains 'Target' -and -not [string]::IsNullOrWhiteSpace([string]$Item.Target)) { return $true }
-  if ($PSVersionTable.PSObject.Properties.Name -contains 'Platform' -and $PSVersionTable.Platform -eq 'Unix') {
+  if ($PSVersionTable.ContainsKey('Platform') -and $PSVersionTable['Platform'] -eq 'Unix') {
     try { if ($null -ne [System.IO.Directory]::ResolveLinkTarget([string]$Item.FullName, $false)) { return $true } } catch {}
     try { if ($null -ne [System.IO.File]::ResolveLinkTarget([string]$Item.FullName, $false)) { return $true } } catch {}
   }

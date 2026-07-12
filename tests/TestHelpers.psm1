@@ -27,7 +27,7 @@ function Assert-ThrowsCode {
 }
 
 function Test-LizardWindows {
-  if ($PSVersionTable.PSObject.Properties.Name -contains 'Platform') { return $PSVersionTable.Platform -eq 'Win32NT' }
+  if ($PSVersionTable.ContainsKey('Platform')) { return $PSVersionTable['Platform'] -eq 'Win32NT' }
   return $true
 }
 

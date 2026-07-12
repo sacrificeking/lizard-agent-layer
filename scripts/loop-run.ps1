@@ -19,6 +19,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+trap {
+  [Console]::Error.WriteLine($_.Exception.Message)
+  exit 1
+}
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.LoopRuntime.psm1') -Force

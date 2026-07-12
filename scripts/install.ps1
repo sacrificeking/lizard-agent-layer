@@ -511,7 +511,7 @@ function Copy-SkillPackage {
   $destSkillDir = Join-Path $DestRoot $SkillName
   Ensure-Dir -Path $destSkillDir -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup ("skill:{0}:directory" -f $SkillName)
   Get-ChildItem -LiteralPath $sourceDir -Recurse -File | Sort-Object FullName | ForEach-Object {
-    $relative = $_.FullName.Substring($sourceDir.Length).TrimStart('\')
+    $relative = $_.FullName.Substring($sourceDir.Length).TrimStart([char[]]@('\', '/'))
     $mirrorGroup = "skill:{0}:{1}" -f $SkillName, $relative.Replace('\', '/')
     Copy-IfMissing -Source $_.FullName -Dest (Join-Path $destSkillDir $relative) -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $mirrorGroup
   }

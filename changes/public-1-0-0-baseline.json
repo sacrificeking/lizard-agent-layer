@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "public-1-0-0-baseline",
   "date": "2026-07-12",
-  "summary": "Establish and portably harden the public 1.0.0 contract baseline for installation, adapters, safety, quality, and assisted loop execution.",
+  "summary": "Establish and cross-runtime harden the public 1.0.0 contract baseline for installation, adapters, safety, quality, and assisted loop execution.",
   "changed_paths": [
     ".github/workflows/*",
     "adapters/*/adapter.json",
