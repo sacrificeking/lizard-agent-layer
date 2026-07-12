@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/skill-evidence.schema.json",
+  "title": "lizard-agent-layer executable skill evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "skill", "provenance", "compatibility", "fixtures"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "skill": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "reviewed_at", "review_record"],
+      "properties": {
+        "owner": { "type": "string", "minLength": 1 },
+        "reviewed_at": { "type": "string", "format": "date-time" },
+        "review_record": { "type": "string", "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(^|/)\\.\\.(/|$)).+$" }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hosts", "model_classes"],
+      "properties": {
+        "hosts": { "type": "array", "items": { "enum": ["windows-powershell-5.1", "windows-pwsh", "linux-pwsh", "macos-pwsh"] }, "minItems": 1, "uniqueItems": true },
+        "model_classes": { "type": "array", "items": { "enum": ["legacy", "current", "model-agnostic"] }, "minItems": 1, "uniqueItems": true }
+      }
+    },
+    "fixtures": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "test_path", "assertion_pattern", "description"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+          "kind": { "enum": ["positive", "negative"] },
+          "test_path": { "type": "string", "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(^|/)\\.\\.(/|$)).+\\.tests\\.ps1$" },
+          "assertion_pattern": { "type": "string", "minLength": 8 },
+          "description": { "type": "string", "minLength": 12 }
+        }
+      },
+      "allOf": [
+        { "contains": { "type": "object", "properties": { "kind": { "const": "positive" } }, "required": ["kind"] }, "minContains": 1 },
+        { "contains": { "type": "object", "properties": { "kind": { "const": "negative" } }, "required": ["kind"] }, "minContains": 1 }
+      ]
+    }
+  }
+}

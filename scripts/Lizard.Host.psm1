@@ -25,8 +25,19 @@ function Get-LizardPowerShellFilePrefix {
   return @($arguments.ToArray())
 }
 
+function Get-LizardHostId {
+  if (Test-LizardWindowsHost) {
+    if ($PSVersionTable.PSEdition -eq 'Desktop') { return 'windows-powershell-5.1' }
+    return 'windows-pwsh'
+  }
+  $isMac = Get-Variable -Name IsMacOS -ValueOnly -ErrorAction SilentlyContinue
+  if ($isMac) { return 'macos-pwsh' }
+  return 'linux-pwsh'
+}
+
 Export-ModuleMember -Function @(
   'Get-LizardPowerShellFilePrefix',
   'Get-LizardPowerShellHostPath',
+  'Get-LizardHostId',
   'Test-LizardWindowsHost'
 )

@@ -9,6 +9,8 @@ $ErrorActionPreference = "Stop"
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Host.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.QualityEvidence.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp\quality' }
 $OutputDir = Initialize-SafeDirectory -Path $OutputDir
@@ -96,15 +98,23 @@ function Get-SkillSupportAssets {
   }
 }
 function Get-SkillMaturity {
-  param([int]$Score, [object]$SupportAssets, [bool]$HasVerification, [bool]$HasSafety)
-  if ($Score -ge 90 -and $SupportAssets.references -and $SupportAssets.tests) { return 'certified' }
-  if ($Score -ge 80 -and $SupportAssets.has_any) { return 'hardened' }
-  if ($Score -ge 75 -and $HasVerification -and $HasSafety) { return 'ready' }
-  if ($Score -ge 65) { return 'baseline' }
+  param(
+    [int]$DocumentationScore,
+    [object]$SupportAssets,
+    [bool]$HasVerification,
+    [bool]$HasSafety,
+    [object]$BehavioralEvidence,
+    [object]$BehavioralPolicy
+  )
+  $behaviorPassed = $BehavioralEvidence.declared -and $BehavioralEvidence.gate -eq 'pass'
+  if ($DocumentationScore -ge 90 -and $behaviorPassed -and [int]$BehavioralEvidence.score -ge [int]$BehavioralPolicy.minimum_certified_score -and $SupportAssets.references) { return 'certified' }
+  if ($DocumentationScore -ge 80 -and $behaviorPassed -and [int]$BehavioralEvidence.score -ge [int]$BehavioralPolicy.minimum_hardened_score -and $SupportAssets.has_any) { return 'hardened' }
+  if ($DocumentationScore -ge 75 -and $HasVerification -and $HasSafety) { return 'ready' }
+  if ($DocumentationScore -ge 65) { return 'baseline' }
   'weak'
 }
 function Measure-Skill {
-  param([System.IO.DirectoryInfo]$Directory, [object]$RiskSignals)
+  param([System.IO.DirectoryInfo]$Directory, [object]$RiskSignals, $FocusedReport, [string]$CurrentHostId, [object]$BehavioralPolicy)
   $skillPath = Join-Path $Directory.FullName 'SKILL.md'
   $lines = Get-Content -LiteralPath $skillPath
   $text = ($lines -join "`n")
@@ -155,14 +165,17 @@ function Measure-Skill {
   if ($text -match '(?i)\bonly\s+works\s+in\b') { $portability -= 3 }
   $dimensions.Add((New-Dimension 'portability' $portability 10 'avoids local machine assumptions')) | Out-Null
 
-  $score = 0
-  foreach ($dimension in @($dimensions.ToArray())) { $score += [int]$dimension.score }
+  $documentationScore = 0
+  foreach ($dimension in @($dimensions.ToArray())) { $documentationScore += [int]$dimension.score }
   $findings = Get-RiskFindings -Kind 'skill' -Name $Directory.Name -Path (Get-RelativePath $skillPath) -Text $text -Signals $RiskSignals
-  $maturity = Get-SkillMaturity -Score $score -SupportAssets $supportAssets -HasVerification $hasVerification -HasSafety $hasSafety
+  $behavioralEvidence = Get-LizardBehavioralEvidence -LayerRoot $LayerRoot -SkillDirectory $Directory -FocusedReport $FocusedReport -CurrentHostId $CurrentHostId
+  $maturity = Get-SkillMaturity -DocumentationScore $documentationScore -SupportAssets $supportAssets -HasVerification $hasVerification -HasSafety $hasSafety -BehavioralEvidence $behavioralEvidence -BehavioralPolicy $BehavioralPolicy
   [ordered]@{
     kind = 'skill'; name = $Directory.Name; path = Get-RelativePath $skillPath
-    score = $score; health = Get-HealthBand $score; risk = Get-RiskLabel $findings; maturity = $maturity
+    score = $documentationScore; documentation_score = $documentationScore; behavioral_readiness_score = [int]$behavioralEvidence.score
+    health = Get-HealthBand $documentationScore; risk = Get-RiskLabel $findings; maturity = $maturity
     support_assets = $supportAssets
+    behavioral_evidence = $behavioralEvidence
     dimensions = @($dimensions.ToArray()); findings = @($findings)
   }
 }
@@ -258,11 +271,15 @@ function Measure-Profile {
 $rubric = Read-JsonFile (Join-Path $LayerRoot 'registry\quality-rubric.json')
 $riskSignals = Read-JsonFile (Join-Path $LayerRoot 'registry\risk-signals.json')
 $maturityLevels = Read-JsonFile (Join-Path $LayerRoot 'registry\maturity-levels.json')
+$behavioralPolicy = Read-JsonFile (Join-Path $LayerRoot 'registry\behavioral-readiness.json')
+$focusedReportPath = Join-Path $LayerRoot '.tmp\tests\focused-test-report.json'
+$focusedReport = if (Test-Path -LiteralPath $focusedReportPath -PathType Leaf) { Read-JsonFile $focusedReportPath } else { $null }
+$currentHostId = Get-LizardHostId
 if ($MinScore -le 0) { $MinScore = [int]$rubric.minimumScore }
 
 $skills = New-Object System.Collections.Generic.List[object]
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory | Sort-Object Name | ForEach-Object {
-  $skills.Add((Measure-Skill -Directory $_ -RiskSignals $riskSignals)) | Out-Null
+  $skills.Add((Measure-Skill -Directory $_ -RiskSignals $riskSignals -FocusedReport $focusedReport -CurrentHostId $currentHostId -BehavioralPolicy $behavioralPolicy)) | Out-Null
 }
 $adapters = New-Object System.Collections.Generic.List[object]
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'adapters') -Directory | Sort-Object Name | ForEach-Object {
@@ -283,6 +300,11 @@ foreach ($artifact in @($allArtifacts)) {
   foreach ($finding in @($artifact.findings)) {
     if ($finding.severity -eq 'critical') { $gateFailures.Add("$($artifact.kind) '$($artifact.name)' has critical risk signal '$($finding.id)'.") | Out-Null }
   }
+  if ($artifact.kind -eq 'skill' -and $artifact.behavioral_evidence.declared -and $artifact.behavioral_evidence.gate -ne 'pass') {
+    foreach ($failure in @($artifact.behavioral_evidence.failures)) {
+      $gateFailures.Add("skill '$($artifact.name)' behavioral evidence failed: $failure") | Out-Null
+    }
+  }
 }
 
 $totalScore = 0
@@ -301,11 +323,23 @@ if ($allArtifacts.Count -gt 0) {
 $criticalCount = @($allFindings.ToArray() | Where-Object { $_.severity -eq 'critical' }).Count
 $highCount = @($allFindings.ToArray() | Where-Object { $_.severity -eq 'high' }).Count
 $maturityCounts = [ordered]@{ certified = 0; hardened = 0; ready = 0; baseline = 0; weak = 0 }
+$behaviorDeclared = 0
+$behaviorPassed = 0
+$behaviorTotal = 0
+$declaredBehaviorTotal = 0
 foreach ($skill in @($skills.ToArray())) {
   $level = [string]$skill.maturity
   if (-not $maturityCounts.Contains($level)) { $maturityCounts[$level] = 0 }
   $maturityCounts[$level] = [int]$maturityCounts[$level] + 1
+  $behaviorTotal += [int]$skill.behavioral_readiness_score
+  if ($skill.behavioral_evidence.declared) {
+    $behaviorDeclared++
+    $declaredBehaviorTotal += [int]$skill.behavioral_readiness_score
+    if ($skill.behavioral_evidence.gate -eq 'pass') { $behaviorPassed++ }
+  }
 }
+$averageBehavioral = if ($skills.Count -gt 0) { [Math]::Round(($behaviorTotal / $skills.Count), 2) } else { 0 }
+$averageDeclaredBehavioral = if ($behaviorDeclared -gt 0) { [Math]::Round(($declaredBehaviorTotal / $behaviorDeclared), 2) } else { 0 }
 
 $report = [ordered]@{
   generated_at = (Get-Date).ToUniversalTime().ToString('o')
@@ -316,6 +350,9 @@ $report = [ordered]@{
   summary = [ordered]@{
     artifacts = $allArtifacts.Count; skills = $skills.Count; adapters = $adapters.Count; profiles = $profiles.Count
     average_score = $average; minimum_score = $minimum; critical_findings = $criticalCount; high_findings = $highCount
+    average_documentation_score = $average; average_behavioral_readiness_score = $averageBehavioral
+    average_declared_behavioral_readiness_score = $averageDeclaredBehavioral
+    skills_with_behavioral_evidence = $behaviorDeclared; behavioral_evidence_passed = $behaviorPassed
     skill_maturity = $maturityCounts
   }
   gate_failures = @($gateFailures.ToArray())
@@ -324,6 +361,12 @@ $report = [ordered]@{
   profiles = @($profiles.ToArray())
   findings = @($allFindings.ToArray())
   maturity_levels = $maturityLevels
+  behavioral_readiness_policy = $behavioralPolicy
+  behavioral_evidence_context = [ordered]@{
+    current_host = $currentHostId
+    focused_report_path = if ($focusedReport) { $focusedReportPath } else { $null }
+    focused_report_generated_at = if ($focusedReport) { [string]$focusedReport.generated_at } else { $null }
+  }
 }
 
 $jsonPath = Join-Path $OutputDir 'layer-quality-report.json'
@@ -344,6 +387,10 @@ $md.Add("- Skills: $($report.summary.skills)") | Out-Null
 $md.Add("- Adapters: $($report.summary.adapters)") | Out-Null
 $md.Add("- Profiles: $($report.summary.profiles)") | Out-Null
 $md.Add("- Average score: $($report.summary.average_score)") | Out-Null
+$md.Add("- Average documentation score: $($report.summary.average_documentation_score)") | Out-Null
+$md.Add("- Average behavioral readiness: $($report.summary.average_behavioral_readiness_score)") | Out-Null
+$md.Add("- Average declared behavioral readiness: $($report.summary.average_declared_behavioral_readiness_score)") | Out-Null
+$md.Add("- Behavioral evidence: $behaviorPassed/$behaviorDeclared declared skills passing") | Out-Null
 $md.Add("- Minimum artifact score: $($report.summary.minimum_score)") | Out-Null
 $md.Add("- Critical findings: $criticalCount") | Out-Null
 $md.Add("- High findings: $highCount") | Out-Null
@@ -353,9 +400,9 @@ foreach ($section in @(@{title='Skills'; items=@($skills.ToArray())}, @{title='A
   $md.Add("## $($section.title)") | Out-Null
   $md.Add('') | Out-Null
   if ($section.title -eq 'Skills') {
-    $md.Add('| Name | Score | Health | Maturity | Risk |') | Out-Null
-    $md.Add('| --- | ---: | --- | --- | --- |') | Out-Null
-    foreach ($item in @($section.items)) { $md.Add("| $($item.name) | $($item.score) | $($item.health) | $($item.maturity) | $($item.risk) |") | Out-Null }
+    $md.Add('| Name | Documentation | Behavioral | Health | Maturity | Risk |') | Out-Null
+    $md.Add('| --- | ---: | ---: | --- | --- | --- |') | Out-Null
+    foreach ($item in @($section.items)) { $md.Add("| $($item.name) | $($item.documentation_score) | $($item.behavioral_readiness_score) | $($item.health) | $($item.maturity) | $($item.risk) |") | Out-Null }
   } else {
     $md.Add('| Name | Score | Health | Risk |') | Out-Null
     $md.Add('| --- | ---: | --- | --- |') | Out-Null

@@ -116,7 +116,17 @@ function applyMutation(document, mutation) {
     parent = parent[token];
   }
   const key = tokens.at(-1);
-  if (mutation.op === "remove") delete parent[key];
+  if (mutation.op === "remove") {
+    if (Array.isArray(parent)) {
+      const index = Number.parseInt(key, 10);
+      if (!Number.isInteger(index) || index < 0 || index >= parent.length) {
+        throw new Error(`MUTATION_ARRAY_INDEX_INVALID: ${mutation.path}`);
+      }
+      parent.splice(index, 1);
+    } else {
+      delete parent[key];
+    }
+  }
   else if (mutation.op === "add" || mutation.op === "replace") parent[key] = mutation.value;
   else throw new Error(`MUTATION_OPERATION_INVALID: ${mutation.op}`);
 }

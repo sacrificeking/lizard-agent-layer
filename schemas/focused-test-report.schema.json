@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/focused-test-report.schema.json",
+  "title": "lizard-agent-layer focused test report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "host", "tests", "passed", "failed"],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "powershell_edition", "powershell_version"],
+      "properties": {
+        "id": { "enum": ["windows-powershell-5.1", "windows-pwsh", "linux-pwsh", "macos-pwsh"] },
+        "powershell_edition": { "type": "string", "minLength": 1 },
+        "powershell_version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["test", "status", "exit_code", "seconds", "output"],
+        "properties": {
+          "test": { "type": "string", "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(^|/)\\.\\.(/|$)).+\\.tests\\.ps1$" },
+          "status": { "enum": ["pass", "fail"] },
+          "exit_code": { "type": "integer" },
+          "seconds": { "type": "number", "minimum": 0 },
+          "output": { "type": "string" }
+        }
+      }
+    },
+    "passed": { "type": "integer", "minimum": 0 },
+    "failed": { "type": "integer", "minimum": 0 }
+  }
+}

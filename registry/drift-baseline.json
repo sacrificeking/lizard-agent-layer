@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-07-11T16:50:36.5820862Z",
+    "generated_at":  "2026-07-12T04:24:07.2140669Z",
     "layer_version":  "1.4.1",
-    "artifact_count":  91,
-    "total_bytes":  96102,
-    "token_estimate":  24018,
+    "artifact_count":  97,
+    "total_bytes":  104008,
+    "token_estimate":  25998,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -206,6 +206,15 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/loop-verifier/evidence.json",
+                          "sha256":  "ad6d45b2d4c6081b04ed1ff5cc3aedc62eb1cbd2bc0d0d289160f6c089bb2eaa",
+                          "bytes":  994,
+                          "lines":  30,
+                          "words":  74,
+                          "token_estimate":  249
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/loop-verifier/SKILL.md",
                           "sha256":  "1dd7dcebe01d3c7141dbe7663ac968bbd5bc7312ab20a16989201f4ceadb0fc0",
                           "bytes":  2282,
@@ -284,6 +293,15 @@
                           "lines":  16,
                           "words":  96,
                           "token_estimate":  168
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/worktree-isolation/evidence.json",
+                          "sha256":  "32d9c7216dcfc13a70a36a124d185f399c1944b783f6b6d1721dfb60391822ff",
+                          "bytes":  1011,
+                          "lines":  30,
+                          "words":  77,
+                          "token_estimate":  253
                       },
                       {
                           "kind":  "skill",
@@ -629,6 +647,15 @@
                       },
                       {
                           "kind":  "registry",
+                          "path":  "registry/behavioral-readiness.json",
+                          "sha256":  "fdf1253dac290587b88705c7c0d3dd370760a324b9ba23d190ae22c31f23c5b1",
+                          "bytes":  238,
+                          "lines":  8,
+                          "words":  16,
+                          "token_estimate":  60
+                      },
+                      {
+                          "kind":  "registry",
                           "path":  "registry/manifest-migrations.json",
                           "sha256":  "bd01337463439e155ce55767e81f15667aaa246537b59afb33955d6562f74ebf",
                           "bytes":  364,
@@ -639,11 +666,11 @@
                       {
                           "kind":  "registry",
                           "path":  "registry/maturity-levels.json",
-                          "sha256":  "ed2cd6c60f3874708e999b056097cff3314a2bd43f93eea1ddc3987f97605ba5",
-                          "bytes":  827,
-                          "lines":  31,
-                          "words":  79,
-                          "token_estimate":  207
+                          "sha256":  "e958f003c913e4295fe9126d6b9bced4b299f8f514a4f80c3563e64d3c858949",
+                          "bytes":  1378,
+                          "lines":  40,
+                          "words":  118,
+                          "token_estimate":  345
                       },
                       {
                           "kind":  "registry",
@@ -674,12 +701,30 @@
                       },
                       {
                           "kind":  "schema",
+                          "path":  "schemas/behavioral-readiness.schema.json",
+                          "sha256":  "c4c48cd46bd9e7c7728a2deeb0dc8ff7ef31d9ba700dc88611bee674ebd2897c",
+                          "bytes":  930,
+                          "lines":  16,
+                          "words":  79,
+                          "token_estimate":  233
+                      },
+                      {
+                          "kind":  "schema",
                           "path":  "schemas/drift-baseline.schema.json",
                           "sha256":  "2b246f7b6034b2865a5d5d78146924cfcb9a1dadfd337ef7984862a0cdcaea3b",
                           "bytes":  1351,
                           "lines":  33,
                           "words":  131,
                           "token_estimate":  338
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/focused-test-report.schema.json",
+                          "sha256":  "4a1c214371a2dbf0d987850e7f605455361b31543745fabd6dfadfbd2776c2ce",
+                          "bytes":  1534,
+                          "lines":  40,
+                          "words":  138,
+                          "token_estimate":  384
                       },
                       {
                           "kind":  "schema",
@@ -756,11 +801,11 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/maturity-levels.schema.json",
-                          "sha256":  "4dc69bef37af3dcfdb0e61379f5b49073da077a95687560d9d348e21e389494a",
-                          "bytes":  1011,
-                          "lines":  30,
-                          "words":  88,
-                          "token_estimate":  253
+                          "sha256":  "415b8df2c147284a29e5b6198868aa73ae15d649a4accf1d80fa6f1ef57bb424",
+                          "bytes":  1337,
+                          "lines":  35,
+                          "words":  117,
+                          "token_estimate":  335
                       },
                       {
                           "kind":  "schema",
@@ -806,6 +851,15 @@
                           "lines":  26,
                           "words":  74,
                           "token_estimate":  214
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/skill-evidence.schema.json",
+                          "sha256":  "5d67628f661dbdfed41775332accb6b9579003bdc9f3abb372d24cee4ef6dfbd",
+                          "bytes":  2322,
+                          "lines":  52,
+                          "words":  215,
+                          "token_estimate":  581
                       },
                       {
                           "kind":  "schema",

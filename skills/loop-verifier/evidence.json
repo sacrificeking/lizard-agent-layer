@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "skill": "loop-verifier",
+  "provenance": {
+    "owner": "lizard-agent-layer maintainers",
+    "reviewed_at": "2026-07-12T00:00:00Z",
+    "review_record": "AUDIT_FINDINGS_AND_IMPLEMENTATION_PLAN.md"
+  },
+  "compatibility": {
+    "hosts": ["windows-powershell-5.1", "windows-pwsh", "linux-pwsh", "macos-pwsh"],
+    "model_classes": ["legacy", "current"]
+  },
+  "fixtures": [
+    {
+      "id": "evidence-bound-pass",
+      "kind": "positive",
+      "test_path": "tests/adversarial/loop-evidence.tests.ps1",
+      "assertion_pattern": "Evidence-bound PASS failed",
+      "description": "Accepts an independent PASS only with successful executable evidence."
+    },
+    {
+      "id": "self-verification-rejected",
+      "kind": "negative",
+      "test_path": "tests/adversarial/loop-evidence.tests.ps1",
+      "assertion_pattern": "Self-verification must fail",
+      "description": "Rejects verifier evidence when implementer and verifier identities match."
+    }
+  ]
+}

@@ -74,6 +74,15 @@ Finding counts:
 - **Remaining validation:** remote three-OS execution after an explicitly approved push
 - **Release note:** Existing project instructions no longer flow into secondary report artifacts by default; context-inclusive patches are explicit and sensitivity-labelled.
 
+### Package 5B — Behavioral quality and maturity
+
+- **Status:** Implemented locally on 2026-07-12
+- **Scope:** D2 and F-014
+- **Evidence:** separate documentation/behavioral scores, executable `evidence.json` contracts, host-aware focused reports, positive/negative assertion binding, compatibility and provenance checks, and an adversarial mini-layer scorer corpus
+- **Passing gates:** 36/36 schema bindings, 13/13 schema mutations, nine focused suites, keyword-stuffed maturity cap, verified certification path, strict rejection of failed evidence, packs, drift, quality, smoke, and 15/15 matrix combinations
+- **Remaining validation:** remote three-OS execution after an explicitly approved push
+- **Release note:** Polished text can no longer claim hardened or certified maturity without current executable evidence.
+
 ## Findings Register
 
 ### F-001 — Linked directories can redirect writes outside the target
@@ -349,7 +358,7 @@ Finding counts:
 - **Category:** Tests; Quality; Governance
 - **Priority:** P2
 - **Severity:** Medium
-- **Status:** Observed
+- **Status:** Implemented locally; complete Windows CI passing, remote three-OS execution pending
 - **Confidence:** High
 - **Evidence:** `scripts/score-layer.ps1:103-201` awards points for document length, headings, bullets, support directories, and safety/testing keywords.
 - **Impact:** A polished but behaviorally weak artifact can appear more mature than a concise artifact with strong executable tests.
@@ -639,6 +648,7 @@ B2 Integrity diff + structured evidence
 #### D2 — Behavioral quality and maturity
 
 - **Priority:** P2
+- **Status:** Implemented locally; complete Windows CI passing, remote three-OS execution pending
 - **Goal:** Separate documentation quality from behavioral readiness.
 - **Files:** Quality scorer, rubric, maturity registry, reports, authoring docs.
 - **Dependencies:** A3, D1

@@ -77,6 +77,20 @@
       "base": "tests/schema/fixtures/merge-suggestions-report.valid.json",
       "mutations": [{ "op": "replace", "path": "/results/0/instruction_path", "value": "../../private.md" }],
       "expected_keyword": "pattern"
+    },
+    {
+      "name": "skill-evidence-requires-both-fixture-kinds",
+      "schema": "schemas/skill-evidence.schema.json",
+      "base": "skills/loop-verifier/evidence.json",
+      "mutations": [{ "op": "remove", "path": "/fixtures/1" }],
+      "expected_keyword": "minItems"
+    },
+    {
+      "name": "skill-evidence-rejects-unsafe-test-path",
+      "schema": "schemas/skill-evidence.schema.json",
+      "base": "skills/loop-verifier/evidence.json",
+      "mutations": [{ "op": "replace", "path": "/fixtures/0/test_path", "value": "../../outside.tests.ps1" }],
+      "expected_keyword": "pattern"
     }
   ]
 }

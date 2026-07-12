@@ -233,9 +233,13 @@ $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\drift-baseline.schema.json'
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\verifier-evidence.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\worktree-lifecycle.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\merge-suggestions-report.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\behavioral-readiness.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\skill-evidence.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\focused-test-report.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\quality-rubric.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\maturity-levels.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\risk-signals.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'registry\behavioral-readiness.json')
 $migrationRegistry = Read-JsonFile (Join-Path $LayerRoot 'registry\manifest-migrations.json')
 if ($migrationRegistry) {
   if ([int]$migrationRegistry.currentSchemaVersion -ne 3) { Fail 'Manifest migration registry currentSchemaVersion must be 3.' }
@@ -284,7 +288,7 @@ foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifes
   catch { Fail "PowerShell parse failure in ${script}: $($_.Exception.Message)" }
 }
 
-foreach ($relative in @('scripts\Lizard.SafeFs.psm1', 'scripts\Lizard.Manifest.psm1', 'scripts\Lizard.Host.psm1', 'scripts\Lizard.Transaction.psm1', 'scripts\Lizard.LoopEvidence.psm1', 'tests\TestHelpers.psm1', 'tests\run-focused.ps1', 'tests\unit\safe-fs.tests.ps1', 'tests\unit\host.tests.ps1', 'tests\integration\manifest-v3.tests.ps1', 'tests\integration\transaction.tests.ps1', 'tests\adversarial\install-containment.tests.ps1', 'tests\adversarial\report-privacy.tests.ps1', 'tests\adversarial\version-gates.tests.ps1', 'tests\adversarial\loop-evidence.tests.ps1')) {
+foreach ($relative in @('scripts\Lizard.SafeFs.psm1', 'scripts\Lizard.Manifest.psm1', 'scripts\Lizard.Host.psm1', 'scripts\Lizard.Transaction.psm1', 'scripts\Lizard.LoopEvidence.psm1', 'scripts\Lizard.QualityEvidence.psm1', 'tests\TestHelpers.psm1', 'tests\run-focused.ps1', 'tests\unit\safe-fs.tests.ps1', 'tests\unit\host.tests.ps1', 'tests\integration\manifest-v3.tests.ps1', 'tests\integration\transaction.tests.ps1', 'tests\adversarial\install-containment.tests.ps1', 'tests\adversarial\report-privacy.tests.ps1', 'tests\adversarial\quality-evidence.tests.ps1', 'tests\adversarial\version-gates.tests.ps1', 'tests\adversarial\loop-evidence.tests.ps1')) {
   $path = Join-Path $LayerRoot $relative
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing safety artifact $relative."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }

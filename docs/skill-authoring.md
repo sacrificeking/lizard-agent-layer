@@ -28,8 +28,10 @@ Run the layer scorer before promoting a skill:
 pwsh -NoProfile -File .\scripts\score-layer.ps1
 ```
 
-A strong skill should explain when it activates, what the agent should do, how to verify the work, and what safety boundaries matter. References, scripts, examples, and tests raise maturity but are not required for the baseline gate.
+A strong skill should explain when it activates, what the agent should do, how to verify the work, and what safety boundaries matter. References, scripts, examples, and tests raise documentation quality but do not prove behavior.
+
+Lexical completeness alone is capped at `ready`. Add `evidence.json` only when repository tests genuinely exercise the skill's behavior. Declare at least one positive and one negative fixture, bind each to a focused test plus exact assertion marker, and record compatible hosts, model classes, owner, review date, and review record. Do not add decorative evidence merely to increase maturity.
 
 ## Package maturity
 
-Keep simple skills as `baseline` or `ready`. Promote high-impact skills toward `hardened` or `certified` by adding `references/`, `examples/`, `scripts/`, or `tests/` only when those assets reduce ambiguity. See [Skill maturity](skill-maturity.md).
+Keep simple skills as `baseline` or `ready`. Promote high-impact skills toward `hardened` or `certified` only when support assets reduce ambiguity and executable evidence proves positive and negative behavior. See [Skill maturity](skill-maturity.md).

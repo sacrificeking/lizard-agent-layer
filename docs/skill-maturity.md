@@ -1,6 +1,6 @@
 # Skill Maturity
 
-Skill maturity makes reusable agent behavior auditable. It separates a valid skill from a deeply supported skill package.
+Skill maturity makes reusable agent behavior auditable. Documentation quality and behavioral readiness are measured separately.
 
 ## Levels
 
@@ -24,31 +24,37 @@ Expected traits:
 - Baseline traits.
 - Explicit verification, checks, tests, review, or audit guidance.
 - Explicit safety, permission, secret, destructive-action, or risk boundaries.
+- It may still have no executable behavioral evidence.
 
 ### hardened
 
-A hardened skill includes supporting material that reduces ambiguity and improves repeatability.
+A hardened skill includes supporting material and current executable evidence.
 
 Expected traits:
 
 - Ready traits.
 - At least one support asset under `references/`, `examples/`, `scripts/`, or `tests/`.
+- An `evidence.json` with positive and negative fixtures.
+- Every fixture assertion exists in a focused test suite that passed on the current host.
+- Compatibility and review provenance are valid.
 
 ### certified
 
-A certified skill has both reference material and scenario tests. It is the target state for high-impact skills.
+A certified skill combines excellent documentation with high behavioral readiness. It is the target state for high-impact skills.
 
 Expected traits:
 
 - Hardened traits.
 - `references/` for domain rules, rubrics, or source material.
-- `tests/` for scenario-based expected behavior.
+- Behavioral readiness of at least 90 with passing positive and negative fixtures.
+- Current-host compatibility, model-class metadata, ownership, review date, and review record.
 
 ## Package layout
 
 ```text
 skills/<skill-name>/
   SKILL.md
+  evidence.json
   references/
     *.md
   tests/
@@ -59,7 +65,11 @@ skills/<skill-name>/
     *.ps1
 ```
 
-Only `SKILL.md` is required. Support folders are optional and should be added when they make behavior more precise.
+Only `SKILL.md` is required. Without `evidence.json`, maturity is capped at `ready` regardless of keywords, headings, or decorative test files.
+
+## Evidence contract
+
+`evidence.json` never contains arbitrary commands. Each fixture names a repository-relative focused test and an exact assertion marker. Behavioral readiness is awarded only when the test exists, contains that marker, and passed in the current `.tmp/tests/focused-test-report.json`. This ties maturity to executed evidence without letting quality metadata execute unreviewed shell commands.
 
 ## Installation behavior
 
@@ -73,4 +83,4 @@ Run:
 pwsh -NoProfile -File .\scripts\score-layer.ps1
 ```
 
-The report lists score, health, maturity, and risk for every skill.
+The report lists documentation score, behavioral readiness, health, maturity, and risk for every skill. Standalone scoring without a current focused-test report does not claim hardened or certified maturity.

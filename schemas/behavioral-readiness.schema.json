@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/behavioral-readiness.schema.json",
+  "title": "lizard-agent-layer behavioral readiness policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "minimum_hardened_score", "minimum_certified_score", "required_fixture_kinds", "supported_hosts"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "minimum_hardened_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "minimum_certified_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "required_fixture_kinds": { "type": "array", "items": { "enum": ["positive", "negative"] }, "minItems": 2, "uniqueItems": true },
+    "supported_hosts": { "type": "array", "items": { "enum": ["windows-powershell-5.1", "windows-pwsh", "linux-pwsh", "macos-pwsh"] }, "minItems": 1, "uniqueItems": true }
+  }
+}

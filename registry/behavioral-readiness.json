@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "minimum_hardened_score": 70,
+  "minimum_certified_score": 90,
+  "required_fixture_kinds": ["positive", "negative"],
+  "supported_hosts": ["windows-powershell-5.1", "windows-pwsh", "linux-pwsh", "macos-pwsh"]
+}

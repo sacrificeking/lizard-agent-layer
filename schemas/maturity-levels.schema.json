@@ -19,6 +19,11 @@
           "requiresSupportingMaterial": { "type": "boolean" },
           "requiresReferences": { "type": "boolean" },
           "requiresTests": { "type": "boolean" },
+          "minimumBehavioralReadiness": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "requiresPositiveFixture": { "type": "boolean" },
+          "requiresNegativeFixture": { "type": "boolean" },
+          "requiresCompatibility": { "type": "boolean" },
+          "requiresProvenance": { "type": "boolean" },
           "description": { "type": "string" }
         },
         "additionalProperties": false

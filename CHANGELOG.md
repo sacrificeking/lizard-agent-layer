@@ -4,6 +4,8 @@
 
 ### Added
 
+- Executable skill-evidence contracts, host-aware focused-test reports, behavioral-readiness policy, and an adversarial scoring corpus.
+
 - Metadata-only merge report schema and adversarial canary scans across patch, Markdown, JSON, and console output.
 
 - Shared `scripts/Lizard.SafeFs.psm1` guard for canonical destination containment, linked-ancestor rejection, safe directory creation, and guarded copy/content writes.
@@ -20,6 +22,8 @@
 - Windows, Ubuntu, and macOS PowerShell 7 CI jobs plus a Windows PowerShell 5.1 compatibility job.
 
 ### Changed
+
+- Skill quality now reports documentation and behavioral readiness separately; lexical completeness without passing positive/negative evidence is capped at `ready`.
 
 - Merge suggestion patches now omit existing project instruction content by default and bind the source by SHA-256; `-IncludeExistingContext` preserves explicitly labelled compatibility behavior.
 

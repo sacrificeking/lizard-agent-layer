@@ -5,6 +5,8 @@ Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
 Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Host.psm1') -Force
 
 $hostPath = Get-LizardPowerShellHostPath
+$hostId = Get-LizardHostId
+Assert-True ($hostId -in @('windows-powershell-5.1', 'windows-pwsh', 'linux-pwsh', 'macos-pwsh')) "Unexpected portable host ID '$hostId'."
 Assert-True (Test-Path -LiteralPath $hostPath -PathType Leaf) 'Current PowerShell host path must exist.'
 $prefix = @(Get-LizardPowerShellFilePrefix)
 Assert-True ($prefix -contains '-NoProfile') 'Child process prefix must disable profiles.'

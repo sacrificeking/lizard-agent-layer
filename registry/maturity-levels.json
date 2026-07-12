@@ -1,30 +1,39 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "levels": [
     {
       "id": "baseline",
       "minimumScore": 65,
-      "description": "Valid, safe, installable, and understandable as a standalone skill."
+      "description": "Documentation score is sufficient for a valid, installable, and understandable standalone skill."
     },
     {
       "id": "ready",
       "minimumScore": 75,
       "requiresVerification": true,
       "requiresSafety": true,
-      "description": "Clear activation, procedure, verification, and safety boundaries."
+      "description": "Documentation includes clear activation, procedure, verification, and safety boundaries; executable behavioral evidence is not yet required."
     },
     {
       "id": "hardened",
       "minimumScore": 80,
+      "minimumBehavioralReadiness": 70,
       "requiresSupportingMaterial": true,
-      "description": "Ready plus references, examples, scripts, or tests that reduce ambiguity."
+      "requiresPositiveFixture": true,
+      "requiresNegativeFixture": true,
+      "requiresCompatibility": true,
+      "requiresProvenance": true,
+      "description": "Ready plus supporting material and passing positive/negative executable evidence for the current host."
     },
     {
       "id": "certified",
       "minimumScore": 90,
+      "minimumBehavioralReadiness": 90,
       "requiresReferences": true,
-      "requiresTests": true,
-      "description": "Hardened plus explicit reference material and scenario tests."
+      "requiresPositiveFixture": true,
+      "requiresNegativeFixture": true,
+      "requiresCompatibility": true,
+      "requiresProvenance": true,
+      "description": "Hardened plus high documentation quality, references, complete behavioral evidence, compatibility metadata, and review provenance."
     }
   ]
 }

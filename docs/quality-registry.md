@@ -14,6 +14,7 @@ The registry is intentionally local-first. It does not crawl external repos and 
 
 - `registry/quality-rubric.json`: scoring dimensions and default minimum score.
 - `registry/risk-signals.json`: configurable risk patterns and severities.
+- `registry/behavioral-readiness.json`: evidence thresholds and supported host identities.
 - `scripts/score-layer.ps1`: local scorer and report generator.
 - `.tmp/quality/layer-quality-report.json`: machine-readable report.
 - `.tmp/quality/layer-quality-report.md`: human-readable report.
@@ -22,7 +23,7 @@ The registry is intentionally local-first. It does not crawl external repos and 
 
 ### Skills
 
-Skills are scored for metadata, activation clarity, procedure quality, verification language, safety discipline, supporting material, and portability.
+Skills retain a documentation score for metadata, activation clarity, procedure quality, verification language, safety discipline, supporting material, and portability. Behavioral readiness is separate and depends on passing executable evidence from the current focused test report.
 
 ### Adapters
 
@@ -60,10 +61,12 @@ pwsh -NoProfile -File .\scripts\score-layer.ps1 -Strict -MinScore 80
 
 ## Maturity path
 
-The current gate enforces baseline quality. Future versions should add deeper maturity levels:
+The strict gate enforces documentation minimums and rejects any declared behavioral evidence that is stale, missing, incompatible with the current host, detached from its assertion, or linked to a failed suite.
 
-- `baseline`: valid, safe, and installable.
-- `ready`: clear activation, workflow, and verification.
-- `hardened`: includes references, examples, scripts, or tests.
-- `certified`: has scenario tests, drift checks, and target-specific evidence.
+- `baseline`: sufficient documentation quality.
+- `ready`: clear activation, workflow, verification, and safety; no executable evidence required.
+- `hardened`: documentation plus support material and passing positive/negative behavioral evidence.
+- `certified`: excellent documentation, references, at least 90 behavioral readiness, compatibility metadata, and review provenance.
+
+Run `tests/run-focused.ps1` before scoring. Without a current focused report, evidence-backed skills fail closed instead of retaining a stale maturity claim.
 

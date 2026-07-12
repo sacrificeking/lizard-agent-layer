@@ -23,6 +23,7 @@ Portable agent infrastructure for projects that need consistent AI-assisted deve
 - Local CI runner plus Windows, Ubuntu, and macOS GitHub Actions gates for PowerShell 7, with a Windows PowerShell 5.1 compatibility job.
 - Executable Draft 2020-12 contracts for declarative configuration, generated manifests, and loop evidence.
 - Quality registry with scoring, risk labels, maturity levels, drift detection, and Markdown/JSON reports.
+- Separate documentation and behavioral-readiness scores; hardened/certified skills require current positive and negative executable evidence.
 - Doctor, validation, upgrade, manifest-sync, manifest diff, update-target, scoring, and smoke-test scripts.
 
 ## Profiles

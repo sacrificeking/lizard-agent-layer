@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "skill": "worktree-isolation",
+  "provenance": {
+    "owner": "lizard-agent-layer maintainers",
+    "reviewed_at": "2026-07-12T00:00:00Z",
+    "review_record": "AUDIT_FINDINGS_AND_IMPLEMENTATION_PLAN.md"
+  },
+  "compatibility": {
+    "hosts": ["windows-powershell-5.1", "windows-pwsh", "linux-pwsh", "macos-pwsh"],
+    "model_classes": ["legacy", "current"]
+  },
+  "fixtures": [
+    {
+      "id": "isolated-worktree-created",
+      "kind": "positive",
+      "test_path": "tests/adversarial/loop-evidence.tests.ps1",
+      "assertion_pattern": "Worktree creation failed",
+      "description": "Creates an approved isolated worktree and binds its lifecycle evidence."
+    },
+    {
+      "id": "nested-worktree-rejected",
+      "kind": "negative",
+      "test_path": "tests/adversarial/loop-evidence.tests.ps1",
+      "assertion_pattern": "Target-contained worktree must be rejected",
+      "description": "Rejects a worktree destination contained by the target repository."
+    }
+  ]
+}
