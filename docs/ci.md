@@ -42,6 +42,7 @@ The runner includes:
 
 - `scripts/validate.ps1`
 - `tools/schema-validator/validate.mjs --mutation-corpus ...`
+- `scripts/contract-check.ps1 -Strict`
 - `tests/run-focused.ps1`
 - `scripts/pack-report.ps1 -Strict`
 - `scripts/drift-check.ps1 -Strict`
@@ -58,6 +59,8 @@ pwsh -NoProfile -File .\scripts\ci.ps1
 ```
 
 For quick iteration, `-SkipMatrix` is acceptable while developing, but the full matrix should pass before a version commit.
+
+Contract-sensitive releases also compare against the intended base ref. GitHub Actions uses full checkout history so pull requests can validate their complete change range.
 
 ## Schema contract gate
 

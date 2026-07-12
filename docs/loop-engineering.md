@@ -1,5 +1,7 @@
 # Loop Engineering
 
+For stale lifecycle evidence, detached worktrees, verifier rejection, and cleanup recovery, follow [Troubleshooting and recovery](troubleshooting.md).
+
 Loop engineering is the practice of designing repeatable agent workflows as bounded feedback loops instead of one-off prompts. In `lizard-agent-layer`, loops are intentionally conservative: they start at L1/report-only, produce evidence and next actions, and require human approval before writes, dependency changes, releases, or high-risk decisions.
 
 ## Why it exists

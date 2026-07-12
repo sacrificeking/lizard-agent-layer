@@ -14,6 +14,8 @@
     { "schema": "schemas/drift-baseline.schema.json", "include": ["registry/drift-baseline.json"] },
     { "schema": "schemas/merge-suggestions-report.schema.json", "include": ["tests/schema/fixtures/merge-suggestions-report.valid.json"] },
     { "schema": "schemas/behavioral-readiness.schema.json", "include": ["registry/behavioral-readiness.json"] },
-    { "schema": "schemas/skill-evidence.schema.json", "include": ["skills/*/evidence.json"] }
+    { "schema": "schemas/skill-evidence.schema.json", "include": ["skills/*/evidence.json"] },
+    { "schema": "schemas/contracts.schema.json", "include": ["registry/contracts.json"] },
+    { "schema": "schemas/contract-change.schema.json", "include": ["changes/*.json"] }
   ]
 }

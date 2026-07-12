@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "id": "2026-07-10-transactions-and-loop-evidence",
+  "date": "2026-07-10",
+  "summary": "Add recoverable target transactions and one evidence-bound L2 worktree lifecycle.",
+  "changed_paths": ["scripts/Lizard.Transaction.psm1", "scripts/transaction-recover.ps1", "tests/integration/transaction.tests.ps1", "scripts/loop-*.ps1", "scripts/Lizard.LoopEvidence.psm1", "schemas/loop*.schema.json", "schemas/worktree-lifecycle.schema.json", "schemas/verifier-evidence.schema.json", "loops/*.json", "templates/loops/*", "skills/loop-*/*", "skills/worktree-isolation/*"],
+  "decision_records": ["docs/adr/0006-transaction-and-recovery-semantics.md", "docs/adr/0008-loop-lifecycle-and-no-auto-merge.md"],
+  "migration": { "disposition": "backward-compatible", "note": "Legacy unbound cleanup remains an explicit reviewed compatibility mode." },
+  "compatibility": { "impact": "additive", "note": "Apply operations gain locking, rollback, and hashed evidence without auto-merge." }
+}

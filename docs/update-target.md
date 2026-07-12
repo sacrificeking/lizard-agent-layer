@@ -1,5 +1,7 @@
 # Update Targets
 
+For interrupted transactions, unsupported manifests, integrity-unknown files, and downgrade gates, follow [Troubleshooting and recovery](troubleshooting.md).
+
 `update-target.ps1` is the plan-first workflow for keeping an installed target project aligned with the current `lizard-agent-layer` repo.
 
 It reads the target's `.agent/lizard-agent-layer.install.json`, preserves the installed profile, requested packs, expanded pack context, and harnesses, then compares that contract against the current layer version and artifacts.

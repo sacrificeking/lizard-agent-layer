@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-07-12T04:24:07.2140669Z",
+    "generated_at":  "2026-07-12T04:51:57.4087907Z",
     "layer_version":  "1.4.1",
-    "artifact_count":  97,
-    "total_bytes":  104008,
-    "token_estimate":  25998,
+    "artifact_count":  101,
+    "total_bytes":  111179,
+    "token_estimate":  27793,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -342,11 +342,11 @@
                       {
                           "kind":  "protocol",
                           "path":  "protocols/release-gates.md",
-                          "sha256":  "dd0877d5f2c16d80c0eea8d207837d42d5487dc8e5060c8a3e32d113edf6932f",
-                          "bytes":  389,
-                          "lines":  13,
-                          "words":  55,
-                          "token_estimate":  97
+                          "sha256":  "1da5c646fcbdadcc6d914a7b965b99bbfb68d9524ae1da0a1749b15fe9ec4e47",
+                          "bytes":  796,
+                          "lines":  21,
+                          "words":  99,
+                          "token_estimate":  199
                       },
                       {
                           "kind":  "protocol",
@@ -656,6 +656,15 @@
                       },
                       {
                           "kind":  "registry",
+                          "path":  "registry/contracts.json",
+                          "sha256":  "1e00963e713d796d803cd8725af558999a12eaba91c6930909ffcf814d82844d",
+                          "bytes":  2906,
+                          "lines":  60,
+                          "words":  134,
+                          "token_estimate":  727
+                      },
+                      {
+                          "kind":  "registry",
                           "path":  "registry/manifest-migrations.json",
                           "sha256":  "bd01337463439e155ce55767e81f15667aaa246537b59afb33955d6562f74ebf",
                           "bytes":  364,
@@ -707,6 +716,33 @@
                           "lines":  16,
                           "words":  79,
                           "token_estimate":  233
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/contract-change.schema.json",
+                          "sha256":  "ced3171e8956ae5f7b6a5b7843904c9c901c7c22ed996f1292f3c0c050a80e98",
+                          "bytes":  1501,
+                          "lines":  35,
+                          "words":  139,
+                          "token_estimate":  376
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/contract-check-report.schema.json",
+                          "sha256":  "a3a40aea859463e0ceef5c83b6f58f6ec5cf00ede0a11c458475a4bbf1f11b3b",
+                          "bytes":  1403,
+                          "lines":  33,
+                          "words":  136,
+                          "token_estimate":  351
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/contracts.schema.json",
+                          "sha256":  "1301711faa38a3d6ec812a700dbb2c4f795cfb3f2a601cb88b14b1a7604010e4",
+                          "bytes":  954,
+                          "lines":  27,
+                          "words":  82,
+                          "token_estimate":  239
                       },
                       {
                           "kind":  "schema",

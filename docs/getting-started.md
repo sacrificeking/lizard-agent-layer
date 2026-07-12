@@ -1,5 +1,7 @@
 # Getting Started
 
+For interrupted operations or stable failure codes, use [Troubleshooting and recovery](troubleshooting.md). Host, manifest, and harness support is defined in [Compatibility](compatibility.md).
+
 ## 1. Analyze the target
 
 Start with a read-only recommendation for profile, risk level, harnesses, skills, and packs.

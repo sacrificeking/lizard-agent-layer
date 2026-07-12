@@ -4,6 +4,9 @@
 
 ### Added
 
+- Accepted ADR baseline, compatibility and deprecation policies, machine-readable contract registry, versioned change declarations, and strict contract governance checks.
+- Troubleshooting and recovery guide with an executable clean-recovery documentation fixture.
+
 - Executable skill-evidence contracts, host-aware focused-test reports, behavioral-readiness policy, and an adversarial scoring corpus.
 
 - Metadata-only merge report schema and adversarial canary scans across patch, Markdown, JSON, and console output.
@@ -22,6 +25,8 @@
 - Windows, Ubuntu, and macOS PowerShell 7 CI jobs plus a Windows PowerShell 5.1 compatibility job.
 
 ### Changed
+
+- CI now runs contract governance after schema mutations, and GitHub checkout retains full history for base-range validation.
 
 - Skill quality now reports documentation and behavioral readiness separately; lexical completeness without passing positive/negative evidence is capped at `ready`.
 

@@ -75,3 +75,7 @@ The layer owns only files it generated. Upgrades should:
 - preserve project-local edits
 - avoid replacing target instructions without explicit force
 - produce a clear summary of created, skipped, and merge-needed files
+
+## Durable contracts
+
+Architecture decisions live under [`docs/adr/`](adr/README.md). Machine-readable contract ownership lives in `registry/contracts.json`; contract-sensitive changes require a matching declaration under `changes/`. See [Compatibility](compatibility.md), [Deprecation policy](deprecation-policy.md), and [Troubleshooting](troubleshooting.md).

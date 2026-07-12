@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/contract-check-report.schema.json",
+  "title": "lizard-agent-layer contract check report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "status", "comparison", "changed_paths", "declarations", "impacted_contracts", "failures"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "status": { "enum": ["pass", "fail", "not-applicable"] },
+    "comparison": { "type": "string" },
+    "changed_paths": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "declarations": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "impacted_contracts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "adr", "migration_required", "changed_paths", "covered"],
+        "properties": {
+          "id": { "type": "string" },
+          "adr": { "type": "string" },
+          "migration_required": { "type": "boolean" },
+          "changed_paths": { "type": "array", "items": { "type": "string" } },
+          "covered": { "type": "boolean" }
+        }
+      }
+    },
+    "failures": { "type": "array", "items": { "type": "string" } }
+  }
+}

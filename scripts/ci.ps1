@@ -60,6 +60,9 @@ Invoke-CiStep 'validate' {
 Invoke-CiStep 'schema mutations' {
   & node (Join-Path $LayerRoot 'tools\schema-validator\validate.mjs') --root $LayerRoot --mutation-corpus 'tools/schema-validator/mutation-corpus.json'
 }
+Invoke-CiStep 'contract governance' {
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\contract-check.ps1') -LayerRoot $LayerRoot -Strict
+}
 Invoke-CiStep 'focused safety' {
   & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'tests\run-focused.ps1') -LayerRoot $LayerRoot
 }

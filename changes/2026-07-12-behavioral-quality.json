@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "id": "2026-07-12-behavioral-quality",
+  "date": "2026-07-12",
+  "summary": "Separate documentation quality from host-bound executable behavioral readiness.",
+  "changed_paths": ["scripts/score-layer.ps1", "scripts/Lizard.QualityEvidence.psm1", "registry/maturity-levels.json", "registry/behavioral-readiness.json", "skills/*/evidence.json", "tests/run-focused.ps1", "schemas/*.schema.json", "tools/schema-validator/*"],
+  "decision_records": ["docs/adr/0001-source-of-truth-and-layer-boundaries.md", "docs/adr/0005-schema-and-manifest-evolution.md"],
+  "migration": { "disposition": "backward-compatible", "note": "The legacy score remains available as documentation_score and score." },
+  "compatibility": { "impact": "additive", "note": "Undeclared evidence remains valid but caps maturity at ready." }
+}

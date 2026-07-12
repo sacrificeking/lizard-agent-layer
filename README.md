@@ -149,6 +149,10 @@ pwsh -NoProfile -File .\scripts\matrix.ps1
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Architecture decisions](docs/adr/README.md)
+- [Compatibility](docs/compatibility.md)
+- [Deprecation policy](docs/deprecation-policy.md)
+- [Troubleshooting and recovery](docs/troubleshooting.md)
 - [Getting started](docs/getting-started.md)
 - [Profiles](docs/profiles.md)
 - [Packs](docs/packs.md)

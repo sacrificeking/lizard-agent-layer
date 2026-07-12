@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "id": "2026-07-11-portable-schema-ci",
+  "date": "2026-07-11",
+  "summary": "Make PowerShell host execution portable and enforce published Draft 2020-12 contracts.",
+  "changed_paths": ["schemas/*.schema.json", "tools/schema-validator/*", "scripts/validate.ps1", "package.json", "package-lock.json", ".github/workflows/lizard-agent-layer-ci.yml"],
+  "decision_records": ["docs/adr/0001-source-of-truth-and-layer-boundaries.md", "docs/adr/0005-schema-and-manifest-evolution.md"],
+  "migration": { "disposition": "backward-compatible", "note": "Schema tightening validates existing documents and does not change target writer schema." },
+  "compatibility": { "impact": "additive", "note": "PowerShell 7 gains three-OS jobs while Windows PowerShell 5.1 remains supported." }
+}

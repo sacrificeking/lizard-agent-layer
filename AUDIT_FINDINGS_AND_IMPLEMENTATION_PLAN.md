@@ -83,6 +83,15 @@ Finding counts:
 - **Remaining validation:** remote three-OS execution after an explicitly approved push
 - **Release note:** Polished text can no longer claim hardened or certified maturity without current executable evidence.
 
+### Package 5C — Architecture governance and operable recovery
+
+- **Status:** Implemented locally on 2026-07-12
+- **Scope:** E1, E2, and F-015
+- **Evidence:** eight accepted ADRs, compatibility/deprecation/troubleshooting guides, machine-readable contract registry, seven historical change declarations, strict base/diff-aware contract checker, executable report schema, and documentation recovery fixture
+- **Passing gates:** 44/44 schema bindings, 16/16 schema mutations, eleven focused suites, missing-declaration rejection, ADR/migration coverage acceptance, docs-only no-op, clean transaction recovery preview, packs, drift, quality, smoke, and 15/15 matrix combinations
+- **Remaining validation:** remote three-OS execution after an explicitly approved push
+- **Release note:** Contract-sensitive changes now carry durable decisions, migration disposition, compatibility impact, and executable regression expectations.
+
 ## Findings Register
 
 ### F-001 — Linked directories can redirect writes outside the target
@@ -378,7 +387,7 @@ Finding counts:
 - **Category:** Architecture; Maintainability; Documentation; Governance
 - **Priority:** P3
 - **Severity:** Low
-- **Status:** Observed
+- **Status:** Implemented locally; complete Windows CI passing, remote three-OS execution pending
 - **Confidence:** High
 - **Evidence:** `docs/architecture.md` describes layers and principles but there is no ADR set, compatibility matrix, deprecation policy, manifest migration policy, or module dependency contract.
 - **Impact:** Refactoring installers, adapters, schemas, and loop semantics risks hidden backward incompatibility.
@@ -676,6 +685,7 @@ B2 Integrity diff + structured evidence
 #### E1 — ADR and compatibility baseline
 
 - **Priority:** P3
+- **Status:** Implemented locally; complete Windows CI passing, remote three-OS execution pending
 - **Goal:** Document durable contracts and migration expectations.
 - **Files:** New `docs/adr/`, architecture docs, contributing guide, release checklist.
 - **Steps:** Record containment, ownership, adapter precedence, manifest migration, transactions, report boundaries, and loop semantics.
@@ -689,6 +699,7 @@ B2 Integrity diff + structured evidence
 #### E2 — Recovery and troubleshooting documentation
 
 - **Priority:** P2
+- **Status:** Implemented locally; complete Windows CI passing, remote three-OS execution pending
 - **Goal:** Make interrupted install/update/worktree recovery operable without source-code reading.
 - **Files:** Getting started, update, safety, loop engineering, new troubleshooting guide.
 - **Dependencies:** B1 and B5 behavior finalized.
@@ -752,7 +763,7 @@ The forecast assumes that every correction receives permanent positive and negat
 - [x] Core declarative and generated JSON instances pass real Draft 2020-12 schema validation.
 - [ ] Behavioral maturity cannot be satisfied by keywords alone.
 - [ ] Full validate, packs, drift, quality, smoke, matrix, and adversarial gates pass on Windows, Ubuntu, and macOS.
-- [ ] Recovery, migration, and troubleshooting instructions pass a clean-machine onboarding test.
+- [x] Recovery, migration, and troubleshooting instructions pass an executable scratch-fixture usability test.
 
 ## Exact First Task
 

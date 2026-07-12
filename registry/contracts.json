@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "contracts": [
+    {
+      "id": "filesystem-boundaries",
+      "adr": "docs/adr/0002-filesystem-and-report-containment.md",
+      "migration_required": false,
+      "paths": ["scripts/Lizard.SafeFs.psm1", "scripts/install.ps1", "scripts/update-target.ps1", "scripts/merge-suggestions.ps1"]
+    },
+    {
+      "id": "ownership-and-manifest",
+      "adr": "docs/adr/0003-ownership-and-manifest-identity.md",
+      "migration_required": true,
+      "paths": ["scripts/Lizard.Manifest.psm1", "scripts/install.ps1", "scripts/manifest-diff.ps1", "scripts/doctor.ps1", "schemas/install-manifest.schema.json", "registry/manifest-migrations.json"]
+    },
+    {
+      "id": "adapter-composition",
+      "adr": "docs/adr/0004-adapter-composition-and-precedence.md",
+      "migration_required": false,
+      "paths": ["adapters/*/adapter.json", "scripts/matrix.ps1", "schemas/adapter.schema.json"]
+    },
+    {
+      "id": "transactions",
+      "adr": "docs/adr/0006-transaction-and-recovery-semantics.md",
+      "migration_required": false,
+      "paths": ["scripts/Lizard.Transaction.psm1", "scripts/transaction-recover.ps1", "tests/integration/transaction.tests.ps1"]
+    },
+    {
+      "id": "report-boundaries",
+      "adr": "docs/adr/0007-report-boundaries-and-privacy.md",
+      "migration_required": false,
+      "paths": ["scripts/merge-suggestions.ps1", "schemas/*report.schema.json", "tests/adversarial/report-privacy.tests.ps1"]
+    },
+    {
+      "id": "loop-lifecycle",
+      "adr": "docs/adr/0008-loop-lifecycle-and-no-auto-merge.md",
+      "migration_required": true,
+      "paths": ["scripts/loop-*.ps1", "scripts/Lizard.LoopEvidence.psm1", "schemas/loop*.schema.json", "schemas/worktree-lifecycle.schema.json", "schemas/verifier-evidence.schema.json", "loops/*.json", "templates/loops/*", "skills/loop-*/*", "skills/worktree-isolation/*"]
+    },
+    {
+      "id": "schema-runtime",
+      "adr": "docs/adr/0005-schema-and-manifest-evolution.md",
+      "migration_required": true,
+      "paths": ["schemas/*.schema.json", "tools/schema-validator/*", "scripts/validate.ps1", "package.json", "package-lock.json"]
+    },
+    {
+      "id": "behavioral-quality",
+      "adr": "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+      "migration_required": false,
+      "paths": ["scripts/score-layer.ps1", "scripts/Lizard.QualityEvidence.psm1", "registry/quality-rubric.json", "registry/maturity-levels.json", "registry/behavioral-readiness.json", "skills/*/evidence.json", "tests/run-focused.ps1"]
+    },
+    {
+      "id": "contract-governance",
+      "adr": "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+      "migration_required": false,
+      "paths": ["registry/contracts.json", "schemas/contracts.schema.json", "schemas/contract-change.schema.json", "scripts/contract-check.ps1", "scripts/ci.ps1", ".github/workflows/lizard-agent-layer-ci.yml"]
+    }
+  ]
+}
