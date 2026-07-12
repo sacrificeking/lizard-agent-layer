@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "sequence": 1,
+  "run_id": "run-1",
+  "pattern": "daily-triage",
+  "event_type": "started",
+  "occurred_at": "2026-07-12T08:00:00Z",
+  "actor": "test-agent",
+  "item_id": "item-1",
+  "tokens": 100,
+  "previous_hash": null,
+  "details": {},
+  "event_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}

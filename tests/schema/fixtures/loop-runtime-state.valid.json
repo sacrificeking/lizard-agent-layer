@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "pattern": "daily-triage",
+  "readiness_level": "L1",
+  "revision": 0,
+  "status": "idle",
+  "active_run_id": null,
+  "last_run_id": null,
+  "updated_at": "2026-07-12T08:00:00Z",
+  "budget_window": { "date": "2026-07-12", "runs_started": 0, "tokens_used": 0 },
+  "items": [],
+  "runs": []
+}

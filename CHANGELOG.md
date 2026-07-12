@@ -4,6 +4,8 @@
 
 ### Added
 
+- Scheduler-independent loop state machine with exclusive leases, stable run IDs, daily run/token caps, per-item attempt accounting, atomic transitions, hash-chained events, human-gated stale-lease recovery, and verifier-bound L2 completion.
+- Executable runtime budget, state, lease, event, and report schemas plus deterministic positive, fault, duplicate, exhaustion, recovery, tamper, and verifier-rejection integration coverage.
 - Accepted ADR baseline, compatibility and deprecation policies, machine-readable contract registry, versioned change declarations, and strict contract governance checks.
 - Troubleshooting and recovery guide with an executable clean-recovery documentation fixture.
 

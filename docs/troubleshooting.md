@@ -42,6 +42,23 @@ pwsh -NoProfile -File .\scripts\manifest-diff.ps1 -TargetPath <project> -Strict
 
 Never merge automatically. The human decision remains merge, revise, discard, or pause.
 
+## Loop Runtime Stops
+
+Inspect authoritative state without mutation:
+
+```powershell
+pwsh -NoProfile -File .\scripts\loop-run.ps1 -TargetPath <project> -Action Status -Json
+```
+
+- `LOOP_LEASE_HELD`: another non-expired run owns the target. Do not start a duplicate.
+- `LOOP_LEASE_STALE_RECOVERY_REQUIRED`: preview `loop-recover.ps1`, verify the recorded owner is no longer active, then use `-Apply -HumanApproved`.
+- `LOOP_RUN_DUPLICATE`: choose a new stable RunId; completed and failed IDs are never reusable.
+- `LOOP_RUN_BUDGET_EXHAUSTED` / `LOOP_TOKEN_BUDGET_EXHAUSTED`: keep the runtime paused until the UTC budget window resets or a human reviews the machine-readable budget.
+- `LOOP_ATTEMPT_BUDGET_EXHAUSTED`: stop retrying the item and resolve or re-scope it with a human.
+- `LOOP_EVENT_HASH_MISMATCH` / `LOOP_EVENT_CHAIN_BROKEN` / `LOOP_EVENT_STATE_DIVERGED`: preserve all runtime files and restore the last trusted state/event set; never truncate or rewrite the event log to bypass the failure.
+- `LOOP_VERIFIER_REQUIRED` / `LOOP_VERIFIER_REJECTED`: L2 cannot complete until `loop-verify.ps1` produced PASS evidence for the same operation and target.
+- `LOOP_RUNTIME_NOT_INITIALIZED`: preview and apply `loop-sync.ps1` once with the current layer. Sync creates missing runtime files but does not replace existing runtime state.
+
 ## Schema Validator Missing
 
 `SCHEMA_VALIDATOR_NODE_MISSING` requires Node.js 20 or newer. `SCHEMA_VALIDATOR_DEPENDENCY_MISSING` requires:

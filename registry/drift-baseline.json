@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-07-12T04:51:57.4087907Z",
+    "generated_at":  "2026-07-12T09:32:20.4145055Z",
     "layer_version":  "1.4.1",
-    "artifact_count":  101,
-    "total_bytes":  111179,
-    "token_estimate":  27793,
+    "artifact_count":  107,
+    "total_bytes":  119339,
+    "token_estimate":  29836,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -342,11 +342,11 @@
                       {
                           "kind":  "protocol",
                           "path":  "protocols/release-gates.md",
-                          "sha256":  "1da5c646fcbdadcc6d914a7b965b99bbfb68d9524ae1da0a1749b15fe9ec4e47",
-                          "bytes":  796,
-                          "lines":  21,
-                          "words":  99,
-                          "token_estimate":  199
+                          "sha256":  "4c56826f6e32de24713635f87c88807ee190e4f09cd810fa7d888b38c007e93e",
+                          "bytes":  1033,
+                          "lines":  23,
+                          "words":  126,
+                          "token_estimate":  258
                       },
                       {
                           "kind":  "protocol",
@@ -486,29 +486,29 @@
                       {
                           "kind":  "loop",
                           "path":  "loops/daily-triage.json",
-                          "sha256":  "bc914c2039578da9092216ed3efadd30528ca1d45f4b8d8374dac4d05e5efcda",
-                          "bytes":  1508,
-                          "lines":  26,
-                          "words":  149,
-                          "token_estimate":  377
+                          "sha256":  "15fdd9a26f3e5fc139525c05f1c38c22c852af3954cd88d34d458bb83cae962e",
+                          "bytes":  1793,
+                          "lines":  30,
+                          "words":  157,
+                          "token_estimate":  448
                       },
                       {
                           "kind":  "loop",
                           "path":  "loops/layer-update-watch.json",
-                          "sha256":  "6202abf78d7fdd231f3da7e3c2f213006a914cf10026ed2ab93edae85b4ff32c",
-                          "bytes":  1622,
-                          "lines":  26,
-                          "words":  149,
-                          "token_estimate":  405
+                          "sha256":  "029d4d83b7de1f61019a02e5b6403efd6a4171c75220aeb07376880d75281dda",
+                          "bytes":  1931,
+                          "lines":  30,
+                          "words":  157,
+                          "token_estimate":  482
                       },
                       {
                           "kind":  "loop",
                           "path":  "loops/minimal-fix-assist.json",
-                          "sha256":  "f7b5714b04f5c328caf91928a2a2c6afcb36b2f497a5f20e5fb68d83be36b765",
-                          "bytes":  2359,
-                          "lines":  29,
-                          "words":  215,
-                          "token_estimate":  590
+                          "sha256":  "fa65960bc27a3c23c94a4cfc0a1e8620e9d71ae438989933197f16dcd3bbecbf",
+                          "bytes":  2668,
+                          "lines":  33,
+                          "words":  223,
+                          "token_estimate":  667
                       },
                       {
                           "kind":  "loop",
@@ -522,11 +522,11 @@
                       {
                           "kind":  "loop",
                           "path":  "loops/release-readiness.json",
-                          "sha256":  "4c8f8159452f88cdf587f55413a1ef0428af7053e708865d4e27f28eb98a0e0d",
-                          "bytes":  1587,
-                          "lines":  26,
-                          "words":  160,
-                          "token_estimate":  396
+                          "sha256":  "c0c8db795078165787b8f4b23c7d254c2a635e4891c05e880376e7ef6b9ee432",
+                          "bytes":  1892,
+                          "lines":  30,
+                          "words":  168,
+                          "token_estimate":  473
                       },
                       {
                           "kind":  "template",
@@ -581,6 +581,15 @@
                           "lines":  8,
                           "words":  39,
                           "token_estimate":  52
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/loops/loop-runtime-budget.json",
+                          "sha256":  "8f65ea3a12e8e19b7b08ed3223229b54c1d3ac93220f910f61749ab3c0460b04",
+                          "bytes":  158,
+                          "lines":  9,
+                          "words":  14,
+                          "token_estimate":  40
                       },
                       {
                           "kind":  "template",
@@ -657,11 +666,11 @@
                       {
                           "kind":  "registry",
                           "path":  "registry/contracts.json",
-                          "sha256":  "1e00963e713d796d803cd8725af558999a12eaba91c6930909ffcf814d82844d",
-                          "bytes":  2906,
+                          "sha256":  "ada8ab57fb47bba42c8c84345a1291aef451a3320ba581e8ae30dfdd666b3b11",
+                          "bytes":  2941,
                           "lines":  60,
-                          "words":  134,
-                          "token_estimate":  727
+                          "words":  135,
+                          "token_estimate":  736
                       },
                       {
                           "kind":  "registry",
@@ -783,11 +792,11 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/loop.schema.json",
-                          "sha256":  "eb6eaae15790d623c89359057acae6c53379cdbe9e9b89d4604c764758007430",
-                          "bytes":  2271,
-                          "lines":  53,
-                          "words":  223,
-                          "token_estimate":  568
+                          "sha256":  "4d3f71fd5320cbfbf77ea2624cbeb34a52690e0b2a5cf3f016fd334d7c392400",
+                          "bytes":  2611,
+                          "lines":  57,
+                          "words":  247,
+                          "token_estimate":  653
                       },
                       {
                           "kind":  "schema",
@@ -815,6 +824,51 @@
                           "lines":  27,
                           "words":  80,
                           "token_estimate":  236
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/loop-runtime-budget.schema.json",
+                          "sha256":  "065f55452290109fe314d211b68e817f169c9e1dceee2628040aa03a18620a51",
+                          "bytes":  746,
+                          "lines":  17,
+                          "words":  65,
+                          "token_estimate":  187
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/loop-runtime-event.schema.json",
+                          "sha256":  "3126bb6ae968187539e58cf353a377c809f88d42b0bb0982b2d4e13240b4646a",
+                          "bytes":  1033,
+                          "lines":  12,
+                          "words":  107,
+                          "token_estimate":  259
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/loop-runtime-lease.schema.json",
+                          "sha256":  "fa340a51bcfeb4e1e74424740e3d3480fd7ede0bb341b6e06028db2bbc529edc",
+                          "bytes":  818,
+                          "lines":  12,
+                          "words":  80,
+                          "token_estimate":  205
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/loop-runtime-report.schema.json",
+                          "sha256":  "4cb99433ff68f471c8c42c3d946864f813570c6d88d3b42c579dcbe5d2ef173b",
+                          "bytes":  895,
+                          "lines":  12,
+                          "words":  89,
+                          "token_estimate":  224
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/loop-runtime-state.schema.json",
+                          "sha256":  "a941fd4f1c2a96029d660bdec6a40ca1340ae0223da64ddafab9809b656e442f",
+                          "bytes":  2690,
+                          "lines":  44,
+                          "words":  273,
+                          "token_estimate":  673
                       },
                       {
                           "kind":  "schema",

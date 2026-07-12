@@ -112,6 +112,34 @@
       "base": "registry/contracts.json",
       "mutations": [{ "op": "replace", "path": "/contracts/0/adr", "value": "README.md" }],
       "expected_keyword": "pattern"
+    },
+    {
+      "name": "loop-runtime-budget-positive-cap",
+      "schema": "schemas/loop-runtime-budget.schema.json",
+      "base": "templates/loops/loop-runtime-budget.json",
+      "mutations": [{ "op": "replace", "path": "/daily_token_cap", "value": 0 }],
+      "expected_keyword": "minimum"
+    },
+    {
+      "name": "loop-runtime-state-active-status",
+      "schema": "schemas/loop-runtime-state.schema.json",
+      "base": "tests/schema/fixtures/loop-runtime-state.valid.json",
+      "mutations": [{ "op": "replace", "path": "/status", "value": "unknown" }],
+      "expected_keyword": "enum"
+    },
+    {
+      "name": "loop-runtime-event-hash",
+      "schema": "schemas/loop-runtime-event.schema.json",
+      "base": "tests/schema/fixtures/loop-runtime-event.valid.json",
+      "mutations": [{ "op": "replace", "path": "/event_hash", "value": "tampered" }],
+      "expected_keyword": "pattern"
+    },
+    {
+      "name": "loop-runtime-report-no-auto-merge",
+      "schema": "schemas/loop-runtime-report.schema.json",
+      "base": "tests/schema/fixtures/loop-runtime-report.valid.json",
+      "mutations": [{ "op": "replace", "path": "/auto_merge", "value": true }],
+      "expected_keyword": "const"
     }
   ]
 }

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.dev/schemas/loop-runtime-report.schema.json",
+  "title": "lizard-agent-layer loop runtime report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "mode", "action", "target", "pattern", "readiness_level", "result", "auto_merge", "human_merge_review_required"],
+  "properties": {
+    "schema_version": { "const": 1 }, "generated_at": { "type": "string", "format": "date-time" }, "mode": { "enum": ["PREVIEW", "APPLY"] }, "action": { "enum": ["status", "start", "complete", "fail", "recover"] }, "target": { "type": "string", "minLength": 1 }, "pattern": { "type": "string" }, "readiness_level": { "enum": ["L1", "L2"] }, "result": { "type": "object" }, "auto_merge": { "const": false }, "human_merge_review_required": { "const": true }
+  }
+}

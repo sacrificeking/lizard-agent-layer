@@ -165,7 +165,7 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'loops') -Filter '*.json' -File
   $loop = Read-JsonFile $_.FullName
   if ($null -eq $loop) { return }
   $expectedName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
-  foreach ($field in @('name', 'description', 'readinessLevel', 'riskLevel', 'cadence', 'stateFile', 'budgetFile', 'runLogFile', 'constraintsFile', 'skills', 'allowedActions', 'humanGates')) {
+  foreach ($field in @('name', 'description', 'readinessLevel', 'riskLevel', 'cadence', 'stateFile', 'budgetFile', 'runLogFile', 'constraintsFile', 'runtimeBudgetFile', 'runtimeStateFile', 'runtimeEventsFile', 'runtimeLeaseFile', 'skills', 'allowedActions', 'humanGates')) {
     if (-not ($loop.PSObject.Properties.Name -contains $field)) { Fail "Loop $($_.Name) missing '$field'." }
   }
   if ($loop.name -ne $expectedName) { Fail "Loop $($_.Name) manifest name '$($loop.name)' does not match filename." }
@@ -178,7 +178,7 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'loops') -Filter '*.json' -File
       if (-not ($loop.cadence.PSObject.Properties.Name -contains $field)) { Fail "Loop $($_.Name) cadence missing '$field'." }
     }
   }
-  foreach ($pathField in @('stateFile', 'budgetFile', 'runLogFile', 'constraintsFile')) {
+  foreach ($pathField in @('stateFile', 'budgetFile', 'runLogFile', 'constraintsFile', 'runtimeBudgetFile', 'runtimeStateFile', 'runtimeEventsFile', 'runtimeLeaseFile')) {
     $pathValue = [string]$loop.$pathField
     if (-not (Is-SafeRelativePath $pathValue)) { Fail "Loop $($_.Name) $pathField is unsafe: $pathValue" }
     elseif ($pathValue.Replace('/', '\') -notmatch '^\.agent\\loops\\') { Warn "Loop $($_.Name) $pathField is outside .agent/loops: $pathValue" }

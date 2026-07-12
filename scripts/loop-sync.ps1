@@ -58,6 +58,18 @@ function Copy-Template {
     Add-Unique $Written $DestRel
   }
 }
+function Write-RuntimeIfMissing {
+  param([string]$DestRel, [string]$Content)
+  $dest = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $DestRel)
+  if (Test-Path -LiteralPath $dest) { Add-Unique $Skipped $DestRel; return }
+  Add-Unique $Planned $DestRel
+  if ($Apply) {
+    $parent = Split-Path -Parent $dest
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-LizardTransactionalDirectory -Path $parent | Out-Null }
+    Set-LizardTransactionalContent -Path $dest -Value $Content
+    Add-Unique $Written $DestRel
+  }
+}
 
 $versionPath = Join-Path $LayerRoot 'VERSION'
 $currentVersion = if (Test-Path -LiteralPath $versionPath) { (Get-Content -LiteralPath $versionPath -Raw).Trim() } else { '0.0.0-dev' }
@@ -76,6 +88,10 @@ $stateRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.stateFile) 'state
 $budgetRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.budgetFile) 'budgetFile'
 $runLogRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.runLogFile) 'runLogFile'
 $constraintsRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.constraintsFile) 'constraintsFile'
+$runtimeBudgetRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.runtimeBudgetFile) 'runtimeBudgetFile'
+$runtimeStateRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.runtimeStateFile) 'runtimeStateFile'
+$runtimeEventsRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.runtimeEventsFile) 'runtimeEventsFile'
+$runtimeLeaseRel = Assert-SafeRelativeTargetPath ([string]$patternDoc.runtimeLeaseFile) 'runtimeLeaseFile'
 $worktreePolicyRel = $null
 $assistedPlanRel = $null
 $verifierRel = $null
@@ -96,7 +112,15 @@ if ($worktreePolicyRel) { Copy-Template 'templates\loops\worktree-policy.md' $wo
 if ($assistedPlanRel) { Copy-Template 'templates\loops\assisted-fix-plan.md' $assistedPlanRel $false }
 if ($verifierRel) { Copy-Template 'templates\loops\loop-verifier-report.md' $verifierRel $false }
 
-$managedPaths = @('.agent\loops\LOOP.md', $stateRel, $budgetRel, $runLogRel, $constraintsRel, '.agent\loops\loop-state.md', '.agent\loops\lizard-agent-layer.loop-install.json')
+$runtimeNow = (Get-Date).ToUniversalTime()
+$runtimeState = [ordered]@{ schema_version = 1; pattern = [string]$patternDoc.name; readiness_level = [string]$patternDoc.readinessLevel; revision = 0; status = 'idle'; active_run_id = $null; last_run_id = $null; updated_at = $runtimeNow.ToString('o'); budget_window = [ordered]@{ date = $runtimeNow.ToString('yyyy-MM-dd'); runs_started = 0; tokens_used = 0 }; items = @(); runs = @() }
+$runtimeLease = [ordered]@{ schema_version = 1; pattern = [string]$patternDoc.name; status = 'available'; run_id = $null; owner = $null; acquired_at = $null; expires_at = $null; released_at = $null }
+Write-RuntimeIfMissing $runtimeBudgetRel (Get-Content -LiteralPath (Join-Path $LayerRoot 'templates\loops\loop-runtime-budget.json') -Raw)
+Write-RuntimeIfMissing $runtimeStateRel ($runtimeState | ConvertTo-Json -Depth 12)
+Write-RuntimeIfMissing $runtimeEventsRel ''
+Write-RuntimeIfMissing $runtimeLeaseRel ($runtimeLease | ConvertTo-Json -Depth 8)
+
+$managedPaths = @('.agent\loops\LOOP.md', $stateRel, $budgetRel, $runLogRel, $constraintsRel, $runtimeBudgetRel, $runtimeStateRel, $runtimeEventsRel, $runtimeLeaseRel, '.agent\loops\loop-state.md', '.agent\loops\lizard-agent-layer.loop-install.json')
 if ($worktreePolicyRel) { $managedPaths += $worktreePolicyRel }
 if ($assistedPlanRel) { $managedPaths += $assistedPlanRel }
 if ($verifierRel) { $managedPaths += $verifierRel }
@@ -114,6 +138,10 @@ $updatedManifest = [ordered]@{
   budget_file = [string]$patternDoc.budgetFile
   run_log_file = [string]$patternDoc.runLogFile
   constraints_file = [string]$patternDoc.constraintsFile
+  runtime_budget_file = [string]$patternDoc.runtimeBudgetFile
+  runtime_state_file = [string]$patternDoc.runtimeStateFile
+  runtime_events_file = [string]$patternDoc.runtimeEventsFile
+  runtime_lease_file = [string]$patternDoc.runtimeLeaseFile
   worktree_policy_file = if ($worktreePolicyRel) { [string]$patternDoc.worktreePolicyFile } else { $null }
   assisted_plan_file = if ($assistedPlanRel) { [string]$patternDoc.assistedPlanFile } else { $null }
   verifier_file = if ($verifierRel) { [string]$patternDoc.verifierFile } else { $null }

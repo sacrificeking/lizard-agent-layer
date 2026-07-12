@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "daily_token_cap": 2000000,
+  "max_runs_per_day": 4,
+  "max_attempts_per_item": 3,
+  "lease_minutes": 30,
+  "on_exceed": "pause"
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.dev/schemas/loop-runtime-event.schema.json",
+  "title": "lizard-agent-layer loop event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "sequence", "run_id", "pattern", "event_type", "occurred_at", "actor", "item_id", "tokens", "previous_hash", "details", "event_hash"],
+  "properties": {
+    "schema_version": { "const": 1 }, "sequence": { "type": "integer", "minimum": 1 }, "run_id": { "type": "string" }, "pattern": { "type": "string" }, "event_type": { "enum": ["started", "completed", "failed", "recovered"] }, "occurred_at": { "type": "string", "format": "date-time" }, "actor": { "type": "string", "minLength": 1 }, "item_id": { "type": ["string", "null"] }, "tokens": { "type": "integer", "minimum": 0 }, "previous_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" }, "details": { "type": "object" }, "event_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

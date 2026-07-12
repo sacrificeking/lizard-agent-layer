@@ -13,6 +13,8 @@ $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.LoopEvidence.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.LoopRuntime.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
@@ -64,7 +66,7 @@ if (Test-Path -LiteralPath $patternPath) {
 }
 
 if ($manifest) {
-  foreach ($field in @('layer_version', 'pattern', 'readiness_level', 'risk_level', 'state_file', 'budget_file', 'run_log_file', 'constraints_file', 'skills', 'human_gates')) {
+  foreach ($field in @('layer_version', 'pattern', 'readiness_level', 'risk_level', 'state_file', 'budget_file', 'run_log_file', 'constraints_file', 'runtime_budget_file', 'runtime_state_file', 'runtime_events_file', 'runtime_lease_file', 'skills', 'human_gates')) {
     if (-not ($manifest.PSObject.Properties.Name -contains $field)) { Add-Failure "Loop manifest missing '$field'." }
   }
   if ($manifest.layer_version -and $manifest.layer_version -ne $currentVersion) { Add-Warning "Installed loop layer version $($manifest.layer_version) differs from current $currentVersion." }
@@ -75,6 +77,16 @@ if ($manifest) {
   Test-RelativeFile ([string]$manifest.budget_file) 'Loop budget file' | Out-Null
   Test-RelativeFile ([string]$manifest.run_log_file) 'Loop run log file' | Out-Null
   Test-RelativeFile ([string]$manifest.constraints_file) 'Loop constraints file' | Out-Null
+  Test-RelativeFile ([string]$manifest.runtime_budget_file) 'Executable loop budget' | Out-Null
+  Test-RelativeFile ([string]$manifest.runtime_state_file) 'Executable loop state' | Out-Null
+  Test-RelativeFile ([string]$manifest.runtime_events_file) 'Append-only loop events' | Out-Null
+  Test-RelativeFile ([string]$manifest.runtime_lease_file) 'Loop lease' | Out-Null
+  try {
+    $runtimeContext = Resolve-LizardLoopRuntimeContext -TargetPath $TargetRoot -Pattern $patternName
+    Get-LizardLoopRuntimeDocuments -Context $runtimeContext | Out-Null
+    $eventChain = Test-LizardLoopEventChain -Context $runtimeContext
+    Add-Pass "Loop runtime documents and event chain are valid ($($eventChain.count) events)."
+  } catch { Add-Failure "Loop runtime rejected: $($_.Exception.Message)" }
   if (($manifest.PSObject.Properties.Name -contains 'worktree_policy_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.worktree_policy_file)) { Test-RelativeFile ([string]$manifest.worktree_policy_file) 'Loop worktree policy file' | Out-Null }
   if (($manifest.PSObject.Properties.Name -contains 'assisted_plan_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.assisted_plan_file)) { Test-RelativeFile ([string]$manifest.assisted_plan_file) 'Loop assisted fix plan file' | Out-Null }
   if (($manifest.PSObject.Properties.Name -contains 'verifier_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.verifier_file)) {

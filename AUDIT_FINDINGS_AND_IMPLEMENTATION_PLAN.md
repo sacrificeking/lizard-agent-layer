@@ -92,6 +92,15 @@ Finding counts:
 - **Remaining validation:** remote three-OS execution after an explicitly approved push
 - **Release note:** Contract-sensitive changes now carry durable decisions, migration disposition, compatibility impact, and executable regression expectations.
 
+### Package 6 - Enforced loop runtime and recovery
+
+- **Status:** Implemented locally on 2026-07-12; remote three-OS execution pending
+- **Scope:** F-012 and the F1 loop-runtime decision
+- **Evidence:** `scripts/Lizard.LoopRuntime.psm1`, `loop-run.ps1`, `loop-recover.ps1`, five executable runtime schemas, additive init/sync migration, and `tests/integration/loop-runtime.tests.ps1`
+- **Passing gates:** valid start/complete, preview immutability, one active lease, duplicate RunId rejection, run/token/attempt limits, failure-injected atomic rollback, stale-lease preview and human-gated recovery, hash-chain tamper rejection, and operation-bound L2 verifier rejection/acceptance
+- **Remaining validation:** run the committed workflow on GitHub-hosted Windows, Ubuntu, and macOS after an explicitly approved push
+- **Release note:** Loop budgets, leases, attempts, state transitions, events, and recovery are now enforced by an explicit scheduler-independent runtime. L1 remains report-only; L2 remains worktree-isolated, verifier-gated, human-reviewed, and no-auto-merge.
+
 ## Findings Register
 
 ### F-001 — Linked directories can redirect writes outside the target
@@ -327,7 +336,7 @@ Finding counts:
 - **Category:** Loop Runtime and Resilience
 - **Priority:** P2
 - **Severity:** Medium
-- **Status:** Observed
+- **Status:** Implemented locally; deterministic Windows integration passing, remote three-OS execution pending
 - **Confidence:** High
 - **Evidence:** Budget, attempt, cadence, and kill-switch fields exist in templates and skills, but no executable runner accounts for tokens, acquires leases, prevents duplicate runs, or performs atomic state transitions.
 - **Impact:** Duplicate runs, budget overruns, repeated failure, and inconsistent state remain possible in the external scheduling harness.
@@ -714,6 +723,8 @@ B2 Integrity diff + structured evidence
 #### F1 — Enforceable loop state machine or explicit toolkit scope
 
 - **Priority:** P2
+- **Status:** Implemented locally through Package 6; complete Windows CI passing, remote three-OS execution pending
+- **Evidence:** Explicit scheduler-independent runner, atomic leases/state, budget and attempt accounting, hash-chained events, human-gated recovery, L2 verifier binding, and deterministic fail-closed integration coverage.
 - **Goal:** Align the product claim with executable behavior.
 - **Files:** Loop schemas/templates/scripts and potentially a new runner.
 - **Steps:** Decide scope; if runtime is retained, add leases, atomic state, budgets, attempts, run IDs, append-only events, recovery, and verifier-bound completion.

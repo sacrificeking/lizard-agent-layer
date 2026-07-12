@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-12T08:00:00Z",
+  "mode": "PREVIEW",
+  "action": "start",
+  "target": "D:/project",
+  "pattern": "daily-triage",
+  "readiness_level": "L1",
+  "result": { "status": "preview" },
+  "auto_merge": false,
+  "human_merge_review_required": true
+}

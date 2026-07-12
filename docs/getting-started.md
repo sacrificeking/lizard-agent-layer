@@ -125,7 +125,10 @@ pwsh -NoProfile -File .\scripts\loop-audit.ps1 -TargetPath D:\path\to\project -S
 pwsh -NoProfile -File .\scripts\loop-report.ps1 -TargetPath D:\path\to\project
 pwsh -NoProfile -File .\scripts\loop-sync.ps1 -TargetPath D:\path\to\project
 pwsh -NoProfile -File .\scripts\loop-cost.ps1 -Pattern daily-triage -Level L1 -Cadence 1d
+pwsh -NoProfile -File .\scripts\loop-run.ps1 -TargetPath D:\path\to\project -Action Status
 ```
+
+Start and finish a scheduler-independent run only with explicit `-Apply`. Supply a stable `RunId`, item, owner, and conservative token estimate; the runtime enforces one lease, daily caps, attempt limits, atomic state, and a hash-chained event log. Use `loop-recover.ps1` only for an expired lease and only after preview plus `-HumanApproved`.
 
 For L2 assisted fixes, initialize `minimal-fix-assist`, preview the worktree, require `-Apply -HumanApproved` before any worktree is created, verify against the exact branch/worktree, and clean up with the same human gate:
 

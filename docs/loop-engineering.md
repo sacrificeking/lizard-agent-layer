@@ -51,6 +51,29 @@ The target receives `.agent/loops/LOOP.md`, state, budget, run-log, constraints,
 
 ## Operate a loop
 
+The runtime is explicit and scheduler-independent. Preview and then start one bounded run:
+
+```powershell
+pwsh -NoProfile -File .\scripts\loop-run.ps1 -TargetPath D:\path\to\project -Action Start -RunId triage-20260712 -ItemId daily-triage -Owner scheduler -TokenEstimate 12000
+pwsh -NoProfile -File .\scripts\loop-run.ps1 -TargetPath D:\path\to\project -Action Start -RunId triage-20260712 -ItemId daily-triage -Owner scheduler -TokenEstimate 12000 -Apply
+```
+
+Complete or fail the same lease explicitly, then inspect state and its event-chain head:
+
+```powershell
+pwsh -NoProfile -File .\scripts\loop-run.ps1 -TargetPath D:\path\to\project -Action Complete -RunId triage-20260712 -Owner scheduler -ActualTokens 10800 -Apply
+pwsh -NoProfile -File .\scripts\loop-run.ps1 -TargetPath D:\path\to\project -Action Status -Json
+```
+
+An expired active lease is never stolen. Preview recovery, review the owner and expiry, and require human approval:
+
+```powershell
+pwsh -NoProfile -File .\scripts\loop-recover.ps1 -TargetPath D:\path\to\project -RunId triage-20260712
+pwsh -NoProfile -File .\scripts\loop-recover.ps1 -TargetPath D:\path\to\project -RunId triage-20260712 -Apply -HumanApproved
+```
+
+For an existing installation, preview and apply `loop-sync.ps1` once to add the executable runtime files and manifest fields. Runtime state, events, leases, and budget are preserved on later syncs, including `-ForceTemplates`.
+
 Audit an installed loop:
 
 ```powershell
@@ -112,3 +135,5 @@ pwsh -NoProfile -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to
 ```
 
 L2 never auto-merges, pushes, releases, deploys, changes dependencies, edits migrations, or touches secrets without separate explicit approval. The verifier rejects unsafe report paths, wrong repositories, non-root worktree paths, branch mismatches, self-review, failed commands, tampered lifecycle data, and stale Git state before it can write the target verifier report. See [L2 Lifecycle And Verifier Evidence](loop-evidence.md).
+
+To register an L2 run, pass the worktree lifecycle `operation_id` to `loop-run.ps1 -Action Start -OperationId ...`. Completion requires the verifier evidence sidecar from `loop-verify.ps1`; its status must be `PASS`, and its operation and target must match the active run.

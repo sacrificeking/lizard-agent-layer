@@ -29,6 +29,8 @@ Codex, Claude Code, Gemini, Cursor, and generic `AGENTS.md` adapters share the s
 
 ## Change compatibility
 
+Loop installations created before the executable runtime remain readable. Preview and apply `loop-sync.ps1` to add missing runtime manifest fields and files; sync never overwrites runtime state, events, leases, or budget.
+
 Contract-sensitive changes require a file under `changes/` that links the relevant ADR and states migration plus compatibility disposition. Run:
 
 ```powershell

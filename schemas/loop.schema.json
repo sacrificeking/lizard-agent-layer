@@ -10,7 +10,7 @@
       "pattern": "^(?![A-Za-z]:)(?![\\\\/])(?!.*(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$)).+$"
     }
   },
-  "required": ["name", "description", "readinessLevel", "riskLevel", "cadence", "stateFile", "budgetFile", "runLogFile", "constraintsFile", "skills", "allowedActions", "deniedActions", "humanGates"],
+  "required": ["name", "description", "readinessLevel", "riskLevel", "cadence", "stateFile", "budgetFile", "runLogFile", "constraintsFile", "runtimeBudgetFile", "runtimeStateFile", "runtimeEventsFile", "runtimeLeaseFile", "skills", "allowedActions", "deniedActions", "humanGates"],
   "properties": {
     "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
     "description": { "type": "string", "minLength": 10 },
@@ -30,6 +30,10 @@
     "budgetFile": { "$ref": "#/$defs/safeRelativePath" },
     "runLogFile": { "$ref": "#/$defs/safeRelativePath" },
     "constraintsFile": { "$ref": "#/$defs/safeRelativePath" },
+    "runtimeBudgetFile": { "$ref": "#/$defs/safeRelativePath" },
+    "runtimeStateFile": { "$ref": "#/$defs/safeRelativePath" },
+    "runtimeEventsFile": { "$ref": "#/$defs/safeRelativePath" },
+    "runtimeLeaseFile": { "$ref": "#/$defs/safeRelativePath" },
     "worktreePolicyFile": { "$ref": "#/$defs/safeRelativePath" },
     "assistedPlanFile": { "$ref": "#/$defs/safeRelativePath" },
     "verifierFile": { "$ref": "#/$defs/safeRelativePath" },

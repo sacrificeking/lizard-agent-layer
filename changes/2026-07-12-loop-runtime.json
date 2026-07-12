@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "id": "2026-07-12-loop-runtime",
+  "date": "2026-07-12",
+  "summary": "Add an enforced scheduler-independent loop state machine while preserving report-only L1 and no-auto-merge L2 policy.",
+  "changed_paths": ["scripts/Lizard.LoopRuntime.psm1", "scripts/loop-*.ps1", "scripts/validate.ps1", "schemas/loop*.schema.json", "loops/*.json", "templates/loops/*", "tests/integration/loop-runtime.tests.ps1", "tests/run-focused.ps1", "tools/schema-validator/*", "registry/contracts.json"],
+  "decision_records": ["docs/adr/0001-source-of-truth-and-layer-boundaries.md", "docs/adr/0005-schema-and-manifest-evolution.md", "docs/adr/0007-report-boundaries-and-privacy.md", "docs/adr/0008-loop-lifecycle-and-no-auto-merge.md"],
+  "migration": { "disposition": "backward-compatible", "note": "Existing targets preview and apply loop-sync once; sync adds missing machine runtime files and preserves all existing runtime data." },
+  "compatibility": { "impact": "additive", "note": "L1 stays report-only and L2 stays human-approved, worktree-isolated, verifier-gated, and no-auto-merge." }
+}

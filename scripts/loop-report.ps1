@@ -11,6 +11,8 @@ $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.LoopRuntime.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
@@ -48,6 +50,7 @@ function Add-FileStatus {
 
 $manifestPath = Join-Path $TargetRoot '.agent\loops\lizard-agent-layer.loop-install.json'
 $manifest = $null
+$runtime = $null
 if (Test-Path -LiteralPath $manifestPath) {
   try { $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json }
   catch { Add-Failure "Invalid loop manifest: $($_.Exception.Message)" }
@@ -61,6 +64,18 @@ if ($null -ne $manifest) {
   Add-FileStatus 'Budget' ([string]$manifest.budget_file)
   Add-FileStatus 'Run log' ([string]$manifest.run_log_file)
   Add-FileStatus 'Constraints' ([string]$manifest.constraints_file)
+  foreach ($entry in @(
+    @('Runtime budget', [string]$manifest.runtime_budget_file),
+    @('Runtime state', [string]$manifest.runtime_state_file),
+    @('Runtime events', [string]$manifest.runtime_events_file),
+    @('Runtime lease', [string]$manifest.runtime_lease_file)
+  )) { Add-FileStatus ([string]$entry[0]) ([string]$entry[1]) }
+  try {
+    $runtimeContext = Resolve-LizardLoopRuntimeContext -TargetPath $TargetRoot -Pattern ([string]$manifest.pattern)
+    $runtimeDocuments = Get-LizardLoopRuntimeDocuments -Context $runtimeContext
+    $runtimeChain = Test-LizardLoopEventChain -Context $runtimeContext
+    $runtime = [pscustomobject][ordered]@{ status = [string]$runtimeDocuments.state.status; active_run_id = $runtimeDocuments.state.active_run_id; state_revision = [int]$runtimeDocuments.state.revision; event_count = [int]$runtimeChain.count; event_head = $runtimeChain.last_hash; budget_window = $runtimeDocuments.state.budget_window; lease_status = [string]$runtimeDocuments.lease.status }
+  } catch { Add-Failure "Loop runtime rejected: $($_.Exception.Message)" }
   if (($manifest.PSObject.Properties.Name -contains 'worktree_policy_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.worktree_policy_file)) { Add-FileStatus 'Worktree policy' ([string]$manifest.worktree_policy_file) }
   if (($manifest.PSObject.Properties.Name -contains 'assisted_plan_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.assisted_plan_file)) { Add-FileStatus 'Assisted fix plan' ([string]$manifest.assisted_plan_file) }
   if (($manifest.PSObject.Properties.Name -contains 'verifier_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.verifier_file)) { Add-FileStatus 'Verifier report' ([string]$manifest.verifier_file) }
@@ -78,6 +93,7 @@ $report = [pscustomobject]@{
   verifier_file = if ($null -ne $manifest -and ($manifest.PSObject.Properties.Name -contains 'verifier_file')) { [string]$manifest.verifier_file } else { $null }
   skills = if ($null -ne $manifest) { @($manifest.skills) } else { @() }
   human_gates = if ($null -ne $manifest) { @($manifest.human_gates) } else { @() }
+  runtime = $runtime
   files = @($fileRows | ForEach-Object { [pscustomobject]@{ label = [string]$_.label; path = [string]$_.path; exists = [bool]$_.exists; heading = if ($null -ne $_.heading) { [string]$_.heading } else { $null } } })
   failures = @($failures)
 }
@@ -93,6 +109,10 @@ $lines += ('- Pattern: `{0}`' -f $report.pattern)
 $lines += ('- Layer version: `{0}`' -f $report.installed_layer_version)
 $lines += ('- Readiness: `{0}`' -f $report.readiness_level)
 $lines += ('- Risk: `{0}`' -f $report.risk_level)
+if ($runtime) {
+  $lines += ('- Runtime: `{0}`' -f $runtime.status)
+  $lines += ('- Runtime events: `{0}`' -f $runtime.event_count)
+}
 $lines += ''
 $lines += '## Files'
 $lines += ''

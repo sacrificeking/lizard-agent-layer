@@ -35,7 +35,7 @@
       "id": "loop-lifecycle",
       "adr": "docs/adr/0008-loop-lifecycle-and-no-auto-merge.md",
       "migration_required": true,
-      "paths": ["scripts/loop-*.ps1", "scripts/Lizard.LoopEvidence.psm1", "schemas/loop*.schema.json", "schemas/worktree-lifecycle.schema.json", "schemas/verifier-evidence.schema.json", "loops/*.json", "templates/loops/*", "skills/loop-*/*", "skills/worktree-isolation/*"]
+      "paths": ["scripts/loop-*.ps1", "scripts/Lizard.LoopEvidence.psm1", "scripts/Lizard.LoopRuntime.psm1", "schemas/loop*.schema.json", "schemas/worktree-lifecycle.schema.json", "schemas/verifier-evidence.schema.json", "loops/*.json", "templates/loops/*", "skills/loop-*/*", "skills/worktree-isolation/*"]
     },
     {
       "id": "schema-runtime",
