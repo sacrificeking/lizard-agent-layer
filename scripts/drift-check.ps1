@@ -18,7 +18,7 @@ $OutputDir = Initialize-SafeDirectory -Path $OutputDir
 function Get-RelativePath {
   param([string]$Path)
   $resolved = (Resolve-Path -LiteralPath $Path).Path
-  $resolved.Substring($LayerRoot.Length).TrimStart('\').Replace('\', '/')
+  $resolved.Substring($LayerRoot.Length).TrimStart([char[]]@('\', '/')).Replace('\', '/')
 }
 
 function Get-ArtifactKind {
