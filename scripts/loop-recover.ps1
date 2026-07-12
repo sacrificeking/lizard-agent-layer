@@ -29,7 +29,7 @@ Assert-PathOutsideRoot -Path $effectiveOutputDir -ExcludedRoot $context.target_r
 $effectiveOutputDir = Initialize-SafeDirectory -Path $effectiveOutputDir
 $documents = Get-LizardLoopRuntimeDocuments -Context $context
 $chain = Test-LizardLoopEventChain -Context $context
-$expires = if ([string]$documents.lease.status -eq 'active') { [DateTimeOffset]::Parse([string]$documents.lease.expires_at).UtcDateTime } else { $null }
+$expires = if ([string]$documents.lease.status -eq 'active') { ConvertTo-LizardLoopDateUtc -Value $documents.lease.expires_at -Code 'LOOP_LEASE_INVALID' } else { $null }
 $available = [string]$documents.lease.status -eq 'active' -and [string]$documents.lease.run_id -eq $RunId -and $expires -le $now
 if ($Apply -and -not $HumanApproved) { throw 'LOOP_RECOVERY_HUMAN_APPROVAL_REQUIRED: Recovery mutates authoritative state.' }
 if ($Apply -and -not $available) { throw 'LOOP_RECOVERY_NOT_AVAILABLE: The requested lease is absent, mismatched, or not stale.' }

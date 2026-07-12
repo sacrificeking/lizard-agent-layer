@@ -11,14 +11,26 @@ function New-LizardLoopRuntimeException {
   return $exception
 }
 
+function ConvertTo-LizardLoopDateUtc {
+  param($Value, [string]$Code = 'LOOP_CLOCK_INVALID')
+  if ($Value -is [DateTimeOffset]) { return ([DateTimeOffset]$Value).UtcDateTime }
+  if ($Value -is [DateTime]) {
+    $date = [DateTime]$Value
+    if ($date.Kind -eq [DateTimeKind]::Unspecified) { return [DateTime]::SpecifyKind($date, [DateTimeKind]::Utc) }
+    return $date.ToUniversalTime()
+  }
+  $parsed = [DateTimeOffset]::MinValue
+  $styles = [System.Globalization.DateTimeStyles]::RoundtripKind
+  if (-not [DateTimeOffset]::TryParse([string]$Value, [System.Globalization.CultureInfo]::InvariantCulture, $styles, [ref]$parsed)) {
+    throw (New-LizardLoopRuntimeException -Code $Code -Message "Timestamp is invalid: $Value")
+  }
+  return $parsed.UtcDateTime
+}
+
 function ConvertTo-LizardLoopUtc {
   param([string]$NowUtc)
   if ([string]::IsNullOrWhiteSpace($NowUtc)) { return (Get-Date).ToUniversalTime() }
-  $parsed = [DateTimeOffset]::MinValue
-  if (-not [DateTimeOffset]::TryParse($NowUtc, [ref]$parsed)) {
-    throw (New-LizardLoopRuntimeException -Code 'LOOP_CLOCK_INVALID' -Message "NowUtc is not a valid timestamp: $NowUtc")
-  }
-  return $parsed.UtcDateTime
+  return ConvertTo-LizardLoopDateUtc -Value $NowUtc -Code 'LOOP_CLOCK_INVALID'
 }
 
 function Read-LizardLoopJson {
@@ -120,7 +132,7 @@ function Test-LizardLoopEventChain {
       run_id = [string]$event.run_id
       pattern = [string]$event.pattern
       event_type = [string]$event.event_type
-      occurred_at = [string]$event.occurred_at
+      occurred_at = $event.occurred_at
       actor = [string]$event.actor
       item_id = if ($null -eq $event.item_id) { $null } else { [string]$event.item_id }
       tokens = [int]$event.tokens
@@ -184,7 +196,7 @@ function Reset-LizardLoopBudgetWindow {
 function Assert-LizardLoopLeaseAvailable {
   param($Lease, [DateTime]$Now)
   if ([string]$Lease.status -ne 'active') { return }
-  $expires = [DateTimeOffset]::Parse([string]$Lease.expires_at).UtcDateTime
+  $expires = ConvertTo-LizardLoopDateUtc -Value $Lease.expires_at -Code 'LOOP_LEASE_INVALID'
   if ($expires -le $Now) {
     throw (New-LizardLoopRuntimeException -Code 'LOOP_LEASE_STALE_RECOVERY_REQUIRED' -Message "Run '$($Lease.run_id)' owns a stale lease. Use loop-recover.ps1 with human approval.")
   }
@@ -303,7 +315,8 @@ function Invoke-LizardLoopRecovery {
   $state = $documents.state
   $lease = $documents.lease
   if ([string]$lease.status -ne 'active' -or [string]$lease.run_id -ne $RunId) { throw (New-LizardLoopRuntimeException -Code 'LOOP_RECOVERY_NOT_AVAILABLE' -Message "Run '$RunId' has no active lease.") }
-  if ([DateTimeOffset]::Parse([string]$lease.expires_at).UtcDateTime -gt $Now) { throw (New-LizardLoopRuntimeException -Code 'LOOP_LEASE_NOT_STALE' -Message "Lease remains active until $($lease.expires_at).") }
+  $leaseExpiresAt = ConvertTo-LizardLoopDateUtc -Value $lease.expires_at -Code 'LOOP_LEASE_INVALID'
+  if ($leaseExpiresAt -gt $Now) { throw (New-LizardLoopRuntimeException -Code 'LOOP_LEASE_NOT_STALE' -Message "Lease remains active until $($leaseExpiresAt.ToString('o')).") }
   $run = @($state.runs | Where-Object { [string]$_.run_id -eq $RunId } | Select-Object -First 1)
   if ($run.Count -eq 0 -or [string]$run[0].status -ne 'running') { throw (New-LizardLoopRuntimeException -Code 'LOOP_RECOVERY_STATE_INVALID' -Message 'Active lease has no matching running state.') }
   $run = $run[0]
@@ -319,7 +332,7 @@ function Invoke-LizardLoopRecovery {
   $state.status = if ([string]$item.status -eq 'blocked') { 'paused' } else { 'idle' }
   $lease.status = 'recovered'
   $lease.released_at = $Now.ToString('o')
-  $event = New-LizardLoopEvent -Context $Context -RunId $RunId -EventType 'recovered' -Now $Now -Actor $Actor -ItemId ([string]$run.item_id) -Tokens 0 -Details ([pscustomobject][ordered]@{ stale_since = [string]$lease.expires_at; human_approved = $true })
+  $event = New-LizardLoopEvent -Context $Context -RunId $RunId -EventType 'recovered' -Now $Now -Actor $Actor -ItemId ([string]$run.item_id) -Tokens 0 -Details ([pscustomobject][ordered]@{ stale_since = $leaseExpiresAt.ToString('o'); human_approved = $true })
   $transaction = Start-LizardTransaction -TargetRoot $Context.target_root -OperationName 'loop-run-recover' -FailAfterMutation $FailAfterMutation
   try {
     Set-LizardTransactionalContent -Path $Context.state_path -Value ($state | ConvertTo-Json -Depth 20)
@@ -335,7 +348,7 @@ function Invoke-LizardLoopRecovery {
 }
 
 Export-ModuleMember -Function @(
-  'ConvertTo-LizardLoopUtc', 'Get-LizardLoopRuntimeDocuments', 'Invoke-LizardLoopFinish',
+  'ConvertTo-LizardLoopDateUtc', 'ConvertTo-LizardLoopUtc', 'Get-LizardLoopRuntimeDocuments', 'Invoke-LizardLoopFinish',
   'Invoke-LizardLoopRecovery', 'Invoke-LizardLoopStart', 'Resolve-LizardLoopRuntimeContext',
   'Test-LizardLoopEventChain'
 )

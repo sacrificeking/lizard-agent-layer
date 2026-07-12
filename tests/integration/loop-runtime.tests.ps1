@@ -68,7 +68,7 @@ try {
   Assert-Equal 100 ([int]$state.budget_window.tokens_used) 'Start must reserve tokens once.'
   $held = Invoke-LoopRun $happy @('-Action', 'Start', '-RunId', 'run-2', '-ItemId', 'item-2', '-Owner', 'agent', '-TokenEstimate', '20', '-TestNowUtc', '2026-07-12T08:01:00Z', '-Apply')
   Assert-False ($held.exit_code -eq 0) 'A second active run must fail.'
-  Assert-True ($held.output -match 'LOOP_LEASE_HELD') 'Active lease failure must be explicit.'
+  Assert-True ($held.output -match 'LOOP_LEASE_HELD') "Active lease failure must be explicit. Output: $($held.output)"
   $complete = Invoke-LoopRun $happy @('-Action', 'Complete', '-RunId', 'run-1', '-Owner', 'cheap-agent', '-ActualTokens', '80', '-TestNowUtc', '2026-07-12T08:02:00Z', '-Apply')
   Assert-Equal 0 $complete.exit_code "Completion failed: $($complete.output)"
   $state = Get-Content -LiteralPath $paths.state -Raw | ConvertFrom-Json
@@ -136,7 +136,7 @@ try {
   Assert-Equal 0 (Invoke-LoopRun $recovery @('-Action', 'Start', '-RunId', 'crash-1', '-ItemId', 'item', '-Owner', 'agent', '-TokenEstimate', '10', '-TestNowUtc', '2026-07-12T08:00:00Z', '-Apply')).exit_code 'Crash fixture start must pass.'
   $stale = Invoke-LoopRun $recovery @('-Action', 'Start', '-RunId', 'crash-2', '-ItemId', 'other', '-Owner', 'agent', '-TokenEstimate', '10', '-TestNowUtc', '2026-07-12T09:00:00Z', '-Apply')
   Assert-False ($stale.exit_code -eq 0) 'Stale lease must fail closed.'
-  Assert-True ($stale.output -match 'LOOP_LEASE_STALE_RECOVERY_REQUIRED') 'Stale lease must require recovery.'
+  Assert-True ($stale.output -match 'LOOP_LEASE_STALE_RECOVERY_REQUIRED') "Stale lease must require recovery. Output: $($stale.output)"
   $previewRecovery = Invoke-TestPowerShell $recoverScript @('-LayerRoot', $RepoRoot, '-TargetPath', $recovery, '-RunId', 'crash-1', '-TestNowUtc', '2026-07-12T09:00:00Z', '-OutputDir', (Join-Path $fixture 'recover-preview'), '-Json')
   Assert-Equal 0 $previewRecovery.exit_code "Recovery preview failed: $($previewRecovery.output)"
   Assert-True ($previewRecovery.output -match 'recovery-available') 'Recovery preview must find stale lease.'
