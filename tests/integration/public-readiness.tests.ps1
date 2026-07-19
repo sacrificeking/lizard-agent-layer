@@ -40,12 +40,11 @@ try {
   $lockText = Get-Content -LiteralPath (Join-Path $LayerRoot 'package-lock.json') -Raw
   $changelog = Get-Content -LiteralPath (Join-Path $LayerRoot 'CHANGELOG.md') -Raw
   $escapedVersion = [regex]::Escape($version)
-  Assert-Equal '1.0.0' $version 'Public release version must be 1.0.0.'
+  Assert-True ($version -match '^[0-9]+\.[0-9]+\.[0-9]+$') 'Public release version must use semantic version format.'
   Assert-Equal $version ([string]$package.version) 'package.json version must match VERSION.'
   Assert-True ($lockText -match ('(?s)^\s*\{\s*"name"\s*:\s*"lizard-agent-layer-tooling"\s*,\s*"version"\s*:\s*"' + $escapedVersion + '"')) 'package-lock.json version must match VERSION.'
   Assert-True ($lockText -match ('(?s)"packages"\s*:\s*\{\s*""\s*:\s*\{\s*"name"\s*:\s*"lizard-agent-layer-tooling"\s*,\s*"version"\s*:\s*"' + $escapedVersion + '"')) 'Root lock package version must match VERSION.'
-  Assert-Equal 1 ([regex]::Matches($changelog, '(?m)^## [0-9]+\.[0-9]+\.[0-9]+')).Count 'Public changelog must contain exactly one release.'
-  Assert-True ($changelog -match '(?m)^## 1\.0\.0 - 2026-07-12\r?$') 'Public changelog must contain the 1.0.0 release.'
+  Assert-True ($changelog -match ('(?m)^## ' + $escapedVersion + ' - [0-9]{4}-[0-9]{2}-[0-9]{2}\r?$')) 'Public changelog must contain a dated entry for VERSION.'
 
   foreach ($removed in @(
     'AUDIT_FINDINGS_AND_IMPLEMENTATION_PLAN.md', 'docs/roadmap.md',
@@ -79,7 +78,7 @@ try {
 
   $manifestPath = Join-Path $existingTarget '.agent\lizard-agent-layer.install.json'
   $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-  Assert-Equal '1.0.0' ([string]$manifest.layer_version) 'Installed manifest must record public version 1.0.0.'
+  Assert-Equal $version ([string]$manifest.layer_version) 'Installed manifest must record the current public version.'
   Assert-True (@($manifest.harnesses) -contains 'github-copilot') 'Installed manifest must record the Copilot harness.'
 
   $doctor = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\doctor.ps1') -Arguments @('-TargetPath', $existingTarget, '-Strict')

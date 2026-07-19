@@ -7,6 +7,7 @@ Portable, preview-first agent infrastructure for repositories that use Codex, Cl
 ## Highlights
 
 - Multi-harness adapters for Codex, Claude Code, Gemini, Cursor, GitHub Copilot, and generic `AGENTS.md` tools.
+- Provider-neutral 10-80-10 staged execution that keeps the active model by default, with optional calibrated automatic routing.
 - Profiles for small repositories, normal product development, and high-risk React/Supabase/finance systems.
 - Reusable packs for frontend, design systems, Supabase, finance, security, agent runtimes, and loop engineering.
 - Preview-first installation and updates with explicit plans, ownership manifests, content hashes, and manual merge guidance.
@@ -28,6 +29,7 @@ lizard-agent-layer source repository
                          v
 target repository
   .agent/                  shared profile, memory, protocols, skills, manifest
+  .agent/routing/          staged policy and private receipts; optional Advanced runtime/inventory
   AGENTS.md                Codex or generic instructions
   CLAUDE.md                Claude Code instructions
   GEMINI.md                Gemini instructions
@@ -190,6 +192,7 @@ Dependency and toolchain versions are recorded in [Dependency And Toolchain Snap
 - [Architecture](docs/architecture.md)
 - [Architecture Decisions](docs/adr/README.md)
 - [Profiles](docs/profiles.md)
+- [Provider-Neutral Staged Execution](docs/staged-execution.md)
 - [Packs](docs/packs.md)
 - [Target Analysis](docs/target-analysis.md)
 - [Install Plans](docs/install-plans.md)

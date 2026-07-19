@@ -6,6 +6,7 @@
   "required": ["name", "provider", "bestFor", "limits"],
   "properties": {
     "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "deprecated": { "type": "boolean" },
     "provider": { "type": "string" },
     "bestFor": { "type": "array", "items": { "type": "string" } },
     "avoidFor": { "type": "array", "items": { "type": "string" } },

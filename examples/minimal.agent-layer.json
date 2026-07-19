@@ -6,10 +6,7 @@
   "riskLevel": "low",
   "memoryMode": "curated",
   "harnesses": ["generic-agents-md"],
-  "modelProfiles": {
-    "implementation": "gpt-5-codex",
-    "review": "claude-sonnet",
-    "research": "gemini-pro"
-  },
-  "skills": ["git-safety", "research-audit"]
+  "routingPolicy": "staged-balanced",
+  "modelMode": "inherit-current",
+  "skills": ["git-safety", "research-audit", "staged-execution"]
 }

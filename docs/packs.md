@@ -35,7 +35,7 @@ The installer merges pack values into the selected profile before it plans or ap
 - `stack`, `skills`, and `verification` are merged without duplicates.
 - `riskLevel` and `projectSize` are raised to the highest selected value.
 - `harnesses` from packs are added unless `-Harnesses` is explicitly provided.
-- `modelProfiles` are overlaid by pack-specific recommendations.
+- Legacy `modelProfiles` may be overlaid by custom packs, but are deprecated and built-in packs do not inject concrete models. Advanced routing uses a target-local automatic runtime plus fingerprint-matched calibrated inventory data.
 - `notes` are appended to the installed `.agent/project-profile.json`.
 - `packs` are recorded in the install manifest and plan report.
 

@@ -6,6 +6,8 @@ alwaysApply: true
 
 # Lizard Agent Layer for Cursor
 
-Read `.agent/project-profile.json`, curated memory, permissions, handoff protocol, and relevant `.agent/skills/*/SKILL.md` files before non-trivial work.
+Read `.agent/project-profile.json`, `.agent/routing/policy.json`, curated memory, permissions, staged-execution and handoff protocols, and relevant `.agent/skills/*/SKILL.md` files before non-trivial work. Keep the active model unless automatic inventory routing is explicitly configured.
 
-Do not push, deploy, migrate, install dependencies, change CI, or expose secrets without explicit approval. Preserve unrelated user changes. Update `.agent/memory/working/WORKSPACE.md` before handing off to another model.
+Separate strategy, execution, and a fresh verification pass. Treat routing as advisory in this adapter. Do not push, deploy, migrate, install dependencies, change CI, or expose secrets without explicit approval. Preserve unrelated user changes. Update `.agent/memory/working/WORKSPACE.md` before handing off to another model.
+
+Apply staged execution internally from the user's normal task prompt. Do not require routing commands, model-picker changes, or role selection.

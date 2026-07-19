@@ -1,6 +1,6 @@
 # Dependency And Toolchain Snapshot
 
-Snapshot date: 2026-07-12. This is a release-readiness record, not an automated update policy for target projects.
+Toolchain baseline reviewed: 2026-07-12. npm release verification refreshed: 2026-07-19. This is a release-readiness record, not an automated update policy for target projects.
 
 `lizard-agent-layer` has no runtime package dependency, application framework, telemetry SDK, database driver, cloud SDK, or production service. PowerShell and Git run the repository tooling. Node.js and the npm development packages are required only for executable JSON Schema validation and repository CI.
 
@@ -50,5 +50,6 @@ Review upstream release notes before changing a major version. For GitHub Action
 - Direct and transitive package licenses are permissive: MIT or BSD-3-Clause.
 - No install scripts are required by the dependency tree.
 - No package is used in installed target projects; target installation copies repository artifacts and does not run npm.
-- A live registry check on 2026-07-12 reported no outdated packages.
-- `npm audit` reported zero known vulnerabilities: 0 info, low, moderate, high, or critical findings.
+- A live registry check on 2026-07-19 reported no outdated packages.
+- A live `npm audit` on 2026-07-19 reported zero known vulnerabilities: 0 info, low, moderate, high, or critical findings.
+- `npm ci --ignore-scripts` completed successfully on 2026-07-19. The local review host used Node.js `25.6.1` and npm `11.9.0`; the supported release baseline remains the LTS runtime exercised by CI.

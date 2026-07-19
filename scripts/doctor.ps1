@@ -25,6 +25,20 @@ function Check-File {
   return $false
 }
 function Normalize-RelPath { param([string]$Path) return $Path.Replace('/', '\').TrimStart('\') }
+function Get-CostRank {
+  param([string]$Tier)
+  switch ($Tier) { 'local' { 0 } 'budget' { 1 } 'balanced' { 2 } 'premium' { 3 } 'frontier' { 4 } default { 99 } }
+}
+function Test-ContainsAll {
+  param($Available, $Required)
+  foreach ($item in @($Required)) { if (@($Available) -notcontains [string]$item) { return $false } }
+  return $true
+}
+function Get-RoleScore {
+  param($Model, [string]$Role)
+  if ($Model.evidence.role_scores -and $Model.evidence.role_scores.PSObject.Properties.Name -contains $Role) { return [double]$Model.evidence.role_scores.$Role }
+  return -1.0
+}
 
 Write-Host "lizard-agent-layer doctor"
 Write-Host "Target: $TargetRoot"
@@ -92,6 +106,9 @@ foreach ($file in @(
   '.agent\protocols\secret-handling.md',
   '.agent\protocols\release-gates.md',
   '.agent\protocols\handoff.md',
+  '.agent\protocols\staged-execution.md',
+  '.agent\protocols\context-hygiene.md',
+  '.agent\routing\policy.json',
   '.agent\skills\_index.md',
   '.agent\skills\_manifest.jsonl'
 )) {
@@ -99,6 +116,81 @@ foreach ($file in @(
 }
 
 if ($null -ne $profile) {
+  if ([string]::IsNullOrWhiteSpace([string]$profile.routingPolicy)) { Add-Fail 'project profile has no routingPolicy.' }
+  else {
+    $routingPolicyPath = Join-Path $TargetRoot '.agent\routing\policy.json'
+    if (Test-Path -LiteralPath $routingPolicyPath -PathType Leaf) {
+      try {
+        $routingPolicy = Get-Content -LiteralPath $routingPolicyPath -Raw | ConvertFrom-Json
+        if ([string]$routingPolicy.name -ne [string]$profile.routingPolicy) { Add-Fail "routing policy '$($routingPolicy.name)' does not match profile '$($profile.routingPolicy)'." }
+        else { Add-Ok "routing policy loaded: $($routingPolicy.name)" }
+      } catch { Add-Fail "routing policy is invalid JSON: $($_.Exception.Message)" }
+    }
+  }
+  $modelMode = if ($profile.PSObject.Properties.Name -contains 'modelMode') { [string]$profile.modelMode } else { 'inherit-current' }
+  if ($modelMode -eq 'inherit-current') {
+    Add-Ok 'model mode inherit-current: no model picker change is required.'
+  } elseif ($modelMode -eq 'inventory-routing') {
+    $inventoryRelative = if ($profile.PSObject.Properties.Name -contains 'modelInventory' -and -not [string]::IsNullOrWhiteSpace([string]$profile.modelInventory)) { [string]$profile.modelInventory } else { '.agent/routing/inventory.json' }
+    $runtimeRelative = if ($profile.PSObject.Properties.Name -contains 'modelRuntime' -and -not [string]::IsNullOrWhiteSpace([string]$profile.modelRuntime)) { [string]$profile.modelRuntime } else { '.agent/routing/runtime.json' }
+    try {
+      $inventoryPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $inventoryRelative.Replace('/', '\'))
+      $runtimePath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $runtimeRelative.Replace('/', '\'))
+      if (-not (Test-Path -LiteralPath $inventoryPath -PathType Leaf)) { throw "inventory-routing requires $inventoryRelative." }
+      if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf)) { throw "inventory-routing requires $runtimeRelative." }
+      $runtime = Get-Content -LiteralPath $runtimePath -Raw | ConvertFrom-Json
+      if ([string]$runtime.status -ne 'ready') { Add-Fail 'routing runtime status is not ready.' }
+      if ([string]$runtime.selection -notin @('subagent', 'per-call')) { Add-Fail 'routing runtime lacks automatic selection.' }
+      if ($runtime.actual_model_reporting -ne $true) { Add-Fail 'routing runtime cannot report actual model identity.' }
+      if ([string]$runtime.attestation -notin @('observed', 'attested')) { Add-Fail 'routing runtime attestation is insufficient.' }
+      if ([string]::IsNullOrWhiteSpace([string]$runtime.configuration_fingerprint)) { Add-Fail 'routing runtime configuration fingerprint is missing.' }
+      if ([DateTimeOffset]::Parse([string]$runtime.expires_at) -le [DateTimeOffset]::UtcNow) { Add-Fail 'routing runtime capability evidence has expired.' }
+      $missingHarnesses = @($harnesses | Where-Object { @($runtime.harnesses) -notcontains $_ })
+      if ($missingHarnesses.Count -gt 0) { Add-Fail "routing runtime does not cover installed harnesses: $($missingHarnesses -join ', ')." }
+      else { Add-Ok "automatic runtime $($runtime.executor_id): $($runtime.selection), harnesses $($harnesses -join ', ')" }
+
+      $inventory = Get-Content -LiteralPath $inventoryPath -Raw | ConvertFrom-Json
+      $duplicateIds = @($inventory.models | Group-Object { [string]$_.id } | Where-Object { $_.Count -gt 1 })
+      if ($duplicateIds.Count -gt 0) { Add-Fail "model inventory contains duplicate id '$([string]$duplicateIds[0].Name)'." }
+      $eligible = @($inventory.models | Where-Object {
+        $_.available -eq $true -and $_.approved -eq $true -and [string]$_.evidence.state -eq 'calibrated' -and
+        [string]$_.evidence.configuration_fingerprint -eq [string]$runtime.configuration_fingerprint -and
+        $_.evidence.expires_at -and ([DateTimeOffset]::Parse([string]$_.evidence.expires_at) -gt [DateTimeOffset]::UtcNow)
+      })
+      if ($eligible.Count -eq 0) { Add-Fail 'model inventory has no available, approved, non-expired calibrated model matching the runtime fingerprint.' }
+      else { Add-Ok "eligible calibrated inventory models: $($eligible.Count)" }
+
+      if ($null -ne $routingPolicy) {
+        foreach ($route in @($routingPolicy.routes)) {
+          $missingDataClasses = New-Object System.Collections.Generic.List[string]
+          foreach ($routeDataClass in @($route.data_classes)) {
+            $covered = $false
+            foreach ($role in @($route.candidate_roles) + @($route.fallback_roles)) {
+              foreach ($candidate in @($eligible)) {
+                if (@($candidate.allowed_data_classes) -notcontains [string]$routeDataClass) { continue }
+                if (-not (Test-ContainsAll -Available @($candidate.capabilities) -Required @($route.required_capabilities))) { continue }
+                if ((Get-CostRank ([string]$candidate.cost_tier)) -gt (Get-CostRank ([string]$route.max_cost_tier))) { continue }
+                if ((Get-RoleScore -Model $candidate -Role ([string]$role)) -lt [double]$routingPolicy.model_selection.minimum_role_score) { continue }
+                $covered = $true
+                break
+              }
+              if ($covered) { break }
+            }
+            if (-not $covered) { $missingDataClasses.Add([string]$routeDataClass) | Out-Null }
+          }
+          if ($missingDataClasses.Count -gt 0) { Add-Fail "route readiness $($route.id) missing data classes: $($missingDataClasses -join ', ')." }
+          else { Add-Ok "route readiness: $($route.id)" }
+        }
+      }
+    } catch { Add-Fail "inventory routing readiness is invalid: $($_.Exception.Message)" }
+  } else {
+    Add-Fail "unsupported modelMode '$modelMode'."
+  }
+  $boundModelProfiles = if ($profile.PSObject.Properties.Name -contains 'modelProfiles' -and $null -ne $profile.modelProfiles) { @($profile.modelProfiles.PSObject.Properties | ForEach-Object { [string]$_.Value } | Sort-Object -Unique) } else { @() }
+  if ($boundModelProfiles.Count -gt 0) { Add-Ok 'legacy modelProfiles bindings are readable but deprecated; migrate to modelInventory and modelRuntime.' }
+  foreach ($modelProfile in $boundModelProfiles) {
+    Check-File ".agent\routing\models\$modelProfile.json" -Required | Out-Null
+  }
   foreach ($skill in @($profile.skills)) {
     Check-File ".agent\skills\$skill\SKILL.md" -Required | Out-Null
   }

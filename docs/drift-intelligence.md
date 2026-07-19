@@ -13,6 +13,7 @@ The drift baseline tracks files under:
 - `protocols/`
 - `profiles/`
 - `model-profiles/`
+- `routing-policies/`
 - `packs/`
 - `registry/`, excluding `registry/drift-baseline.json`
 - `schemas/`

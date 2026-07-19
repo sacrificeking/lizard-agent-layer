@@ -10,9 +10,11 @@
    - project size, stack, risk level, memory mode, selected skills, harnesses, model roles
 3. Adapter layer
    - Codex, Claude Code, Gemini, Cursor, or generic AGENTS.md wiring
-4. Model profile layer
-   - suggested model roles such as implementer, reviewer, researcher, and low-risk assistant
-5. Project layer
+4. Legacy model profile compatibility layer
+   - deprecated concrete role mappings retained only for existing custom profiles
+5. Staged execution layer
+   - provider-neutral strategy, execution, verification, escalation, and receipt contracts; active-model default
+6. Project layer
    - target-local memory, decisions, lessons, handoff state, and permissions
 
 ## Principle
@@ -26,6 +28,12 @@ A target project may receive:
 ```text
 .agent/
   project-profile.json
+  routing/
+    policy.json
+    receipts/                    # private runtime metadata
+    inventory.json               # optional, target-owned Advanced mode
+    runtime.json                 # optional, automatic executor capability
+    calibration/                 # optional, metadata-only promotion audit
   lizard-agent-layer.install.json
   .gitignore
   memory/
@@ -66,6 +74,8 @@ Use curated memory by default:
 ## Multi-model handoff
 
 Every harness should read the same `.agent/` core. Before a task moves between models, the active agent updates `.agent/memory/working/WORKSPACE.md` using `.agent/protocols/handoff.md`.
+
+Staged execution uses logical responsibilities rather than provider names. The portable default keeps the active harness model. Automatic model routing requires a target runtime capability, fingerprint-matched calibrated inventory, and separate execution attestation. See [Provider-Neutral Staged Execution](staged-execution.md).
 
 ## Upgrade stance
 

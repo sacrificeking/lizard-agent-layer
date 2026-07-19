@@ -99,6 +99,8 @@ Before running the installer, present:
 | Risk |  |  |
 | Harnesses |  |  |
 | Packs |  |  |
+| Routing policy |  |  |
+| Model mode | `inherit-current` | Do not enable inventory routing without an attesting automatic runtime, actual-model reporting, and fingerprint-matched calibration. |
 | Memory mode |  |  |
 | Automation |  |  |
 | Prohibited capabilities |  |  |
@@ -110,7 +112,7 @@ Ask the user to correct this record. Do not infer approval from silence.
 Build the command with the confirmed values:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -WritePlan
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -RoutingPolicy <routing-policy> -ModelMode inherit-current -WritePlan
 ```
 
 Omit `-Packs` when none were selected. Review the console output and plan report. If existing instruction files require integration, generate metadata-only merge suggestions:
@@ -130,7 +132,7 @@ Ask:
 Only an explicit approval permits:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -Apply
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -RoutingPolicy <routing-policy> -ModelMode inherit-current -Apply
 ```
 
 Do not add `-Force` or `-ForceManaged` during initial installation.

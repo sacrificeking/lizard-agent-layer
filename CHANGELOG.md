@@ -2,6 +2,18 @@
 
 All notable public changes to lizard-agent-layer are documented here.
 
+## Unreleased
+
+## 1.1.0 - 2026-07-19
+
+### Added
+
+- Provider-neutral 10-80-10 staged execution that uses the active harness model without picker interruptions.
+- Optional automatic inventory routing for arbitrary providers, gated by a target runtime contract, complete route coverage, and fingerprint-bound calibrated evidence.
+- Separate route-decision and attested execution receipts, preview-first model calibration, secret blocking, escalation signals, fresh verification, protocols, schemas, and a reusable staged-execution skill.
+- Deprecation warnings for legacy `modelProfiles`; built-in profiles remain provider-neutral and use `inherit-current`.
+- Beginner-oriented daily-use guidance and routing output with explicit ready, pause, and blocked next actions; blocked work no longer appears to recommend an active model.
+
 ## 1.0.0 - 2026-07-12
 
 Initial public release.

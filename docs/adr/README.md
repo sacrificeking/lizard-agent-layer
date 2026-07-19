@@ -10,3 +10,4 @@ ADRs record durable contracts that implementations and migrations must preserve.
 - [0006 Transaction and recovery semantics](0006-transaction-and-recovery-semantics.md)
 - [0007 Report boundaries and privacy](0007-report-boundaries-and-privacy.md)
 - [0008 Loop lifecycle and no auto-merge](0008-loop-lifecycle-and-no-auto-merge.md)
+- [0009 Provider-neutral staged execution](0009-provider-neutral-staged-routing.md)

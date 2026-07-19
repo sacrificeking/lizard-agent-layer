@@ -4,6 +4,11 @@
   [string]$Profile,
   [string[]]$Harnesses,
   [string[]]$Packs,
+  [string]$RoutingPolicy,
+  [ValidateSet('inherit-current', 'inventory-routing')]
+  [string]$ModelMode,
+  [string]$ModelInventory,
+  [string]$ModelRuntime,
   [switch]$Apply,
   [switch]$ForceManaged,
   [switch]$Json,
@@ -69,6 +74,10 @@ function Format-CommandLine {
   if (-not [string]::IsNullOrWhiteSpace($SelectedProfile)) { $parts.Add(('-Profile {0}' -f $SelectedProfile)) | Out-Null }
   if ($SelectedHarnesses.Count -gt 0) { $parts.Add(('-Harnesses {0}' -f ($SelectedHarnesses -join ','))) | Out-Null }
   if ($SelectedPacks.Count -gt 0) { $parts.Add(('-Packs {0}' -f ($SelectedPacks -join ','))) | Out-Null }
+  if (-not [string]::IsNullOrWhiteSpace($SelectedRoutingPolicy)) { $parts.Add(('-RoutingPolicy {0}' -f $SelectedRoutingPolicy)) | Out-Null }
+  if (-not [string]::IsNullOrWhiteSpace($SelectedModelMode)) { $parts.Add(('-ModelMode {0}' -f $SelectedModelMode)) | Out-Null }
+  if (-not [string]::IsNullOrWhiteSpace($SelectedModelInventory)) { $parts.Add(('-ModelInventory "{0}"' -f $SelectedModelInventory)) | Out-Null }
+  if (-not [string]::IsNullOrWhiteSpace($SelectedModelRuntime)) { $parts.Add(('-ModelRuntime "{0}"' -f $SelectedModelRuntime)) | Out-Null }
   if ($AsApply) { $parts.Add('-Apply') | Out-Null }
   if ($AsForce) { $parts.Add('-ForceManaged') | Out-Null }
   if ($AllowDowngrade) { $parts.Add('-AllowDowngrade') | Out-Null }
@@ -127,6 +136,11 @@ function New-UpdatePlanMarkdown {
   $lines.Add(('- Harnesses: `{0}`' -f (Format-ListValue $SelectedHarnesses))) | Out-Null
   $lines.Add(('- Requested packs: `{0}`' -f (Format-ListValue $SelectedPacks))) | Out-Null
   $lines.Add(('- Installed expanded packs: `{0}`' -f (Format-ListValue $InstalledExpandedPacks))) | Out-Null
+  $lines.Add(('- Routing policy: `{0}`' -f $SelectedRoutingPolicy)) | Out-Null
+  $lines.Add(('- Model mode: `{0}`' -f $SelectedModelMode)) | Out-Null
+  $lines.Add(('- Daily use: {0}' -f $(if ($SelectedModelMode -eq 'inherit-current') { 'Submit ordinary task prompts; the active IDE model completes all stages without picker changes.' } else { 'Submit ordinary task prompts; the configured automatic runtime selects models without manual picker changes.' }))) | Out-Null
+  if ($SelectedModelInventory) { $lines.Add(('- Model inventory: `{0}`' -f $SelectedModelInventory)) | Out-Null }
+  if ($SelectedModelRuntime) { $lines.Add(('- Model runtime: `{0}`' -f $SelectedModelRuntime)) | Out-Null }
   $lines.Add(('- Force managed files: `{0}`' -f $ForceManaged.IsPresent)) | Out-Null
   $lines.Add(('- Downgrade approved: `{0}`' -f ($AllowDowngrade -and $HumanApproved))) | Out-Null
   $lines.Add(('- Manifest diff status: `{0}`' -f $DiffReport.status)) | Out-Null
@@ -225,6 +239,11 @@ try { $null = [Version]$InstalledVersion } catch { throw "VERSION_FORMAT_INVALID
 $SelectedProfile = if (-not [string]::IsNullOrWhiteSpace($Profile)) { $Profile } elseif ($Manifest.profile) { [string]$Manifest.profile } elseif ($ProfileDoc.profile) { [string]$ProfileDoc.profile } else { 'standard' }
 $SelectedHarnesses = if ($Harnesses -and $Harnesses.Count -gt 0) { Expand-ValueList $Harnesses } elseif ($Manifest.harnesses) { Expand-ValueList $Manifest.harnesses } elseif ($ProfileDoc.harnesses) { Expand-ValueList $ProfileDoc.harnesses } else { @() }
 $SelectedPacks = if ($Packs -and $Packs.Count -gt 0) { Expand-ValueList $Packs } elseif ($Manifest.requested_packs) { Expand-ValueList $Manifest.requested_packs } elseif ($ProfileDoc.requestedPacks) { Expand-ValueList $ProfileDoc.requestedPacks } elseif ($Manifest.packs) { Expand-ValueList $Manifest.packs } else { @() }
+$SelectedRoutingPolicy = if (-not [string]::IsNullOrWhiteSpace($RoutingPolicy)) { $RoutingPolicy.Trim() } elseif ($Manifest.routing_policy) { [string]$Manifest.routing_policy } elseif ($ProfileDoc.routingPolicy) { [string]$ProfileDoc.routingPolicy } else { 'staged-balanced' }
+if ($SelectedRoutingPolicy -notmatch '^[a-z0-9][a-z0-9-]{0,62}$') { throw "Invalid routing policy '$SelectedRoutingPolicy'." }
+$SelectedModelMode = if (-not [string]::IsNullOrWhiteSpace($ModelMode)) { $ModelMode } elseif ($Manifest.model_mode) { [string]$Manifest.model_mode } elseif ($ProfileDoc.modelMode) { [string]$ProfileDoc.modelMode } else { 'inherit-current' }
+$SelectedModelInventory = if (-not [string]::IsNullOrWhiteSpace($ModelInventory)) { $ModelInventory.Trim() } elseif ($Manifest.model_inventory) { [string]$Manifest.model_inventory } elseif ($ProfileDoc.modelInventory) { [string]$ProfileDoc.modelInventory } else { $null }
+$SelectedModelRuntime = if (-not [string]::IsNullOrWhiteSpace($ModelRuntime)) { $ModelRuntime.Trim() } elseif ($Manifest.model_runtime) { [string]$Manifest.model_runtime } elseif ($ProfileDoc.modelRuntime) { [string]$ProfileDoc.modelRuntime } else { $null }
 $InstalledExpandedPacks = if ($Manifest.packs) { Expand-ValueList $Manifest.packs } else { @() }
 $SelectedHarnesses = @($SelectedHarnesses | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
 $SelectedPacks = @($SelectedPacks | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
@@ -274,6 +293,10 @@ if ($Apply) {
     )
     if ($SelectedHarnesses.Count -gt 0) { $installArgs += '-Harnesses'; $installArgs += ($SelectedHarnesses -join ',') }
     if ($SelectedPacks.Count -gt 0) { $installArgs += '-Packs'; $installArgs += ($SelectedPacks -join ',') }
+    $installArgs += '-RoutingPolicy'; $installArgs += $SelectedRoutingPolicy
+    $installArgs += '-ModelMode'; $installArgs += $SelectedModelMode
+    if ($SelectedModelInventory) { $installArgs += '-ModelInventory'; $installArgs += $SelectedModelInventory }
+    if ($SelectedModelRuntime) { $installArgs += '-ModelRuntime'; $installArgs += $SelectedModelRuntime }
     if ($ForceManaged) { $installArgs += '-ForceManaged' }
     if ($TestFailAfterMutation -gt 0) { $installArgs += '-TestFailAfterMutation'; $installArgs += [string]$TestFailAfterMutation }
     $global:LASTEXITCODE = 0
@@ -295,6 +318,10 @@ if ($Apply) {
       profile = $SelectedProfile
       requested_packs = @($SelectedPacks)
       harnesses = @($SelectedHarnesses)
+      routing_policy = $SelectedRoutingPolicy
+      model_mode = $SelectedModelMode
+      model_inventory = $SelectedModelInventory
+      model_runtime = $SelectedModelRuntime
       force_managed = $ForceManaged.IsPresent
       allow_downgrade = $AllowDowngrade.IsPresent
       human_approved = $HumanApproved.IsPresent
@@ -332,6 +359,10 @@ $report = [ordered]@{
   profile = $SelectedProfile
   harnesses = @($SelectedHarnesses)
   requested_packs = @($SelectedPacks)
+  routing_policy = $SelectedRoutingPolicy
+  model_mode = $SelectedModelMode
+  model_inventory = $SelectedModelInventory
+  model_runtime = $SelectedModelRuntime
   installed_expanded_packs = @($InstalledExpandedPacks)
   force_managed = $ForceManaged.IsPresent
   allow_downgrade = $AllowDowngrade.IsPresent
@@ -359,6 +390,10 @@ Write-Status "Version relation: $VersionRelation"
 Write-Status "Profile: $SelectedProfile"
 Write-Status "Harnesses: $(Format-ListValue $SelectedHarnesses)"
 Write-Status "Requested packs: $(Format-ListValue $SelectedPacks)"
+Write-Status "Routing policy: $SelectedRoutingPolicy"
+Write-Status "Model mode: $SelectedModelMode"
+Write-Status "Daily use: $(if ($SelectedModelMode -eq 'inherit-current') { 'Submit normal task prompts; keep the current IDE model.' } else { 'Submit normal task prompts; the configured runtime selects models automatically.' })"
+if ($SelectedModelRuntime) { Write-Status "Model runtime: $SelectedModelRuntime" }
 Write-Status "Manifest diff: $($preDiff.status) ($($preDiff.summary.differences) differences)"
 Write-Status "Update plan: $effectivePlanPath"
 Write-Status "Report: $reportPath"

@@ -9,5 +9,15 @@
   },
   "skillMirrors": [
     { "dst": ".gemini/skills", "description": "Gemini-local skill mirror for projects that read skill folders." }
-  ]
+  ],
+  "routingCapabilities": {
+    "policyMode": "advisory",
+    "nativeDelegation": false,
+    "modelPinning": false,
+    "modelDiscovery": "none",
+    "modelSelection": "inherit-current",
+    "actualModelReporting": false,
+    "receiptCapture": false,
+    "notes": "The portable layer provides routing guidance without assuming a specific Gemini runtime configuration."
+  }
 }

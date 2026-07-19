@@ -8,3 +8,9 @@ flywheel/**
 *.log
 .index/
 .index/**
+routing/receipts/
+routing/inventory.json
+routing/runtime.json
+routing/calibration/
+routing/evaluations/
+routing/receipts/**

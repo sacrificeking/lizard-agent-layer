@@ -82,6 +82,17 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'model-profiles') -Filter '*.js
   if ($model.name) { $modelNames.Add($model.name) | Out-Null }
 }
 
+$routingPolicyNames = New-Object System.Collections.Generic.HashSet[string]
+Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'routing-policies') -Filter '*.json' -File -ErrorAction SilentlyContinue | ForEach-Object {
+  $policy = Read-JsonFile $_.FullName
+  if ($null -eq $policy) { return }
+  $expectedName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
+  if ([string]$policy.name -ne $expectedName) { Fail "Routing policy $($_.Name) name '$($policy.name)' does not match filename." }
+  $phaseTotal = [double]$policy.phase_budget.strategy + [double]$policy.phase_budget.execution + [double]$policy.phase_budget.verification
+  if ([Math]::Abs($phaseTotal - 1.0) -gt 0.000001) { Fail "Routing policy $($_.Name) phase budget must sum to 1.0, got $phaseTotal." }
+  if ($policy.name) { $routingPolicyNames.Add([string]$policy.name) | Out-Null }
+}
+
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'profiles') -Filter '*.json' -File | ForEach-Object {
   $profile = Read-JsonFile $_.FullName
   if ($null -eq $profile) { return }
@@ -103,6 +114,9 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'profiles') -Filter '*.json' -F
       if (-not $modelNames.Contains([string]$prop.Value)) { Fail "Profile $($_.Name) references missing model profile '$($prop.Value)' for '$($prop.Name)'." }
     }
   }
+  if ([string]::IsNullOrWhiteSpace([string]$profile.routingPolicy)) { Fail "Profile $($_.Name) missing routingPolicy." }
+  elseif (-not $routingPolicyNames.Contains([string]$profile.routingPolicy)) { Fail "Profile $($_.Name) references missing routing policy '$($profile.routingPolicy)'." }
+  if ([string]$profile.modelMode -notin @('inherit-current', 'inventory-routing')) { Fail "Profile $($_.Name) must declare modelMode inherit-current or inventory-routing." }
 }
 
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'examples') -Filter '*.json' -File -ErrorAction SilentlyContinue | ForEach-Object {
@@ -219,6 +233,12 @@ $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\lizard-agent-layer.schema.j
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\adapter.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\install-manifest.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-profile.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\routing-policy.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-inventory.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-evaluation.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\routing-runtime.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\route-receipt.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\execution-receipt.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\quality-registry.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\maturity-levels.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\pack.schema.json')
@@ -282,14 +302,14 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory | ForEach-
   if ([string]::IsNullOrWhiteSpace($values['description'])) { Fail "Skill '$folderName' has empty description." }
 }
 
-foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'contract-check.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1', 'manifest-diff.ps1', 'update-target.ps1', 'transaction-recover.ps1', 'loop-init.ps1', 'loop-audit.ps1', 'loop-report.ps1', 'loop-sync.ps1', 'loop-cost.ps1', 'loop-worktree.ps1', 'loop-verify.ps1', 'loop-worktree-cleanup.ps1')) {
+foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'contract-check.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1', 'manifest-diff.ps1', 'update-target.ps1', 'transaction-recover.ps1', 'route-task.ps1', 'record-execution.ps1', 'calibrate-model.ps1', 'loop-init.ps1', 'loop-audit.ps1', 'loop-report.ps1', 'loop-sync.ps1', 'loop-cost.ps1', 'loop-worktree.ps1', 'loop-verify.ps1', 'loop-worktree-cleanup.ps1')) {
   $path = Join-Path $LayerRoot "scripts\$script"
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing script $script."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }
   catch { Fail "PowerShell parse failure in ${script}: $($_.Exception.Message)" }
 }
 
-foreach ($relative in @('scripts\Lizard.SafeFs.psm1', 'scripts\Lizard.Manifest.psm1', 'scripts\Lizard.Host.psm1', 'scripts\Lizard.Transaction.psm1', 'scripts\Lizard.LoopEvidence.psm1', 'scripts\Lizard.QualityEvidence.psm1', 'tests\TestHelpers.psm1', 'tests\run-focused.ps1', 'tests\unit\safe-fs.tests.ps1', 'tests\unit\host.tests.ps1', 'tests\integration\manifest-v3.tests.ps1', 'tests\integration\transaction.tests.ps1', 'tests\adversarial\install-containment.tests.ps1', 'tests\adversarial\report-privacy.tests.ps1', 'tests\adversarial\quality-evidence.tests.ps1', 'tests\adversarial\contract-governance.tests.ps1', 'tests\adversarial\version-gates.tests.ps1', 'tests\adversarial\loop-evidence.tests.ps1')) {
+foreach ($relative in @('scripts\Lizard.SafeFs.psm1', 'scripts\Lizard.Manifest.psm1', 'scripts\Lizard.Host.psm1', 'scripts\Lizard.Transaction.psm1', 'scripts\Lizard.LoopEvidence.psm1', 'scripts\Lizard.QualityEvidence.psm1', 'tests\TestHelpers.psm1', 'tests\run-focused.ps1', 'tests\unit\safe-fs.tests.ps1', 'tests\unit\host.tests.ps1', 'tests\integration\manifest-v3.tests.ps1', 'tests\integration\transaction.tests.ps1', 'tests\integration\model-routing.tests.ps1', 'tests\adversarial\install-containment.tests.ps1', 'tests\adversarial\report-privacy.tests.ps1', 'tests\adversarial\quality-evidence.tests.ps1', 'tests\adversarial\contract-governance.tests.ps1', 'tests\adversarial\version-gates.tests.ps1', 'tests\adversarial\loop-evidence.tests.ps1')) {
   $path = Join-Path $LayerRoot $relative
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing safety artifact $relative."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "evaluation_id": "fixture-evaluation-v1",
+  "model_id": "future-model/arbitrary-id@1",
+  "provider": "example-provider",
+  "suite": "portable-role-eval-v1",
+  "evaluated_at": "2026-07-19T12:00:00Z",
+  "expires_at": "2027-07-19T12:00:00Z",
+  "executor_id": "fixture/runtime-v1",
+  "configuration_fingerprint": "fixture-runtime-config-v1",
+  "attestation": "observed",
+  "cases": [
+    { "id": "implementation-1", "role": "standardExecutor", "score": 0.82, "passed": true, "evidence_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+    { "id": "implementation-2", "role": "standardExecutor", "score": 0.86, "passed": true, "evidence_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }
+  ],
+  "raw_prompts_stored": false
+}

@@ -1,118 +1,118 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-07-12T14:28:18.1089405Z",
-    "layer_version":  "1.0.0",
-    "artifact_count":  106,
-    "total_bytes":  117910,
-    "token_estimate":  29517,
+    "generated_at":  "2026-07-19T12:53:48.5095235Z",
+    "layer_version":  "1.1.0",
+    "artifact_count":  116,
+    "total_bytes":  154735,
+    "token_estimate":  38727,
     "artifacts":  [
                       {
                           "kind":  "adapter",
                           "path":  "adapters/claude-code/adapter.json",
-                          "sha256":  "4627a59e98a84e1cfb5a956c396183dfb537bf225b3092803de8ecb03863a5d3",
-                          "bytes":  426,
-                          "lines":  14,
-                          "words":  42,
-                          "token_estimate":  107
+                          "sha256":  "bc9d0dc5a5fdbbb486e25acfc5c836d44e00c84111dc31430b9f689ada189ba6",
+                          "bytes":  804,
+                          "lines":  24,
+                          "words":  74,
+                          "token_estimate":  201
                       },
                       {
                           "kind":  "adapter",
                           "path":  "adapters/claude-code/CLAUDE.lizard.md",
-                          "sha256":  "2c20b2fd58c57a46d88f6e4c9199ace9466c22d960f65eebbb1ae35617f5daf2",
-                          "bytes":  1156,
-                          "lines":  25,
-                          "words":  146,
-                          "token_estimate":  289
+                          "sha256":  "726041405338097ede0a582595c098f319db820ca813404e910ed6360c2cb283",
+                          "bytes":  1722,
+                          "lines":  29,
+                          "words":  219,
+                          "token_estimate":  431
                       },
                       {
                           "kind":  "adapter",
                           "path":  "adapters/codex/adapter.json",
-                          "sha256":  "a0e20169ca2e12dd205e776598065e19e63607d6f7909109f6d2839de9fdf06b",
-                          "bytes":  472,
-                          "lines":  18,
-                          "words":  44,
-                          "token_estimate":  118
+                          "sha256":  "6050f76bd2f55bf159ea84b15e7d1b38bb4d068067ce3300f62187ef3a9ad31c",
+                          "bytes":  884,
+                          "lines":  28,
+                          "words":  80,
+                          "token_estimate":  221
                       },
                       {
                           "kind":  "adapter",
                           "path":  "adapters/codex/AGENTS.lizard.md",
-                          "sha256":  "6f345385ec832f55af2c747a5ee3fe82ac9344e4dbb7ad6a02f12994e2c036b0",
-                          "bytes":  975,
-                          "lines":  24,
-                          "words":  124,
-                          "token_estimate":  244
+                          "sha256":  "477316276d6080e773d3a1c25bdc4f4c74b29e0b2a81670b4551ed6c794feac9",
+                          "bytes":  1902,
+                          "lines":  34,
+                          "words":  258,
+                          "token_estimate":  476
                       },
                       {
                           "kind":  "adapter",
                           "path":  "adapters/cursor/adapter.json",
-                          "sha256":  "6f95498e40129346bbf56ee98ffc62dcdec4d7108b554ee35d6652b5c32ecb45",
-                          "bytes":  434,
-                          "lines":  14,
-                          "words":  37,
-                          "token_estimate":  109
+                          "sha256":  "316084cb3293ac09208038e00bad16b62943cbcc9fcf564e2ac56c0eb9611a42",
+                          "bytes":  688,
+                          "lines":  23,
+                          "words":  54,
+                          "token_estimate":  172
                       },
                       {
                           "kind":  "adapter",
                           "path":  "adapters/cursor/lizard-agent-layer.mdc",
-                          "sha256":  "4cdac8c86fbb8928b22797b09696bf3a75d76bf3d8bd67d8c004d1aaf44afca9",
-                          "bytes":  552,
-                          "lines":  12,
-                          "words":  65,
-                          "token_estimate":  138
+                          "sha256":  "e16f65c8ef121e5a29a8144b3c3f16c317407fe051836adce4cb76ae0e73a7b4",
+                          "bytes":  936,
+                          "lines":  14,
+                          "words":  114,
+                          "token_estimate":  234
                       },
                       {
                           "kind":  "adapter",
                           "path":  "adapters/gemini/adapter.json",
-                          "sha256":  "211da98bc4680d9068d0432fa0f6cd5db53ed5e743d03e875bc7b8d12d522647",
-                          "bytes":  411,
-                          "lines":  14,
-                          "words":  41,
-                          "token_estimate":  103
+                          "sha256":  "a31998a4e5b7c917da40102ad8cb15702dfc645fafa75c22aba4657a340aea6e",
+                          "bytes":  784,
+                          "lines":  24,
+                          "words":  72,
+                          "token_estimate":  196
                       },
                       {
                           "kind":  "adapter",
                           "path":  "adapters/gemini/GEMINI.lizard.md",
-                          "sha256":  "72fda299373f455632420c6f6fa8a98c392384a890960e3134ce24dc1f6509e6",
-                          "bytes":  940,
-                          "lines":  21,
-                          "words":  114,
-                          "token_estimate":  235
+                          "sha256":  "3d15a6044c60850de5e6a4f5b5a044401bf7e8fa5a950ecc43459c1547ae06d1",
+                          "bytes":  1515,
+                          "lines":  25,
+                          "words":  189,
+                          "token_estimate":  379
                       },
                       {
                           "kind":  "adapter",
                           "path":  "adapters/generic-agents-md/adapter.json",
-                          "sha256":  "e4e63326011ffaeebabc5fb91cf2f5357dd0ed3189e45ac78e90139bc05c68f7",
-                          "bytes":  439,
-                          "lines":  16,
-                          "words":  40,
-                          "token_estimate":  110
+                          "sha256":  "5f6c9c81d6139e2fc0e130b174f1ef890230e9d3ff5652aab9ec373732e4e336",
+                          "bytes":  693,
+                          "lines":  25,
+                          "words":  57,
+                          "token_estimate":  174
                       },
                       {
                           "kind":  "adapter",
                           "path":  "adapters/generic-agents-md/AGENTS.generic.lizard.md",
-                          "sha256":  "9d38c2593dff39ee2521dcc2c05dfd490999bd9b6743087e21f47ebe4cf68974",
-                          "bytes":  673,
-                          "lines":  20,
-                          "words":  71,
-                          "token_estimate":  169
+                          "sha256":  "d1b18bd65097cba8210f8797107bb54c4818e4b80299090276393036c4f042b2",
+                          "bytes":  1028,
+                          "lines":  24,
+                          "words":  113,
+                          "token_estimate":  257
                       },
                       {
                           "kind":  "adapter",
                           "path":  "adapters/github-copilot/adapter.json",
-                          "sha256":  "377bccaf88b6f652483ff928854104b843fa84bdc3842a1e7b2b75fbd9e3945b",
-                          "bytes":  484,
-                          "lines":  16,
-                          "words":  32,
-                          "token_estimate":  121
+                          "sha256":  "aadb75c620acfb1fcb33734fc99d9d9d13a24aad0925bf9a53ed4504740abab8",
+                          "bytes":  738,
+                          "lines":  25,
+                          "words":  49,
+                          "token_estimate":  185
                       },
                       {
                           "kind":  "adapter",
                           "path":  "adapters/github-copilot/copilot-instructions.lizard.md",
-                          "sha256":  "c52b41a811a8deb58204579a6ede2fada23f012f4e764bf7d456eaab22f92150",
-                          "bytes":  1237,
-                          "lines":  22,
-                          "words":  157,
-                          "token_estimate":  310
+                          "sha256":  "6f7e288119fdc5533dcc34e8d518b9d2ec441749e969e56940ec2b5a9c0ccade",
+                          "bytes":  1680,
+                          "lines":  25,
+                          "words":  221,
+                          "token_estimate":  420
                       },
                       {
                           "kind":  "skill",
@@ -305,6 +305,15 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/staged-execution/SKILL.md",
+                          "sha256":  "12765ceeaa234f9a3abcb8904242d168c6ef4748d0bb800dbb9dc8527b74ecb3",
+                          "bytes":  2775,
+                          "lines":  42,
+                          "words":  374,
+                          "token_estimate":  694
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/supabase/SKILL.md",
                           "sha256":  "4bff2dfef9f0ff3e51aa8ebc6f59803493068c8fe494933979f64229ac5f663a",
                           "bytes":  669,
@@ -329,6 +338,15 @@
                           "lines":  61,
                           "words":  355,
                           "token_estimate":  582
+                      },
+                      {
+                          "kind":  "protocol",
+                          "path":  "protocols/context-hygiene.md",
+                          "sha256":  "8e8b8ba36bafd58d7aeec6eb6223a7abbf650e0f1863c4e97508452822236fa6",
+                          "bytes":  642,
+                          "lines":  10,
+                          "words":  96,
+                          "token_estimate":  161
                       },
                       {
                           "kind":  "protocol",
@@ -376,76 +394,94 @@
                           "token_estimate":  138
                       },
                       {
+                          "kind":  "protocol",
+                          "path":  "protocols/staged-execution.md",
+                          "sha256":  "e5b0a3d86fcf1723f1e96e8e8b8efc10f3af4a476778a7a55e0cd9ef49401dfe",
+                          "bytes":  2004,
+                          "lines":  27,
+                          "words":  292,
+                          "token_estimate":  501
+                      },
+                      {
                           "kind":  "profile",
                           "path":  "profiles/minimal.json",
-                          "sha256":  "234f092d9bbe2297f8e1ac773f87a94594d52c7546264dc3cabdf0d22e3c42e5",
-                          "bytes":  548,
-                          "lines":  18,
-                          "words":  55,
-                          "token_estimate":  137
+                          "sha256":  "8f29f57d97c2671089c57e4ac06c5a67fe0c4cd5d49049544a1bd975fddf0161",
+                          "bytes":  517,
+                          "lines":  15,
+                          "words":  51,
+                          "token_estimate":  130
                       },
                       {
                           "kind":  "profile",
                           "path":  "profiles/standard.json",
-                          "sha256":  "5ba5c899e8c1ab984589eeb5fadf72abb8fb58e51f01f8345b80b4290907c205",
-                          "bytes":  635,
-                          "lines":  18,
-                          "words":  57,
-                          "token_estimate":  159
+                          "sha256":  "7332eeb52429161bcc904f878ebcb4a24c6a22af0cd79f2a134c38c075724e59",
+                          "bytes":  604,
+                          "lines":  15,
+                          "words":  53,
+                          "token_estimate":  151
                       },
                       {
                           "kind":  "profile",
                           "path":  "profiles/supabase-react-finance.json",
-                          "sha256":  "71013ee9230e16a24089cddcfc6f4fab7f374508374addb402fe829928c9bc39",
-                          "bytes":  982,
-                          "lines":  35,
-                          "words":  84,
-                          "token_estimate":  246
+                          "sha256":  "fb403e68055aaf07a8a1b2a527c1e77c9aa37267dfd94879fef6ee956a31f35b",
+                          "bytes":  907,
+                          "lines":  32,
+                          "words":  78,
+                          "token_estimate":  227
                       },
                       {
                           "kind":  "model-profile",
                           "path":  "model-profiles/claude-sonnet.json",
-                          "sha256":  "b408fae77971e0e9eb42b611139b510d2e957ee227a875f98992d0fb799951e8",
-                          "bytes":  451,
-                          "lines":  10,
-                          "words":  50,
-                          "token_estimate":  113
+                          "sha256":  "3b4fa19b6be1998d448cb84b8dd43c005df413663c5553e7eef416e4a2c6ea8d",
+                          "bytes":  497,
+                          "lines":  11,
+                          "words":  56,
+                          "token_estimate":  125
                       },
                       {
                           "kind":  "model-profile",
                           "path":  "model-profiles/gemini-pro.json",
-                          "sha256":  "bb1b7b044143d43deb8e7c264187182e466d80c07c60ac06cd88ced11a050504",
-                          "bytes":  495,
-                          "lines":  10,
-                          "words":  49,
-                          "token_estimate":  124
+                          "sha256":  "fc7db9f05c59c3b5366630b5c8f8570207b4cdabee49a3885b504f593d160036",
+                          "bytes":  551,
+                          "lines":  11,
+                          "words":  57,
+                          "token_estimate":  138
                       },
                       {
                           "kind":  "model-profile",
                           "path":  "model-profiles/gpt-5-codex.json",
-                          "sha256":  "dac7d554f4f38b3b992c2c3b1fbbcd0e4a2e18408f3216417978903c39837a02",
-                          "bytes":  480,
-                          "lines":  10,
-                          "words":  48,
-                          "token_estimate":  120
+                          "sha256":  "884a4e549f22544f409720e2dfd35b290abc62ec3cf7b26924df14fe945bda41",
+                          "bytes":  542,
+                          "lines":  11,
+                          "words":  56,
+                          "token_estimate":  136
                       },
                       {
                           "kind":  "model-profile",
                           "path":  "model-profiles/local-small-model.json",
-                          "sha256":  "425c03518c913feba1779554de5910a60292d263d87af84a34bbda56ba2b0316",
-                          "bytes":  452,
-                          "lines":  10,
-                          "words":  44,
-                          "token_estimate":  113
+                          "sha256":  "de4bb0ec392b51a1c8d452cbc306e02bbcdf68ab3cb6c68f5e36bd2b289471b9",
+                          "bytes":  525,
+                          "lines":  11,
+                          "words":  53,
+                          "token_estimate":  132
+                      },
+                      {
+                          "kind":  "routing-policy",
+                          "path":  "routing-policies/staged-balanced.json",
+                          "sha256":  "eff9ee1c20b76bb06b55336fd964ed32127eeff2b10466374c69de2b5ce96e4e",
+                          "bytes":  4562,
+                          "lines":  124,
+                          "words":  295,
+                          "token_estimate":  1141
                       },
                       {
                           "kind":  "pack",
                           "path":  "packs/agent-runtime.json",
-                          "sha256":  "ab20c7d58f5d46a5fb4a0fc9feffbe92a321970f6c851f4e54267a3a8b609445",
-                          "bytes":  755,
+                          "sha256":  "52ea262f29d99b669b2f9edc720b5d5b312b04e0df0576dfd831010947c327e3",
+                          "bytes":  817,
                           "lines":  13,
-                          "words":  75,
-                          "token_estimate":  189
+                          "words":  81,
+                          "token_estimate":  205
                       },
                       {
                           "kind":  "pack",
@@ -549,11 +585,11 @@
                       {
                           "kind":  "template",
                           "path":  "templates/agent-gitignore",
-                          "sha256":  "bf48f1e96820eb2646dc59d5f458275f04b2878049f5970256ac08cc08f2ec75",
-                          "bytes":  153,
-                          "lines":  11,
-                          "words":  14,
-                          "token_estimate":  39
+                          "sha256":  "916e21c51d98dc76dcf78c70cafeaaa11b46f621e51863228f4f87b85cea6e26",
+                          "bytes":  277,
+                          "lines":  17,
+                          "words":  20,
+                          "token_estimate":  70
                       },
                       {
                           "kind":  "template",
@@ -684,11 +720,11 @@
                       {
                           "kind":  "registry",
                           "path":  "registry/contracts.json",
-                          "sha256":  "ada8ab57fb47bba42c8c84345a1291aef451a3320ba581e8ae30dfdd666b3b11",
-                          "bytes":  2941,
-                          "lines":  60,
-                          "words":  135,
-                          "token_estimate":  736
+                          "sha256":  "123474ede384fc5ab445c80233c874deaaa5f609b4ec587d3a85862e20774a15",
+                          "bytes":  3582,
+                          "lines":  66,
+                          "words":  158,
+                          "token_estimate":  896
                       },
                       {
                           "kind":  "registry",
@@ -729,11 +765,11 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/adapter.schema.json",
-                          "sha256":  "146e5c8d12b082d8c6a219e2395b5a9d3ffee9102bff14d4fd187a04ea57abbb",
-                          "bytes":  1669,
-                          "lines":  52,
-                          "words":  135,
-                          "token_estimate":  418
+                          "sha256":  "f97d73ddd92b3468c4c86c9c97be998b5b5cda7d72932bbc20ab5fe536f24f83",
+                          "bytes":  2404,
+                          "lines":  67,
+                          "words":  198,
+                          "token_estimate":  601
                       },
                       {
                           "kind":  "schema",
@@ -782,6 +818,15 @@
                       },
                       {
                           "kind":  "schema",
+                          "path":  "schemas/execution-receipt.schema.json",
+                          "sha256":  "8eeb9a47167bcbcdc2de943191561e0445ea2a06a2346fe91ae56bdd257ffc88",
+                          "bytes":  1737,
+                          "lines":  29,
+                          "words":  157,
+                          "token_estimate":  435
+                      },
+                      {
+                          "kind":  "schema",
                           "path":  "schemas/focused-test-report.schema.json",
                           "sha256":  "4a1c214371a2dbf0d987850e7f605455361b31543745fabd6dfadfbd2776c2ce",
                           "bytes":  1534,
@@ -792,20 +837,20 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/install-manifest.schema.json",
-                          "sha256":  "4675f74783c247cc4da745feb6214f754da2f4d86a1dd96d8a2fdb0e65abd24f",
-                          "bytes":  4559,
-                          "lines":  105,
-                          "words":  450,
-                          "token_estimate":  1140
+                          "sha256":  "55011cab73bd6d1aca0d96d641d1633b0e658e01b6adfaf9006a4f1f52258ee7",
+                          "bytes":  5491,
+                          "lines":  122,
+                          "words":  534,
+                          "token_estimate":  1373
                       },
                       {
                           "kind":  "schema",
                           "path":  "schemas/lizard-agent-layer.schema.json",
-                          "sha256":  "eb64b12869a509e124c7f56d9fb3f82f08c74c91a2762a97e84473db6b14b7f0",
-                          "bytes":  1066,
-                          "lines":  25,
-                          "words":  111,
-                          "token_estimate":  267
+                          "sha256":  "e89dd7bca28029da106f5307704262da49d188ba9a6fffae9197b13f6a801328",
+                          "bytes":  1994,
+                          "lines":  49,
+                          "words":  188,
+                          "token_estimate":  499
                       },
                       {
                           "kind":  "schema",
@@ -899,21 +944,39 @@
                       },
                       {
                           "kind":  "schema",
+                          "path":  "schemas/model-evaluation.schema.json",
+                          "sha256":  "a49bf25755890fcd7bac97071d8af20a104a177ed702d69ca17a6e908fecab06",
+                          "bytes":  1810,
+                          "lines":  38,
+                          "words":  169,
+                          "token_estimate":  453
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/model-inventory.schema.json",
+                          "sha256":  "26b9796753cb0a2288d4b4a4ce2e4862ac0d45e83563cc8676d93a6f408cd7c4",
+                          "bytes":  3428,
+                          "lines":  73,
+                          "words":  300,
+                          "token_estimate":  857
+                      },
+                      {
+                          "kind":  "schema",
                           "path":  "schemas/model-profile.schema.json",
-                          "sha256":  "539f88c905314815b02337c3bd6c67515083bd2358e27417738afeaf3e79e35e",
-                          "bytes":  711,
-                          "lines":  18,
-                          "words":  74,
-                          "token_estimate":  178
+                          "sha256":  "3233b474b15ed3786904e2469bab3710a9c9b029422c0fe0ce6eb05ff4fb9abe",
+                          "bytes":  752,
+                          "lines":  19,
+                          "words":  79,
+                          "token_estimate":  188
                       },
                       {
                           "kind":  "schema",
                           "path":  "schemas/pack.schema.json",
-                          "sha256":  "6d6ec7853d37897733fe75dbfc4318fd1ea3140b34fe619483b165cbfaefaac3",
-                          "bytes":  1137,
+                          "sha256":  "a849008584e229cfa0ec427e58910f20d70940a08da9949b3d5ce3b810ab0ec3",
+                          "bytes":  1202,
                           "lines":  23,
-                          "words":  130,
-                          "token_estimate":  285
+                          "words":  136,
+                          "token_estimate":  301
                       },
                       {
                           "kind":  "schema",
@@ -932,6 +995,33 @@
                           "lines":  26,
                           "words":  74,
                           "token_estimate":  214
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/route-receipt.schema.json",
+                          "sha256":  "10e3ff8835d2b7c77e20927cbeb4aa235fe7691f0d1e10b4e8cf34a06769f8aa",
+                          "bytes":  4274,
+                          "lines":  73,
+                          "words":  408,
+                          "token_estimate":  1069
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/routing-policy.schema.json",
+                          "sha256":  "53555d419d7cb97a5e2a9040db506ec274a3293473d3df7dfeec2c14037817b7",
+                          "bytes":  5378,
+                          "lines":  100,
+                          "words":  478,
+                          "token_estimate":  1345
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/routing-runtime.schema.json",
+                          "sha256":  "947bf1e2b79672c2fca0c69090a0f6b0eaf62ea93b97995b6341d0fa9ccfe06f",
+                          "bytes":  1412,
+                          "lines":  24,
+                          "words":  128,
+                          "token_estimate":  353
                       },
                       {
                           "kind":  "schema",

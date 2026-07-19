@@ -14,7 +14,7 @@
     "harnesses": { "type": "array", "items": { "type": "string" } },
     "skills": { "type": "array", "items": { "type": "string" } },
     "verification": { "type": "array", "items": { "type": "string" } },
-    "modelProfiles": { "type": "object", "additionalProperties": { "type": "string" } },
+    "modelProfiles": { "type": "object", "additionalProperties": { "type": "string" }, "deprecated": true, "description": "Legacy compatibility only." },
     "recommendedForSignals": { "type": "array", "items": { "type": "string" } },
     "notes": { "type": "string" }
   },

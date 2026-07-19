@@ -3,6 +3,11 @@
   [string]$Profile = "standard",
   [string[]]$Harnesses,
   [string[]]$Packs,
+  [string]$RoutingPolicy,
+  [ValidateSet('inherit-current', 'inventory-routing')]
+  [string]$ModelMode,
+  [string]$ModelInventory,
+  [string]$ModelRuntime,
   [switch]$Apply,
   [switch]$Force,
   [switch]$ForceManaged,
@@ -217,6 +222,115 @@ if ($ShouldWritePlan) {
     else { $planParent = Initialize-SafeDirectory -Path $planParent }
   }
 }
+
+function Get-CostRank {
+  param([string]$Tier)
+  switch ($Tier) { 'local' { 0 } 'budget' { 1 } 'balanced' { 2 } 'premium' { 3 } 'frontier' { 4 } default { 99 } }
+}
+
+function Test-ContainsAll {
+  param($Available, $Required)
+  foreach ($item in @($Required)) { if (@($Available) -notcontains [string]$item) { return $false } }
+  return $true
+}
+
+function Get-RoleScore {
+  param($Model, [string]$Role)
+  if ($Model.evidence.role_scores -and $Model.evidence.role_scores.PSObject.Properties.Name -contains $Role) { return [double]$Model.evidence.role_scores.$Role }
+  return -1.0
+}
+
+$EffectiveRoutingPolicy = if (-not [string]::IsNullOrWhiteSpace($RoutingPolicy)) {
+  $RoutingPolicy.Trim()
+} elseif ($ProfileDoc.PSObject.Properties.Name -contains 'routingPolicy' -and -not [string]::IsNullOrWhiteSpace([string]$ProfileDoc.routingPolicy)) {
+  [string]$ProfileDoc.routingPolicy
+} else {
+  'staged-balanced'
+}
+if ($EffectiveRoutingPolicy -notmatch '^[a-z0-9][a-z0-9-]{0,62}$') { throw "Invalid routing policy '$EffectiveRoutingPolicy'." }
+$RoutingPolicyPath = Join-Path $LayerRoot "routing-policies\$EffectiveRoutingPolicy.json"
+if (-not (Test-Path -LiteralPath $RoutingPolicyPath -PathType Leaf)) { throw "Unknown routing policy '$EffectiveRoutingPolicy'. Expected routing-policies/$EffectiveRoutingPolicy.json." }
+$RoutingPolicyDoc = Get-Content -LiteralPath $RoutingPolicyPath -Raw | ConvertFrom-Json
+if ([string]$RoutingPolicyDoc.name -ne $EffectiveRoutingPolicy) { throw "Routing policy name '$($RoutingPolicyDoc.name)' does not match '$EffectiveRoutingPolicy'." }
+Set-DocProperty $ProfileDoc 'routingPolicy' $EffectiveRoutingPolicy
+$EffectiveModelMode = if (-not [string]::IsNullOrWhiteSpace($ModelMode)) {
+  $ModelMode
+} elseif ($ProfileDoc.PSObject.Properties.Name -contains 'modelMode' -and -not [string]::IsNullOrWhiteSpace([string]$ProfileDoc.modelMode)) {
+  [string]$ProfileDoc.modelMode
+} else {
+  [string]$RoutingPolicyDoc.model_selection.default_mode
+}
+if ($EffectiveModelMode -notin @('inherit-current', 'inventory-routing')) { throw "Invalid model mode '$EffectiveModelMode'." }
+$EffectiveModelInventory = $null
+$EffectiveModelRuntime = $null
+if ($EffectiveModelMode -eq 'inventory-routing') {
+  $EffectiveModelInventory = if (-not [string]::IsNullOrWhiteSpace($ModelInventory)) {
+    $ModelInventory.Trim()
+  } elseif ($ProfileDoc.PSObject.Properties.Name -contains 'modelInventory' -and -not [string]::IsNullOrWhiteSpace([string]$ProfileDoc.modelInventory)) {
+    [string]$ProfileDoc.modelInventory
+  } else {
+    [string]$RoutingPolicyDoc.model_selection.inventory_path
+  }
+  if ([System.IO.Path]::IsPathRooted($EffectiveModelInventory) -or $EffectiveModelInventory -match '(^|[\\/])\.\.([\\/]|$)') { throw "Invalid model inventory path '$EffectiveModelInventory'." }
+  Set-DocProperty $ProfileDoc 'modelInventory' $EffectiveModelInventory.Replace('\\', '/')
+  $inventoryTargetPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $EffectiveModelInventory.Replace('/', '\'))
+  if (-not (Test-Path -LiteralPath $inventoryTargetPath -PathType Leaf)) { throw "MODEL_INVENTORY_REQUIRED: Advanced automatic routing is not configured because '$EffectiveModelInventory' is missing. Recommended for normal IDE use: omit '-ModelMode inventory-routing' and keep the default inherit-current mode; no model-picker changes are required. Only a routing administrator or automatic runtime adapter should create this inventory." }
+  try { $inventoryPreflight = Get-Content -LiteralPath $inventoryTargetPath -Raw | ConvertFrom-Json }
+  catch { throw "MODEL_INVENTORY_INVALID: $($_.Exception.Message)" }
+  if (@($inventoryPreflight.models).Count -eq 0) { throw 'MODEL_INVENTORY_INVALID: inventory contains no models.' }
+  $duplicateInventoryIds = @($inventoryPreflight.models | Group-Object { [string]$_.id } | Where-Object { $_.Count -gt 1 })
+  if ($duplicateInventoryIds.Count -gt 0) { throw "MODEL_INVENTORY_INVALID: duplicate model id '$([string]$duplicateInventoryIds[0].Name)'." }
+  $EffectiveModelRuntime = if (-not [string]::IsNullOrWhiteSpace($ModelRuntime)) {
+    $ModelRuntime.Trim()
+  } elseif ($ProfileDoc.PSObject.Properties.Name -contains 'modelRuntime' -and -not [string]::IsNullOrWhiteSpace([string]$ProfileDoc.modelRuntime)) {
+    [string]$ProfileDoc.modelRuntime
+  } else {
+    [string]$RoutingPolicyDoc.model_selection.runtime_path
+  }
+  if ([System.IO.Path]::IsPathRooted($EffectiveModelRuntime) -or $EffectiveModelRuntime -match '(^|[\\/])\.\.([\\/]|$)') { throw "Invalid model runtime path '$EffectiveModelRuntime'." }
+  Set-DocProperty $ProfileDoc 'modelRuntime' $EffectiveModelRuntime.Replace('\\', '/')
+  $runtimeTargetPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $EffectiveModelRuntime.Replace('/', '\'))
+  if (-not (Test-Path -LiteralPath $runtimeTargetPath -PathType Leaf)) { throw "MODEL_RUNTIME_REQUIRED: Advanced automatic routing is not configured because '$EffectiveModelRuntime' is missing. Recommended for normal IDE use: omit '-ModelMode inventory-routing' and keep the default inherit-current mode. Only enable Advanced mode after an automatic runtime can select and report models without user interaction." }
+  try { $runtimePreflight = Get-Content -LiteralPath $runtimeTargetPath -Raw | ConvertFrom-Json }
+  catch { throw "MODEL_RUNTIME_INVALID: $($_.Exception.Message)" }
+  if ([string]$runtimePreflight.status -ne 'ready') { throw 'MODEL_RUNTIME_NOT_READY: runtime status must be ready.' }
+  if ([string]$runtimePreflight.selection -notin @('subagent', 'per-call')) { throw 'MODEL_RUNTIME_AUTOMATION_REQUIRED: selection must be subagent or per-call.' }
+  if ($runtimePreflight.actual_model_reporting -ne $true) { throw 'MODEL_RUNTIME_REPORTING_REQUIRED: actual_model_reporting must be true.' }
+  if ([string]$runtimePreflight.attestation -notin @('observed', 'attested')) { throw 'MODEL_RUNTIME_ATTESTATION_REQUIRED: attestation must be observed or attested.' }
+  if ([string]::IsNullOrWhiteSpace([string]$runtimePreflight.configuration_fingerprint)) { throw 'MODEL_RUNTIME_CONFIGURATION_REQUIRED: configuration_fingerprint is required.' }
+  if ([DateTimeOffset]::Parse([string]$runtimePreflight.expires_at) -le [DateTimeOffset]::UtcNow) { throw 'MODEL_RUNTIME_EXPIRED: runtime capability evidence has expired.' }
+  $missingRuntimeHarnesses = @($SelectedHarnesses | Where-Object { @($runtimePreflight.harnesses) -notcontains $_ })
+  if ($missingRuntimeHarnesses.Count -gt 0) { throw "MODEL_RUNTIME_HARNESS_MISMATCH: runtime does not cover selected harnesses '$($missingRuntimeHarnesses -join ', ')'." }
+  $eligibleInventoryModels = @($inventoryPreflight.models | Where-Object {
+    $_.available -eq $true -and $_.approved -eq $true -and [string]$_.evidence.state -eq 'calibrated' -and
+    [string]$_.evidence.configuration_fingerprint -eq [string]$runtimePreflight.configuration_fingerprint -and
+    $_.evidence.expires_at -and ([DateTimeOffset]::Parse([string]$_.evidence.expires_at) -gt [DateTimeOffset]::UtcNow)
+  })
+  if ($eligibleInventoryModels.Count -eq 0) { throw 'MODEL_INVENTORY_NO_ELIGIBLE_MODELS: at least one available, approved, non-expired calibrated model matching the runtime fingerprint is required.' }
+  foreach ($route in @($RoutingPolicyDoc.routes)) {
+    foreach ($routeDataClass in @($route.data_classes)) {
+      $routeCovered = $false
+      foreach ($role in @($route.candidate_roles) + @($route.fallback_roles)) {
+        foreach ($candidate in @($eligibleInventoryModels)) {
+          if (@($candidate.allowed_data_classes) -notcontains [string]$routeDataClass) { continue }
+          if (-not (Test-ContainsAll -Available @($candidate.capabilities) -Required @($route.required_capabilities))) { continue }
+          if ((Get-CostRank ([string]$candidate.cost_tier)) -gt (Get-CostRank ([string]$route.max_cost_tier))) { continue }
+          if ((Get-RoleScore -Model $candidate -Role ([string]$role)) -lt [double]$RoutingPolicyDoc.model_selection.minimum_role_score) { continue }
+          $routeCovered = $true
+          break
+        }
+        if ($routeCovered) { break }
+      }
+      if (-not $routeCovered) { throw "MODEL_INVENTORY_ROUTE_GAP: route '$($route.id)' has no eligible model for data class '$routeDataClass'." }
+    }
+  }
+} else {
+  if ($ProfileDoc.PSObject.Properties.Name -contains 'modelInventory') { $ProfileDoc.PSObject.Properties.Remove('modelInventory') }
+  if ($ProfileDoc.PSObject.Properties.Name -contains 'modelRuntime') { $ProfileDoc.PSObject.Properties.Remove('modelRuntime') }
+}
+Set-DocProperty $ProfileDoc 'modelMode' $EffectiveModelMode
+$BoundRoutingModelNames = [object[]]@(if ($ProfileDoc.PSObject.Properties.Name -contains 'modelProfiles' -and $null -ne $ProfileDoc.modelProfiles) { $ProfileDoc.modelProfiles.PSObject.Properties | ForEach-Object { [string]$_.Value } | Sort-Object -Unique })
+if ($BoundRoutingModelNames.Count -gt 0) { Write-Warning 'modelProfiles is deprecated; migrate target configuration to modelInventory and modelRuntime.' }
 $Mode = if ($Apply) { "APPLY" } else { "PREVIEW" }
 $Planned = New-Object System.Collections.Generic.List[string]
 $Created = New-Object System.Collections.Generic.List[string]
@@ -388,6 +502,10 @@ function New-InstallPlanMarkdown {
   $lines.Add(('- Risk level: `{0}`' -f $ProfileDoc.riskLevel)) | Out-Null
   $lines.Add(('- Memory mode: `{0}`' -f $ProfileDoc.memoryMode)) | Out-Null
   $lines.Add(('- Harnesses: `{0}`' -f ($SelectedHarnesses -join ', '))) | Out-Null
+  $lines.Add(('- Routing policy: `{0}`' -f $EffectiveRoutingPolicy)) | Out-Null
+  $lines.Add(('- Model mode: `{0}`' -f $EffectiveModelMode)) | Out-Null
+  $lines.Add(('- Daily use: {0}' -f $(if ($EffectiveModelMode -eq 'inherit-current') { 'Submit ordinary task prompts; the active IDE model completes all stages without picker changes.' } else { 'Submit ordinary task prompts; the configured automatic runtime selects models without manual picker changes.' }))) | Out-Null
+  if ($EffectiveModelRuntime) { $lines.Add(('- Model runtime: `{0}`' -f $EffectiveModelRuntime)) | Out-Null }
   $lines.Add('') | Out-Null
   $lines.Add('## Summary') | Out-Null
   $lines.Add('') | Out-Null
@@ -401,6 +519,10 @@ function New-InstallPlanMarkdown {
   $lines.Add('') | Out-Null
   $previewCommand = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath "{0}" -Profile {1} -Harnesses {2}' -f $TargetRoot, $Profile, ($SelectedHarnesses -join ',')
   if ($RequestedPacks.Count -gt 0) { $previewCommand += (' -Packs {0}' -f ($RequestedPacks -join ',')) }
+  $previewCommand += (' -RoutingPolicy {0}' -f $EffectiveRoutingPolicy)
+  $previewCommand += (' -ModelMode {0}' -f $EffectiveModelMode)
+  if ($EffectiveModelInventory) { $previewCommand += (' -ModelInventory "{0}"' -f $EffectiveModelInventory) }
+  if ($EffectiveModelRuntime) { $previewCommand += (' -ModelRuntime "{0}"' -f $EffectiveModelRuntime) }
   $applyCommand = "$previewCommand -Apply"
   $lines.Add('Preview:') | Out-Null
   $lines.Add('') | Out-Null
@@ -624,7 +746,12 @@ function Write-InstallManifest {
   $doc['memory_mode'] = $ProfileDoc.memoryMode
   $doc['risk_level'] = $ProfileDoc.riskLevel
   $doc['harnesses'] = @($SelectedHarnesses)
-  $doc['model_profiles'] = $ProfileDoc.modelProfiles
+  $doc['model_profiles'] = if ($ProfileDoc.PSObject.Properties.Name -contains 'modelProfiles' -and $null -ne $ProfileDoc.modelProfiles) { $ProfileDoc.modelProfiles } else { [pscustomobject]@{} }
+  $doc['model_mode'] = $EffectiveModelMode
+  $doc['model_inventory'] = if ($EffectiveModelInventory) { $EffectiveModelInventory.Replace('\\', '/') } else { $null }
+  $doc['model_runtime'] = if ($EffectiveModelRuntime) { $EffectiveModelRuntime.Replace('\\', '/') } else { $null }
+  $doc['routing_policy'] = $EffectiveRoutingPolicy
+  $doc['routing_models'] = [object[]]@($BoundRoutingModelNames)
   $doc['skills'] = @($ProfileDoc.skills)
   $doc['adapters'] = @($InstalledAdapters.ToArray())
   $doc['adapter_aliases'] = @($AdapterComposition.aliases)
@@ -669,6 +796,10 @@ if ($Apply -and -not $InternalPreflight) {
   }
   if ($Harnesses -and $Harnesses.Count -gt 0) { $preflightParams['Harnesses'] = $Harnesses }
   if ($Packs -and $Packs.Count -gt 0) { $preflightParams['Packs'] = $Packs }
+  $preflightParams['RoutingPolicy'] = $EffectiveRoutingPolicy
+  $preflightParams['ModelMode'] = $EffectiveModelMode
+  if ($EffectiveModelInventory) { $preflightParams['ModelInventory'] = $EffectiveModelInventory }
+  if ($EffectiveModelRuntime) { $preflightParams['ModelRuntime'] = $EffectiveModelRuntime }
   if ($Force) { $preflightParams['Force'] = $true }
   if ($ForceManaged) { $preflightParams['ForceManaged'] = $true }
   & $PSCommandPath @preflightParams | Out-Null
@@ -697,6 +828,10 @@ Write-Host "Packs: $packDisplay"
 $requestedPackDisplay = if ($RequestedPacks.Count -gt 0) { $RequestedPacks -join ', ' } else { 'none' }
 Write-Host "Requested packs: $requestedPackDisplay"
 Write-Host "Harnesses: $($SelectedHarnesses -join ', ')"
+Write-Host "Routing policy: $EffectiveRoutingPolicy"
+Write-Host "Model mode: $EffectiveModelMode"
+Write-Host "Daily use: $(if ($EffectiveModelMode -eq 'inherit-current') { 'Submit normal task prompts; keep the current IDE model.' } else { 'Submit normal task prompts; the configured runtime selects models automatically.' })"
+if ($EffectiveModelRuntime) { Write-Host "Model runtime: $EffectiveModelRuntime" }
 Write-Host "Version: $LayerVersion"
 if ($ShouldWritePlan) { Write-Host "Plan report: $EffectivePlanPath" }
 Write-Host ""
@@ -707,9 +842,13 @@ Ensure-Dir (Join-Path $TargetRoot ".agent\memory\semantic")
 Ensure-Dir (Join-Path $TargetRoot ".agent\memory\working")
 Ensure-Dir (Join-Path $TargetRoot ".agent\protocols")
 Ensure-Dir (Join-Path $TargetRoot ".agent\skills")
+Ensure-Dir (Join-Path $TargetRoot ".agent\routing")
+Ensure-Dir (Join-Path $TargetRoot ".agent\routing\receipts")
+Ensure-Dir (Join-Path $TargetRoot ".agent\routing\receipts\decisions")
+Ensure-Dir (Join-Path $TargetRoot ".agent\routing\receipts\executions")
 
 Copy-IfMissing (Join-Path $LayerRoot "templates\agent-gitignore") (Join-Path $TargetRoot ".agent\.gitignore")
-if ($SelectedPacks.Count -gt 0) {
+if ($SelectedPacks.Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($RoutingPolicy) -or -not [string]::IsNullOrWhiteSpace($ModelMode) -or -not [string]::IsNullOrWhiteSpace($ModelInventory) -or -not [string]::IsNullOrWhiteSpace($ModelRuntime)) {
   Write-IfMissing -Dest (Join-Path $TargetRoot ".agent\project-profile.json") -Content ($ProfileDoc | ConvertTo-Json -Depth 10) -SourcePath 'generated:project-profile'
 } else {
   Copy-IfMissing $ProfilePath (Join-Path $TargetRoot ".agent\project-profile.json")
@@ -719,8 +858,18 @@ Copy-IfMissing (Join-Path $LayerRoot "templates\memory\semantic\DECISIONS.md") (
 Copy-IfMissing (Join-Path $LayerRoot "templates\memory\semantic\LESSONS.md") (Join-Path $TargetRoot ".agent\memory\semantic\LESSONS.md")
 Copy-IfMissing (Join-Path $LayerRoot "templates\memory\working\WORKSPACE.md") (Join-Path $TargetRoot ".agent\memory\working\WORKSPACE.md")
 
-foreach ($protocol in @("permissions.md", "memory-policy.md", "secret-handling.md", "release-gates.md", "handoff.md")) {
+foreach ($protocol in @("permissions.md", "memory-policy.md", "secret-handling.md", "release-gates.md", "handoff.md", "staged-execution.md", "context-hygiene.md")) {
   Copy-IfMissing (Join-Path $LayerRoot "protocols\$protocol") (Join-Path $TargetRoot ".agent\protocols\$protocol")
+}
+
+Copy-IfMissing $RoutingPolicyPath (Join-Path $TargetRoot ".agent\routing\policy.json")
+$RoutingModelNames = [object[]]@($BoundRoutingModelNames)
+if ($RoutingModelNames.Count -gt 0) { Ensure-Dir (Join-Path $TargetRoot ".agent\routing\models") }
+foreach ($modelName in $RoutingModelNames) {
+  if ($modelName -notmatch '^[a-z0-9][a-z0-9-]{0,62}$') { throw "Invalid model profile name '$modelName' in routing bindings." }
+  $modelSource = Join-Path $LayerRoot "model-profiles\$modelName.json"
+  if (-not (Test-Path -LiteralPath $modelSource -PathType Leaf)) { throw "Missing routing model profile '$modelName'." }
+  Copy-IfMissing $modelSource (Join-Path $TargetRoot ".agent\routing\models\$modelName.json")
 }
 
 $indexLines = New-Object System.Collections.Generic.List[string]

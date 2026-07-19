@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/route-receipt.schema.json",
+  "title": "lizard-agent-layer route decision receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artifact_kind", "receipt_id", "created_at", "policy", "model_mode", "runtime_executor", "runtime_attestation", "runtime_configuration_fingerprint", "model_switch_required", "phase", "task_class", "risk_level", "data_class", "decision", "route_id", "requested_roles", "selected_role", "recommended_model", "recommended_provider", "selection_capability", "effort", "reasoning_setting", "cost_tier", "verification_mode", "fallback_used", "fallback_reason", "required_capabilities", "signals", "reasons", "raw_prompt_stored"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "route-decision" },
+    "receipt_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "policy": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "model_mode": { "enum": ["inherit-current", "inventory-routing"] },
+    "runtime_executor": { "type": ["string", "null"] },
+    "runtime_attestation": { "enum": ["unknown", "observed", "attested"] },
+    "runtime_configuration_fingerprint": { "type": ["string", "null"], "maxLength": 200 },
+    "model_switch_required": { "const": false },
+    "phase": { "enum": ["strategy", "execution", "verification"] },
+    "task_class": { "type": "string", "minLength": 1 },
+    "risk_level": { "enum": ["low", "medium", "high"] },
+    "data_class": { "enum": ["public", "internal-code", "internal-docs", "confidential", "regulated", "secrets"] },
+    "decision": { "enum": ["route", "block", "human-review"] },
+    "route_id": { "type": ["string", "null"] },
+    "requested_roles": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "selected_role": { "type": ["string", "null"] },
+    "recommended_model": { "type": ["string", "null"] },
+    "recommended_provider": { "type": ["string", "null"] },
+    "selection_capability": { "type": ["string", "null"], "enum": ["subagent", "per-call", null] },
+    "effort": { "type": ["string", "null"], "enum": ["low", "medium", "high", null] },
+    "reasoning_setting": { "type": ["string", "null"] },
+    "cost_tier": { "type": ["string", "null"], "enum": ["local", "budget", "balanced", "premium", "frontier", null] },
+    "verification_mode": { "enum": ["self-review", "independent-model-preferred", "human-review", "not-applicable"] },
+    "fallback_used": { "type": "boolean" },
+    "fallback_reason": { "type": ["string", "null"] },
+    "required_capabilities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "signals": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "reasons": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "raw_prompt_stored": { "const": false }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "model_mode": { "const": "inherit-current" } }, "required": ["model_mode"] },
+      "then": {
+        "properties": {
+          "runtime_executor": { "const": null },
+          "runtime_attestation": { "const": "unknown" },
+          "runtime_configuration_fingerprint": { "const": null },
+          "recommended_model": { "const": null },
+          "recommended_provider": { "const": null },
+          "selection_capability": { "const": null }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "model_mode": { "const": "inventory-routing" }, "decision": { "const": "route" } },
+        "required": ["model_mode", "decision"]
+      },
+      "then": {
+        "properties": {
+          "runtime_executor": { "type": "string", "minLength": 1 },
+          "runtime_attestation": { "enum": ["observed", "attested"] },
+          "runtime_configuration_fingerprint": { "type": "string", "minLength": 1 },
+          "recommended_model": { "type": "string", "minLength": 1 },
+          "recommended_provider": { "type": "string", "minLength": 1 },
+          "selection_capability": { "enum": ["subagent", "per-call"] }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "execution-receipt",
+  "receipt_id": "fixture-execution",
+  "route_decision_id": "fixture-route",
+  "created_at": "2026-07-19T12:02:00Z",
+  "started_at": "2026-07-19T12:00:00Z",
+  "completed_at": "2026-07-19T12:01:00Z",
+  "executor_id": "fixture/runtime-v1",
+  "configuration_fingerprint": "fixture-runtime-config-v1",
+  "harness": "codex",
+  "actual_model": "future-model/arbitrary-id@1",
+  "actual_provider": "example-provider",
+  "reasoning_setting": "normal",
+  "attestation": "observed",
+  "attestation_source": "fixture runtime API",
+  "outcome": "succeeded",
+  "evidence_ref": "fixture-run-123",
+  "raw_prompt_stored": false
+}

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/model-inventory.schema.json",
+  "title": "Target-local calibrated model inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "name", "models"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "models": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "provider", "available", "approved", "capabilities", "allowed_data_classes", "cost_tier", "reasoning", "evidence"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "provider": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "available": { "type": "boolean" },
+          "approved": { "type": "boolean" },
+          "capabilities": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" }, "uniqueItems": true },
+          "allowed_data_classes": { "type": "array", "items": { "enum": ["public", "internal-code", "internal-docs", "confidential", "regulated"] }, "minItems": 1, "uniqueItems": true },
+          "cost_tier": { "enum": ["local", "budget", "balanced", "premium", "frontier"] },
+          "reasoning": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["light", "balanced", "deep", "maximum"],
+            "properties": {
+              "light": { "type": ["string", "null"] },
+              "balanced": { "type": ["string", "null"] },
+              "deep": { "type": ["string", "null"] },
+              "maximum": { "type": ["string", "null"] }
+            }
+          },
+          "evidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["state", "role_scores"],
+            "properties": {
+              "state": { "enum": ["uncalibrated", "calibrated", "expired", "rejected"] },
+              "suite": { "type": ["string", "null"] },
+              "evaluated_at": { "type": ["string", "null"], "format": "date-time" },
+              "expires_at": { "type": ["string", "null"], "format": "date-time" },
+              "configuration_fingerprint": { "type": ["string", "null"], "maxLength": 200 },
+              "role_scores": {
+                "type": "object",
+                "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            },
+            "allOf": [
+              {
+                "if": { "properties": { "state": { "const": "calibrated" } }, "required": ["state"] },
+                "then": {
+                  "required": ["suite", "evaluated_at", "expires_at", "configuration_fingerprint"],
+                  "properties": {
+                    "suite": { "type": "string", "minLength": 1 },
+                    "evaluated_at": { "type": "string", "format": "date-time" },
+                    "expires_at": { "type": "string", "format": "date-time" },
+                    "configuration_fingerprint": { "type": "string", "minLength": 1, "maxLength": 200 },
+                    "role_scores": { "type": "object", "minProperties": 1 }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

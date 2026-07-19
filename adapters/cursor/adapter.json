@@ -9,5 +9,14 @@
   },
   "skillMirrors": [
     { "dst": ".cursor/skills", "description": "Optional Cursor-local skill mirror." }
-  ]
+  ],
+  "routingCapabilities": {
+    "policyMode": "advisory",
+    "nativeDelegation": false,
+    "modelPinning": false,
+    "modelDiscovery": "none",
+    "modelSelection": "inherit-current",
+    "actualModelReporting": false,
+    "receiptCapture": false
+  }
 }

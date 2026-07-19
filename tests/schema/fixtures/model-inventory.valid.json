@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "name": "fixture-inventory",
+  "models": [
+    {
+      "id": "future-model/arbitrary-id@1",
+      "provider": "example-provider",
+      "available": true,
+      "approved": true,
+      "capabilities": ["implementation"],
+      "allowed_data_classes": ["public", "internal-code"],
+      "cost_tier": "balanced",
+      "reasoning": { "light": "fast", "balanced": "normal", "deep": "thorough", "maximum": null },
+      "evidence": {
+        "state": "calibrated",
+        "suite": "portable-role-eval-v1",
+        "evaluated_at": "2026-07-19T12:00:00Z",
+        "expires_at": "2027-07-19T12:00:00Z",
+        "configuration_fingerprint": "fixture-runtime-config-v1",
+        "role_scores": { "standardExecutor": 0.84 }
+      }
+    }
+  ]
+}

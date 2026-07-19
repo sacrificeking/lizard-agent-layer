@@ -1,9 +1,10 @@
 ﻿{
   "name": "claude-sonnet",
+  "deprecated": true,
   "provider": "anthropic",
   "bestFor": ["code review", "architecture critique", "long-context reasoning", "risk analysis"],
   "avoidFor": ["blind file edits without local verification"],
   "limits": ["adapter support depends on the host harness", "must read lizard handoff state before continuing work"],
   "handoffRole": "reviewer",
-  "notes": "Good paired reviewer or architecture critic in multi-model development."
+  "notes": "Legacy compatibility identifier only; it is not a current availability or model recommendation."
 }

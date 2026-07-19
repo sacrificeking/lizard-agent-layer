@@ -1,12 +1,12 @@
 {
   "name": "agent-runtime",
-  "description": "Agent application runtime pack for model routing, tool boundaries, memory, fallback, and evaluations.",
+  "description": "Agent application runtime pack for staged execution, tool boundaries, memory, fallback, and evaluations.",
   "riskLevel": "high",
   "projectSize": "large",
   "stack": ["agent-runtime", "llm", "tools", "memory", "evals"],
   "harnesses": ["codex", "claude-code", "gemini"],
-  "skills": ["agent-runtime", "security-hardening", "research-audit", "dependency-upgrade", "git-safety"],
-  "verification": ["test model routing", "test tool permission boundaries", "test fallback behavior", "document manual evaluation notes"],
+  "skills": ["agent-runtime", "staged-execution", "security-hardening", "research-audit", "dependency-upgrade", "git-safety"],
+  "verification": ["test staged execution and any automatic inventory routing", "test tool permission boundaries", "test fallback behavior", "document manual evaluation notes"],
   "recommendedForSignals": ["agent", "llm", "openai", "anthropic", "gemini", "mcp", "rag"],
   "notes": "Use when the project contains runtime agent code rather than only agent instructions."
 }

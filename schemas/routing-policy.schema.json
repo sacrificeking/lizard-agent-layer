@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/routing-policy.schema.json",
+  "title": "lizard-agent-layer staged execution policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "name", "description", "mode", "phase_budget", "model_selection", "routes", "escalation", "verification", "budget"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "description": { "type": "string", "minLength": 20 },
+    "mode": { "enum": ["advisory", "enforced"] },
+    "phase_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "execution", "verification"],
+      "properties": {
+        "strategy": { "type": "number", "minimum": 0, "maximum": 1 },
+        "execution": { "type": "number", "minimum": 0, "maximum": 1 },
+        "verification": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "model_selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_mode", "inventory_path", "runtime_path", "eligible_evidence_states", "minimum_role_score", "require_automatic_selection", "require_actual_model_reporting", "never_interrupt_for_model_switch"],
+      "properties": {
+        "default_mode": { "const": "inherit-current" },
+        "inventory_path": { "const": ".agent/routing/inventory.json" },
+        "runtime_path": { "const": ".agent/routing/runtime.json" },
+        "eligible_evidence_states": {
+          "type": "array",
+          "items": { "const": "calibrated" },
+          "minItems": 1,
+          "maxItems": 1,
+          "uniqueItems": true
+        },
+        "minimum_role_score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "require_automatic_selection": { "const": true },
+        "require_actual_model_reporting": { "const": true },
+        "never_interrupt_for_model_switch": { "const": true }
+      }
+    },
+    "routes": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "phase", "priority", "task_classes", "risk_levels", "data_classes", "candidate_roles", "required_capabilities", "effort", "max_cost_tier", "allow_delegation"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+          "phase": { "enum": ["strategy", "execution", "verification"] },
+          "priority": { "type": "integer", "minimum": 0, "maximum": 1000 },
+          "task_classes": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true },
+          "risk_levels": { "type": "array", "items": { "enum": ["low", "medium", "high"] }, "minItems": 1, "uniqueItems": true },
+          "data_classes": { "type": "array", "items": { "enum": ["public", "internal-code", "internal-docs", "confidential", "regulated"] }, "minItems": 1, "uniqueItems": true },
+          "candidate_roles": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9]{0,62}$" }, "minItems": 1, "uniqueItems": true },
+          "fallback_roles": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9]{0,62}$" }, "uniqueItems": true },
+          "required_capabilities": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" }, "uniqueItems": true },
+          "effort": { "enum": ["low", "medium", "high"] },
+          "max_cost_tier": { "enum": ["local", "budget", "balanced", "premium", "frontier"] },
+          "allow_delegation": { "type": "boolean" }
+        }
+      }
+    },
+    "escalation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["human_review_signals", "strategist_signals", "max_attempts"],
+      "properties": {
+        "human_review_signals": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" }, "uniqueItems": true },
+        "strategist_signals": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" }, "uniqueItems": true },
+        "max_attempts": { "type": "integer", "minimum": 1, "maximum": 10 }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_mode", "independent_context_preferred", "different_model_preferred_for", "different_provider_preferred_for"],
+      "properties": {
+        "default_mode": { "const": "self-review" },
+        "independent_context_preferred": { "type": "boolean" },
+        "different_model_preferred_for": { "type": "array", "items": { "enum": ["low", "medium", "high"] }, "uniqueItems": true },
+        "different_provider_preferred_for": { "type": "array", "items": { "enum": ["low", "medium", "high"] }, "uniqueItems": true }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_subagents_per_task", "max_nested_delegation", "receipt_mode"],
+      "properties": {
+        "max_subagents_per_task": { "type": "integer", "minimum": 0, "maximum": 32 },
+        "max_nested_delegation": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "receipt_mode": { "enum": ["metadata-only", "off"] }
+      }
+    }
+  }
+}

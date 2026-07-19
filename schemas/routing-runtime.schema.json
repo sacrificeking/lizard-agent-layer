@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/routing-runtime.schema.json",
+  "title": "Target-local automatic routing runtime capability",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "name", "executor_id", "harnesses", "status", "discovery", "selection", "actual_model_reporting", "attestation", "capability_source", "configuration_fingerprint", "verified_at", "expires_at"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "executor_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$" },
+    "harnesses": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" }, "minItems": 1, "uniqueItems": true },
+    "status": { "const": "ready" },
+    "discovery": { "enum": ["configured", "runtime-api"] },
+    "selection": { "enum": ["subagent", "per-call"] },
+    "actual_model_reporting": { "const": true },
+    "attestation": { "enum": ["observed", "attested"] },
+    "capability_source": { "type": "string", "minLength": 1, "maxLength": 300 },
+    "configuration_fingerprint": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "verified_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" }
+  }
+}

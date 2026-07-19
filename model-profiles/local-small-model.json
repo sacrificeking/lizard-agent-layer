@@ -1,9 +1,10 @@
 ﻿{
   "name": "local-small-model",
+  "deprecated": true,
   "provider": "local",
   "bestFor": ["classification", "simple lint suggestions", "summaries", "low-risk repetitive tasks"],
   "avoidFor": ["schema design", "security-sensitive decisions", "large refactors", "release decisions"],
   "limits": ["small context", "requires stronger validation", "should not own high-risk changes"],
   "handoffRole": "assistant",
-  "notes": "Use only behind strong deterministic checks."
+  "notes": "Legacy compatibility identifier only; it is not a current availability or model recommendation."
 }

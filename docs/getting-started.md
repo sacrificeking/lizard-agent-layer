@@ -88,7 +88,11 @@ Packs add reusable project-shape guidance to a profile. Combine only packs justi
 
 Pack values merge deterministically. Explicit `-Harnesses` overrides profile and pack harness defaults.
 
-## 8. Choose Memory Mode
+## 8. Confirm Staged Execution
+
+Built-in profiles use `staged-balanced` with `modelMode: inherit-current`. The active IDE or harness model performs strategy, execution, and verification without asking the user to change a picker. Use Advanced inventory routing only when the runtime can select automatically and the target has calibrated its models. See [Provider-Neutral Staged Execution](staged-execution.md).
+
+## 9. Choose Memory Mode
 
 ### `curated`
 
@@ -104,7 +108,7 @@ Use when project memory is prohibited or unnecessary. Harness instructions and s
 
 Never store credentials, tokens, customer records, regulated data, private incident content, or unreleased vulnerability details in memory.
 
-## 9. Choose Automation Level
+## 10. Choose Automation Level
 
 - No loop runtime: ordinary IDE assistance with protocols and skills.
 - L1 report-only: recurring inspection, state, budget, and reports without source changes.
@@ -112,12 +116,12 @@ Never store credentials, tokens, customer records, regulated data, private incid
 
 L2 is not autonomy. It cannot auto-merge, push, release, deploy, change dependencies, edit migrations, or access secrets without separate approval.
 
-## 10. Generate The Installation Plan
+## 11. Generate The Installation Plan
 
 Example:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -WritePlan
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -RoutingPolicy staged-balanced -WritePlan
 ```
 
 The plan includes profile, risk, memory, harnesses, packs, skills, planned paths, skipped paths, conflicts, sidecars, and exact preview/apply commands. Preview plus `-WritePlan` writes only the selected report outside the target.
@@ -130,28 +134,28 @@ pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\pro
 
 Default suggestions are metadata-only and bind existing instructions by path and SHA-256 without reproducing their content.
 
-## 11. Apply After Review
+## 12. Apply After Review
 
 Use the same selections as the approved plan:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -Apply
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -RoutingPolicy staged-balanced -Apply
 ```
 
 Do not use `-Force` during ordinary initial installation. Existing target instructions receive sidecars and manual merge records.
 
 Apply uses a target lock and write-ahead transaction journal. If an operation is interrupted, do not remove the lock manually; follow [Transactions And Recovery](transactions.md).
 
-## 12. Verify Installation
+## 13. Verify Installation
 
 ```powershell
 pwsh -NoProfile -File .\scripts\doctor.ps1 -TargetPath D:\path\to\project -Strict
 pwsh -NoProfile -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project -Strict
 ```
 
-Review manual merge requirements. A strict doctor pass proves installed identity and current content for managed artifacts; it does not prove that an organization has approved the selected model or IDE.
+Review manual merge requirements. A strict doctor pass proves installed identity and current content for managed artifacts. In Advanced mode it also checks automatic-runtime readiness, full installed-harness coverage, fingerprint-matched calibrated candidates, and every policy route/data-class combination. Organizational approval and the truthfulness of external runtime attestation remain target responsibilities.
 
-## 13. GitHub Copilot Setup
+## 14. GitHub Copilot Setup
 
 Select `github-copilot` only when repository custom instructions are allowed. The adapter creates:
 
@@ -167,7 +171,7 @@ When the target already has this file, the layer creates:
 
 Review and merge the smallest necessary pointer or policy block. Organization owners should separately configure Copilot features, model access, coding agents, CLI, MCP, public-code matching, content exclusion, and audit policy. Verify the policy on every surface in use.
 
-## 14. Initialize Optional Loops
+## 15. Initialize Optional Loops
 
 Installing `loop-engineering` adds skills but does not start a loop. Preview a specific L1 pattern:
 
@@ -183,7 +187,7 @@ pwsh -NoProfile -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pa
 
 Use `loop-run.ps1` to acquire a bounded run lease and record enforced budgets and events. Use `minimal-fix-assist` only for a separately approved L2 item. See [Loop Engineering](loop-engineering.md).
 
-## 15. Update An Installed Target
+## 16. Update An Installed Target
 
 After obtaining a newer trusted source checkout, preview:
 
@@ -199,13 +203,13 @@ pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project
 
 `-ForceManaged` is not a general overwrite mode. It refreshes only artifacts with unchanged layer-owned provenance and preserves ambiguous or modified files.
 
-## 16. Remove The Layer
+## 17. Remove The Layer
 
 Use [`UNINSTALL.md`](../UNINSTALL.md) with an AI assistant. Choose managed-only, complete, or export-then-complete removal. The assistant must inventory manifest ownership, show exact paths, request approval, preserve user-owned content, and verify residue.
 
 There is no generic recursive uninstall command because common directories may contain project-owned files.
 
-## 17. Common Scenarios
+## 18. Common Scenarios
 
 ### Small private library
 
@@ -221,9 +225,9 @@ Complete the enterprise decision checklist, select approved harnesses only, pres
 
 ### High-risk Supabase or finance system
 
-Use `supabase-react-finance` plus applicable security, Supabase, finance, and frontend packs. Treat auth, migrations, calculations, data provenance, releases, and production operations as human-gated. Use a strong independent verifier.
+Use `supabase-react-finance` plus applicable security, Supabase, finance, and frontend packs. Treat auth, migrations, calculations, data provenance, releases, and production operations as human-gated. Perform a fresh, evidence-based verification pass and use an independent verifier when the environment provides one automatically.
 
-## 18. Troubleshooting
+## 19. Troubleshooting
 
 - Existing instruction file: use sidecar merge suggestions; do not overwrite.
 - Linked path rejection: replace the linked destination with an approved physical directory or choose another target.
@@ -234,7 +238,7 @@ Use `supabase-react-finance` plus applicable security, Supabase, finance, and fr
 
 See [Troubleshooting And Recovery](troubleshooting.md) for stable codes and detailed procedures.
 
-## 19. Source Repository Validation
+## 20. Source Repository Validation
 
 Contributors to `lizard-agent-layer` run:
 

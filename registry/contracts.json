@@ -54,6 +54,12 @@
       "adr": "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
       "migration_required": false,
       "paths": ["registry/contracts.json", "schemas/contracts.schema.json", "schemas/contract-change.schema.json", "scripts/contract-check.ps1", "scripts/ci.ps1", ".github/workflows/lizard-agent-layer-ci.yml"]
+    },
+    {
+      "id": "provider-neutral-staged-execution",
+      "adr": "docs/adr/0009-provider-neutral-staged-routing.md",
+      "migration_required": false,
+      "paths": ["routing-policies/*.json", "protocols/staged-execution.md", "protocols/context-hygiene.md", "skills/staged-execution/*", "scripts/route-task.ps1", "scripts/record-execution.ps1", "scripts/calibrate-model.ps1", "schemas/routing-policy.schema.json", "schemas/model-inventory.schema.json", "schemas/model-evaluation.schema.json", "schemas/routing-runtime.schema.json", "schemas/route-receipt.schema.json", "schemas/execution-receipt.schema.json", "profiles/*.json"]
     }
   ]
 }

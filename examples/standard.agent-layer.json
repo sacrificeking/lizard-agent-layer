@@ -6,10 +6,7 @@
   "riskLevel": "medium",
   "memoryMode": "curated",
   "harnesses": ["codex", "claude-code", "gemini", "github-copilot"],
-  "modelProfiles": {
-    "implementation": "gpt-5-codex",
-    "review": "claude-sonnet",
-    "research": "gemini-pro"
-  },
-  "skills": ["git-safety", "release", "dependency-upgrade", "research-audit"]
+  "routingPolicy": "staged-balanced",
+  "modelMode": "inherit-current",
+  "skills": ["git-safety", "release", "dependency-upgrade", "research-audit", "staged-execution"]
 }

@@ -6,12 +6,8 @@
   "riskLevel": "high",
   "memoryMode": "curated",
   "harnesses": ["codex", "claude-code", "gemini", "github-copilot"],
-  "modelProfiles": {
-    "implementation": "gpt-5-codex",
-    "review": "claude-sonnet",
-    "research": "gemini-pro",
-    "lowRiskAssistant": "local-small-model"
-  },
+  "routingPolicy": "staged-balanced",
+  "modelMode": "inherit-current",
   "skills": [
     "git-safety",
     "release",
@@ -21,7 +17,8 @@
     "supabase",
     "edge-functions",
     "data-quality",
-    "research-audit"
+    "research-audit",
+    "staged-execution"
   ],
   "verification": [
     "npm run typecheck",
@@ -30,5 +27,5 @@
     "npm run test",
     "validate Supabase migrations before applying remotely"
   ],
-  "notes": "High-risk profile for finance dashboards with Supabase, Edge Functions, strict UI contracts, and multi-model handoff."
+  "notes": "High-risk profile for finance dashboards with Supabase, Edge Functions, strict UI contracts, and staged execution."
 }

@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "provider-neutral-staged-routing",
+  "date": "2026-07-19",
+  "summary": "Add provider-neutral staged execution that inherits the active model by default and permits only calibrated automatic model routing as an advanced option.",
+  "changed_paths": [
+    "adapters/*/adapter.json",
+    "docs/*.md",
+    "docs/adr/*.md",
+    "package.json",
+    "package-lock.json",
+    "profiles/*.json",
+    "protocols/*.md",
+    "registry/contracts.json",
+    "routing-policies/*.json",
+    "schemas/*.schema.json",
+    "scripts/doctor.ps1",
+    "scripts/install.ps1",
+    "scripts/route-task.ps1",
+    "scripts/record-execution.ps1",
+    "scripts/calibrate-model.ps1",
+    "scripts/score-layer.ps1",
+    "scripts/update-target.ps1",
+    "scripts/validate.ps1",
+    "skills/staged-execution/*",
+    "templates/agent-gitignore",
+    "tests/integration/model-routing.tests.ps1",
+    "tests/run-focused.ps1",
+    "tools/schema-validator/*"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0002-filesystem-and-report-containment.md",
+    "docs/adr/0003-ownership-and-manifest-identity.md",
+    "docs/adr/0004-adapter-composition-and-precedence.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0009-provider-neutral-staged-routing.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Existing targets remain readable; reviewed install or update adds routing artifacts without replacing project-owned files."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Existing targets remain readable. New built-in profiles no longer bind concrete models; legacy target model profiles remain optional."
+  }
+}

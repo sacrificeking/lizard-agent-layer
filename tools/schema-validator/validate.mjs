@@ -40,6 +40,29 @@ function matchesAny(relativePath, globs = []) {
   return globs.some((glob) => globRegex(glob).test(relativePath));
 }
 
+function bindingCandidates(root, globs = []) {
+  const candidates = new Set();
+  for (const glob of globs) {
+    const normalized = glob.split("\\").join("/");
+    const wildcardIndex = normalized.indexOf("*");
+    if (wildcardIndex === -1) {
+      const exact = path.join(root, ...normalized.split("/"));
+      if (fs.existsSync(exact) && fs.statSync(exact).isFile()) candidates.add(exact);
+      continue;
+    }
+
+    const staticPrefix = normalized.slice(0, wildcardIndex);
+    const lastSlash = staticPrefix.lastIndexOf("/");
+    const searchRelative = lastSlash === -1 ? "" : staticPrefix.slice(0, lastSlash);
+    const searchRoot = searchRelative
+      ? path.join(root, ...searchRelative.split("/"))
+      : root;
+    if (!fs.existsSync(searchRoot) || !fs.statSync(searchRoot).isDirectory()) continue;
+    for (const file of walkFiles(searchRoot)) candidates.add(file);
+  }
+  return [...candidates];
+}
+
 function formatErrors(errors = []) {
   return [...(errors || [])]
     .sort((a, b) => `${a.instancePath}:${a.keyword}`.localeCompare(`${b.instancePath}:${b.keyword}`))
@@ -88,7 +111,7 @@ function validateBindings(root, bindingsPath) {
     throw new Error(`BINDINGS_INVALID: ${bindingsPath}`);
   }
   const ajv = createValidator(root);
-  const allFiles = walkFiles(root)
+  const allFiles = bindingCandidates(root, bindings.bindings.flatMap((binding) => binding.include))
     .map((file) => path.relative(root, file).split(path.sep).join("/"))
     .sort();
   const results = [];

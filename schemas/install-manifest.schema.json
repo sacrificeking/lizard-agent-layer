@@ -41,7 +41,12 @@
     "memory_mode": { "enum": ["curated", "private-episodic", "off"] },
     "risk_level": { "enum": ["low", "medium", "high"] },
     "harnesses": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-    "model_profiles": { "type": "object", "additionalProperties": { "type": "string" } },
+    "model_profiles": { "type": "object", "additionalProperties": { "type": "string" }, "deprecated": true },
+    "model_mode": { "enum": ["inherit-current", "inventory-routing"] },
+    "model_inventory": { "type": ["string", "null"], "pattern": "^(?![A-Za-z]:)(?![\\\\/])(?!.*(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$)).+$" },
+    "model_runtime": { "type": ["string", "null"], "pattern": "^(?![A-Za-z]:)(?![\\\\/])(?!.*(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$)).+$" },
+    "routing_policy": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "routing_models": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true, "deprecated": true },
     "skills": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
     "adapters": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
     "adapter_aliases": {
@@ -100,5 +105,17 @@
     "conflicts": { "type": "array", "items": { "type": "string" } },
     "transaction_operation_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "model_mode": { "const": "inventory-routing" } }, "required": ["model_mode"] },
+      "then": {
+        "required": ["model_inventory", "model_runtime"],
+        "properties": {
+          "model_inventory": { "type": "string" },
+          "model_runtime": { "type": "string" }
+        }
+      }
+    }
+  ]
 }

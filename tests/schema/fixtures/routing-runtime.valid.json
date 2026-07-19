@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "name": "fixture-runtime",
+  "executor_id": "fixture/runtime-v1",
+  "harnesses": ["codex"],
+  "status": "ready",
+  "discovery": "runtime-api",
+  "selection": "per-call",
+  "actual_model_reporting": true,
+  "attestation": "observed",
+  "capability_source": "fixture runtime API",
+  "configuration_fingerprint": "fixture-runtime-config-v1",
+  "verified_at": "2026-07-19T12:00:00Z",
+  "expires_at": "2027-07-19T12:00:00Z"
+}

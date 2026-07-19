@@ -11,5 +11,14 @@
     "sidecar": ".github/copilot-instructions.lizard-agent-layer.md",
     "mergePolicy": "sidecar-if-exists"
   },
-  "skillMirrors": []
+  "skillMirrors": [],
+  "routingCapabilities": {
+    "policyMode": "advisory",
+    "nativeDelegation": false,
+    "modelPinning": false,
+    "modelDiscovery": "none",
+    "modelSelection": "inherit-current",
+    "actualModelReporting": false,
+    "receiptCapture": false
+  }
 }

@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "name": "staged-balanced",
+  "description": "Provider-neutral 10-80-10 staged execution with the active model by default and calibrated automatic routing as an option.",
+  "mode": "advisory",
+  "phase_budget": {
+    "strategy": 0.1,
+    "execution": 0.8,
+    "verification": 0.1
+  },
+  "model_selection": {
+    "default_mode": "inherit-current",
+    "inventory_path": ".agent/routing/inventory.json",
+    "runtime_path": ".agent/routing/runtime.json",
+    "eligible_evidence_states": ["calibrated"],
+    "minimum_role_score": 0.6,
+    "require_automatic_selection": true,
+    "require_actual_model_reporting": true,
+    "never_interrupt_for_model_switch": true
+  },
+  "routes": [
+    {
+      "id": "strategy-default",
+      "phase": "strategy",
+      "priority": 100,
+      "task_classes": ["*"],
+      "risk_levels": ["low", "medium", "high"],
+      "data_classes": ["public", "internal-code", "internal-docs", "confidential", "regulated"],
+      "candidate_roles": ["strategist"],
+      "fallback_roles": ["deepExecutor"],
+      "required_capabilities": ["architecture", "task-decomposition"],
+      "effort": "high",
+      "max_cost_tier": "frontier",
+      "allow_delegation": false
+    },
+    {
+      "id": "execution-bulk",
+      "phase": "execution",
+      "priority": 300,
+      "task_classes": ["formatting", "rename", "boilerplate", "classification", "lint", "test-scaffolding", "data-cleaning", "translation"],
+      "risk_levels": ["low", "medium"],
+      "data_classes": ["public", "internal-code", "internal-docs"],
+      "candidate_roles": ["bulkExecutor"],
+      "fallback_roles": ["standardExecutor"],
+      "required_capabilities": ["mechanical-execution"],
+      "effort": "low",
+      "max_cost_tier": "budget",
+      "allow_delegation": false
+    },
+    {
+      "id": "execution-research",
+      "phase": "execution",
+      "priority": 250,
+      "task_classes": ["research", "large-context-analysis", "document-synthesis"],
+      "risk_levels": ["low", "medium", "high"],
+      "data_classes": ["public", "internal-code", "internal-docs", "confidential", "regulated"],
+      "candidate_roles": ["researchExecutor"],
+      "fallback_roles": ["deepExecutor"],
+      "required_capabilities": ["research", "large-context"],
+      "effort": "medium",
+      "max_cost_tier": "premium",
+      "allow_delegation": false
+    },
+    {
+      "id": "execution-deep",
+      "phase": "execution",
+      "priority": 200,
+      "task_classes": ["complex-debug", "cross-cutting-refactor", "ambiguous-reasoning", "migration-design"],
+      "risk_levels": ["low", "medium", "high"],
+      "data_classes": ["public", "internal-code", "internal-docs", "confidential", "regulated"],
+      "candidate_roles": ["deepExecutor"],
+      "fallback_roles": ["strategist"],
+      "required_capabilities": ["deep-reasoning"],
+      "effort": "high",
+      "max_cost_tier": "premium",
+      "allow_delegation": false
+    },
+    {
+      "id": "execution-standard",
+      "phase": "execution",
+      "priority": 100,
+      "task_classes": ["*"],
+      "risk_levels": ["low", "medium", "high"],
+      "data_classes": ["public", "internal-code", "internal-docs", "confidential", "regulated"],
+      "candidate_roles": ["standardExecutor"],
+      "fallback_roles": ["deepExecutor"],
+      "required_capabilities": ["implementation"],
+      "effort": "medium",
+      "max_cost_tier": "balanced",
+      "allow_delegation": false
+    },
+    {
+      "id": "verification-default",
+      "phase": "verification",
+      "priority": 100,
+      "task_classes": ["*"],
+      "risk_levels": ["low", "medium", "high"],
+      "data_classes": ["public", "internal-code", "internal-docs", "confidential", "regulated"],
+      "candidate_roles": ["verifier"],
+      "fallback_roles": ["researchExecutor"],
+      "required_capabilities": ["independent-review"],
+      "effort": "medium",
+      "max_cost_tier": "premium",
+      "allow_delegation": false
+    }
+  ],
+  "escalation": {
+    "human_review_signals": ["uncertain-ownership", "unapproved-scope-expansion", "security-sensitive", "regulated-data"],
+    "strategist_signals": ["plan-deviation", "repeated-verification-failure", "ambiguous-requirements"],
+    "max_attempts": 3
+  },
+  "verification": {
+    "default_mode": "self-review",
+    "independent_context_preferred": true,
+    "different_model_preferred_for": ["medium", "high"],
+    "different_provider_preferred_for": ["high"]
+  },
+  "budget": {
+    "max_subagents_per_task": 3,
+    "max_nested_delegation": 0,
+    "receipt_mode": "metadata-only"
+  }
+}

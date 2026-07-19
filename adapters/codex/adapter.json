@@ -13,5 +13,15 @@
   },
   "skillMirrors": [
     { "dst": ".agents/skills", "description": "Codex repository skill discovery path." }
-  ]
+  ],
+  "routingCapabilities": {
+    "policyMode": "advisory",
+    "nativeDelegation": true,
+    "modelPinning": false,
+    "modelDiscovery": "none",
+    "modelSelection": "inherit-current",
+    "actualModelReporting": false,
+    "receiptCapture": false,
+    "notes": "The portable default inherits the active model. Target-local configuration must prove automatic selection before inventory routing is enabled."
+  }
 }

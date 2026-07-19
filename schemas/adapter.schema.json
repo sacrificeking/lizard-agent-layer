@@ -45,6 +45,21 @@
         },
         "additionalProperties": false
       }
+    },
+    "routingCapabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policyMode", "nativeDelegation", "modelPinning", "modelDiscovery", "modelSelection", "actualModelReporting", "receiptCapture"],
+      "properties": {
+        "policyMode": { "enum": ["advisory", "enforced"] },
+        "nativeDelegation": { "type": "boolean" },
+        "modelPinning": { "type": "boolean" },
+        "modelDiscovery": { "enum": ["none", "configured", "runtime-api"] },
+        "modelSelection": { "enum": ["inherit-current", "subagent", "per-call"] },
+        "actualModelReporting": { "type": "boolean" },
+        "receiptCapture": { "type": "boolean" },
+        "notes": { "type": "string" }
+      }
     }
   },
   "additionalProperties": false

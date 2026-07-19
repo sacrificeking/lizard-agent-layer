@@ -244,9 +244,10 @@ function Measure-Profile {
   $harnessScore = if ($harnesses -ge 3) { 20 } elseif ($harnesses -eq 2) { 15 } elseif ($harnesses -eq 1) { 10 } else { 0 }
   $dimensions.Add((New-Dimension 'harnesses' $harnessScore 20 'harness coverage')) | Out-Null
 
-  $modelCount = if ($profile.modelProfiles) { @($profile.modelProfiles.PSObject.Properties).Count } else { 0 }
-  $modelScore = if ($modelCount -ge 3) { 15 } elseif ($modelCount -gt 0) { 8 } else { 0 }
-  $dimensions.Add((New-Dimension 'model-routing' $modelScore 15 'model role mapping')) | Out-Null
+  $stagedScore = 0
+  if (-not [string]::IsNullOrWhiteSpace([string]$profile.routingPolicy)) { $stagedScore += 7 }
+  if ([string]$profile.modelMode -in @('inherit-current', 'inventory-routing')) { $stagedScore += 8 }
+  $dimensions.Add((New-Dimension 'staged-execution' $stagedScore 15 'portable phase policy and explicit model mode')) | Out-Null
 
   $verificationCount = @($profile.verification).Count
   $verificationScore = 0
