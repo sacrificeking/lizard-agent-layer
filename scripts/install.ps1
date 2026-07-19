@@ -274,7 +274,10 @@ if ($EffectiveModelMode -eq 'inventory-routing') {
   if ([System.IO.Path]::IsPathRooted($EffectiveModelInventory) -or $EffectiveModelInventory -match '(^|[\\/])\.\.([\\/]|$)') { throw "Invalid model inventory path '$EffectiveModelInventory'." }
   Set-DocProperty $ProfileDoc 'modelInventory' $EffectiveModelInventory.Replace('\\', '/')
   $inventoryTargetPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $EffectiveModelInventory.Replace('/', '\'))
-  if (-not (Test-Path -LiteralPath $inventoryTargetPath -PathType Leaf)) { throw "MODEL_INVENTORY_REQUIRED: Advanced automatic routing is not configured because '$EffectiveModelInventory' is missing. Recommended for normal IDE use: omit '-ModelMode inventory-routing' and keep the default inherit-current mode; no model-picker changes are required. Only a routing administrator or automatic runtime adapter should create this inventory." }
+  if (-not (Test-Path -LiteralPath $inventoryTargetPath -PathType Leaf)) {
+    Write-Output "Recommended for normal IDE use: omit '-ModelMode inventory-routing' and keep the default inherit-current mode; no model-picker changes are required."
+    throw "MODEL_INVENTORY_REQUIRED: Advanced automatic routing is not configured because '$EffectiveModelInventory' is missing. Only a routing administrator or automatic runtime adapter should create this inventory."
+  }
   try { $inventoryPreflight = Get-Content -LiteralPath $inventoryTargetPath -Raw | ConvertFrom-Json }
   catch { throw "MODEL_INVENTORY_INVALID: $($_.Exception.Message)" }
   if (@($inventoryPreflight.models).Count -eq 0) { throw 'MODEL_INVENTORY_INVALID: inventory contains no models.' }
@@ -290,7 +293,10 @@ if ($EffectiveModelMode -eq 'inventory-routing') {
   if ([System.IO.Path]::IsPathRooted($EffectiveModelRuntime) -or $EffectiveModelRuntime -match '(^|[\\/])\.\.([\\/]|$)') { throw "Invalid model runtime path '$EffectiveModelRuntime'." }
   Set-DocProperty $ProfileDoc 'modelRuntime' $EffectiveModelRuntime.Replace('\\', '/')
   $runtimeTargetPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $EffectiveModelRuntime.Replace('/', '\'))
-  if (-not (Test-Path -LiteralPath $runtimeTargetPath -PathType Leaf)) { throw "MODEL_RUNTIME_REQUIRED: Advanced automatic routing is not configured because '$EffectiveModelRuntime' is missing. Recommended for normal IDE use: omit '-ModelMode inventory-routing' and keep the default inherit-current mode. Only enable Advanced mode after an automatic runtime can select and report models without user interaction." }
+  if (-not (Test-Path -LiteralPath $runtimeTargetPath -PathType Leaf)) {
+    Write-Output "Recommended for normal IDE use: omit '-ModelMode inventory-routing' and keep the default inherit-current mode."
+    throw "MODEL_RUNTIME_REQUIRED: Advanced automatic routing is not configured because '$EffectiveModelRuntime' is missing. Only enable Advanced mode after an automatic runtime can select and report models without user interaction."
+  }
   try { $runtimePreflight = Get-Content -LiteralPath $runtimeTargetPath -Raw | ConvertFrom-Json }
   catch { throw "MODEL_RUNTIME_INVALID: $($_.Exception.Message)" }
   if ([string]$runtimePreflight.status -ne 'ready') { throw 'MODEL_RUNTIME_NOT_READY: runtime status must be ready.' }

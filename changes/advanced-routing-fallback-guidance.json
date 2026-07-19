@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "advanced-routing-fallback-guidance",
+  "date": "2026-07-19",
+  "summary": "Make the safe inherit-current fallback visible before Advanced routing preflight fails, consistently across supported PowerShell hosts.",
+  "changed_paths": [
+    "scripts/install.ps1"
+  ],
+  "decision_records": [
+    "docs/adr/0002-filesystem-and-report-containment.md",
+    "docs/adr/0003-ownership-and-manifest-identity.md",
+    "docs/adr/0009-provider-neutral-staged-routing.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Advanced preflight remains fail-closed and non-mutating; the change only makes its existing safe fallback explicit."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Existing inherit-current and inventory-routing targets remain readable and unchanged."
+  }
+}
