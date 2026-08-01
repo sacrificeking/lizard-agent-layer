@@ -7,7 +7,7 @@ The baseline is commit `1797097d8a1c5ab5444ac82e83786ac1ccc841f6`. A finding is 
 | ID | Current status | Current evidence or change | Evidence still required for closure |
 | --- | --- | --- | --- |
 | H-01 | `OPEN_CONFIRMED` | Apply is not bound to an approved canonical plan | Plan/source/target/options/overlay/expiry mismatch matrix before first mutation |
-| H-02 | `OPEN_CONFIRMED` | Recovery still trusts mutable journal fields and unstable replay ordering | Tamper, repeated-path, retry and committed-cleanup recovery suite |
+| H-02 | `OPEN_CHANGED` | WP-02 adds strict v2 validation, lock/journal/root binding, canonical backups, immediate rollback checkpoints, stop-first-error replay, retry skipping, and terminal cleanup; the focused hostile/crash suite passes locally | Authenticated evidence boundary for target-local forgery (H-09), v1 migration decision, and supported-host matrix |
 | H-03 | `OPEN_CHANGED` | WP-01A adds protected read/metadata/hash primitives and migrates loop-evidence reads | Unix mount/bind-mount fixtures, terminal links on all hosts, and handle-bound/TOCTOU mutation evidence |
 | H-04 | `OPEN_CONFIRMED` | Updates still discard ownership records for deselected artifacts; no executable uninstaller exists | Contract-reduction and transactional uninstall lifecycle suite |
 | H-05 | `OPEN_CONFIRMED` | Memory artifacts and adapter references remain unconditional | Full `curated`, `private-episodic`, and `off` lifecycle matrix |
@@ -19,7 +19,7 @@ The baseline is commit `1797097d8a1c5ab5444ac82e83786ac1ccc841f6`. A finding is 
 | M-02 | `OPEN_CONFIRMED` | Generated plans still hard-code Windows PowerShell | Emitted-command tests on every supported host |
 | M-03 | `OPEN_CONFIRMED` | Skill version, permission, dependency, migration and removal contracts remain incomplete | Executable end-to-end skill lifecycle |
 | M-04 | `OPEN_CONFIRMED` | No general retention, legal-hold, purge or deletion-receipt lifecycle exists | Boundary-time, hold, export, purge, interruption and deletion evidence |
-| M-05 | `OPEN_CONFIRMED` | Doctor and target-local report transaction gaps remain | Deterministic lock/journal state and failure-residue tests |
+| M-05 | `OPEN_CHANGED` | Doctor now deterministically classifies active, recovery-required, cleanup-required, invalid, and orphan transaction metadata | Target-local report residue and cross-command lifecycle consistency tests |
 | M-06 | `OPEN_CONFIRMED` | CI still installs without `--ignore-scripts` | Lifecycle-script canary and hardened workflow assertions |
 | M-07 | `OPEN_CONFIRMED` | Sensitive metadata lacks consistent sensitivity and retention fields | Cross-artifact metadata/redaction canaries |
 | M-08 | `OPEN_CONFIRMED` | Repository protocols do not constrain the IDE or agent host | External host-enforcement evidence or narrower documented claims |

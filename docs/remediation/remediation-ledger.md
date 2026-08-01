@@ -20,7 +20,7 @@ This ledger tracks remediation of the findings in the [2026-08-01 Codex/VS Code 
 | WP-01A: safe read/hash foundation | H-03 | Implemented and locally verified | Wave 0 | Contained reads succeed; linked terminal objects and ancestors fail with stable `SAFEFS_*` codes; loop evidence uses the shared primitives |
 | WP-01B: mount/device boundaries | H-03 | Not started | WP-01A, Unix fixtures | Unix mount and bind-mount escapes fail closed |
 | WP-01C: handle-bound mutation | H-03 | Not started | WP-01A, host capability contract | Supported hosts use no-follow/handle-bound mutation; unsupported hosts fail closed or state the reduced guarantee |
-| WP-02: transaction recovery | H-02, M-05 | Not started | WP-01 | Tampered journals and repeated recovery attempts fail safely and deterministically |
+| WP-02: transaction recovery | H-02, M-05 | Implemented and locally verified | WP-01A | Strict v2 runtime/schema validation, identity binding, contained canonical backups, retry-safe reverse replay, terminal cleanup, and decisive doctor classifications pass focused tests |
 | WP-03: canonical plan binding | H-01 | Not started | Canonical serialization | Apply rejects every plan, source, target, option and approval mismatch before mutation |
 | WP-04: continuous ownership | H-04 | Not started | WP-03 | Contract reduction retains retired ownership evidence |
 | WP-05: transactional uninstall | H-04, M-04 | Not started | WP-01 through WP-04 | Bound preview/apply uninstall is reversible, resumable and idempotent |
@@ -74,3 +74,41 @@ Residual limitations:
 | Full local CI | Passed in 1,225 seconds: validation, schema mutations, contract governance, focused safety, packs, drift, quality, smoke, and 18/18 profile/harness matrix combinations |
 
 No commit, push, merge, publication or release is authorized by this ledger.
+
+## WP-02 implementation record
+
+Implemented controls:
+
+- Strict lock and journal v2 shape and semantic validation with bounded protected reads.
+- Operation, target-root, owner, name, and timestamp binding across lock and journal.
+- Chronological, contiguous mutation storage with canonical per-sequence backup names.
+- Reverse-order recovery that persists every completed step, skips an already rolled-back suffix, and stops at the first failure.
+- Dedicated cleanup for committed or fully rolled-back terminal journals.
+- Doctor classifications for active, recovery-required, cleanup-required, invalid, missing, and orphan transaction evidence.
+- Executable schema validation plus hostile unknown-field, JSON-type, identity-mismatch, traversal, sequence, missing/hash-mismatched backup, repeated-path interruption/retry, committed-cleanup, and explicit v1 fail-closed tests.
+
+Compatibility and residuals:
+
+- Journal v1 interrupted operations fail closed and require manual evidence-led recovery; clean targets require no migration.
+- Target-local journals and unkeyed hashes are not authenticated against a writer who can alter the target; H-09 remains open.
+- Name-based copy and restore retain the synchronized race limitations tracked by H-03/WP-01C.
+- Transaction-related M-05 diagnostics are implemented, while report-residue lifecycle coverage remains pending.
+
+WP-02 focused verification passed locally on Windows PowerShell 5.1. Full consolidated CI for this work package is recorded after its final gate run.
+
+## WP-02 verification record
+
+| Gate | Result |
+| --- | --- |
+| Failure-first journal-v2 assertion | Failed as expected before v2 writer support |
+| Strict schema and repository validation | Passed: 54/54 schema bindings |
+| Contract governance | Passed: transaction, schema-runtime, and ownership/manifest contracts linked to ADR-0006, ADR-0005, and ADR-0003 |
+| Focused safety suites | Passed in the final consolidated run, covering hostile journal fields/types, identity mismatch, traversal, invalid sequence, missing/hash-mismatched backup, v1 fail-closed behavior, repeated-path interrupted retry, terminal cleanup, and doctor classifications |
+| Pack report | Passed: 7 packs, 21 unique skills, no failures or warnings |
+| Quality gate | Passed: average documentation score 87.77, minimum artifact score 68, no critical findings |
+| Smoke gate | Passed; the sequential gate runner advanced to matrix |
+| Profile/harness matrix | Passed: 18/18 combinations |
+| Drift gate | Passed: baseline records 117 reviewed artifacts including `schemas/transaction-journal.schema.json`; zero added, changed, or removed artifacts |
+| Full local CI | Passed all nine gates in 2,739.737 seconds; report `.tmp/ci/ci-report-20260801123114.json` |
+
+The first complete CI command stopped at the intentional schema drift. The user subsequently approved the exact `registry/drift-baseline.json` scope extension. The final consolidated CI run passed every gate in 2,739.737 seconds: validation, 20/20 schema mutations, contract governance, all focused safety suites, packs, strict drift, quality, smoke, and the 18/18 profile/harness matrix. No commit, push, merge, publication, or release was performed.

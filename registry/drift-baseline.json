@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-07-19T12:53:48.5095235Z",
+    "generated_at":  "2026-08-01T09:45:06.2844152Z",
     "layer_version":  "1.1.0",
-    "artifact_count":  116,
-    "total_bytes":  154735,
-    "token_estimate":  38727,
+    "artifact_count":  117,
+    "total_bytes":  157802,
+    "token_estimate":  39494,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -1031,6 +1031,15 @@
                           "lines":  52,
                           "words":  215,
                           "token_estimate":  581
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/transaction-journal.schema.json",
+                          "sha256":  "5a241206a968ec49ba3c2c5e83f29f3ba751addfe869206a997a6ec494464a65",
+                          "bytes":  3067,
+                          "lines":  60,
+                          "words":  288,
+                          "token_estimate":  767
                       },
                       {
                           "kind":  "schema",

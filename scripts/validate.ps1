@@ -238,6 +238,7 @@ $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-inventory.schema.json
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-evaluation.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\routing-runtime.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\route-receipt.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\transaction-journal.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\execution-receipt.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\quality-registry.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\maturity-levels.schema.json')

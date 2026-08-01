@@ -8,6 +8,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LayerRoot = Split-Path -Parent $ScriptDir
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Manifest.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $Failures = New-Object System.Collections.Generic.List[string]
@@ -43,6 +44,26 @@ function Get-RoleScore {
 Write-Host "lizard-agent-layer doctor"
 Write-Host "Target: $TargetRoot"
 Write-Host ""
+
+$transactionStore = Join-Path $TargetRoot '.lizard-agent-layer-transactions'
+try {
+  $transactionInfo = Get-LizardTransactionRecoveryInfo -TargetRoot $TargetRoot
+  if ($null -eq $transactionInfo) {
+    if (Test-Path -LiteralPath $transactionStore) { Add-Fail 'TRANSACTION_ORPHAN_METADATA: transaction metadata exists without a lock.' }
+    else { Add-Ok 'transaction control metadata is clean' }
+  } elseif ([string]$transactionInfo.journal_state -eq 'active') {
+    $ownerLive = $false
+    try { $ownerLive = $null -ne (Get-Process -Id ([int]$transactionInfo.lock.owner_pid) -ErrorAction Stop) } catch { $ownerLive = $false }
+    if ($ownerLive) { Add-Fail "TRANSACTION_ACTIVE: operation $($transactionInfo.lock.operation_id) is active; do not run another writer." }
+    else { Add-Fail "TRANSACTION_RECOVERY_REQUIRED: operation $($transactionInfo.lock.operation_id) has a stale active journal." }
+  } elseif ([string]$transactionInfo.journal_state -eq 'recovery-required') {
+    Add-Fail "TRANSACTION_RECOVERY_REQUIRED: operation $($transactionInfo.lock.operation_id) requires retry-safe rollback."
+  } else {
+    Add-Fail "TRANSACTION_CLEANUP_REQUIRED: operation $($transactionInfo.lock.operation_id) is $($transactionInfo.journal_state) and requires metadata cleanup."
+  }
+} catch {
+  Add-Fail "TRANSACTION_EVIDENCE_INVALID: $($_.Exception.Message)"
+}
 
 $profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
 $manifestPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.install.json'

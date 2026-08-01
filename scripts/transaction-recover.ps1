@@ -1,12 +1,13 @@
 param(
   [string]$TargetPath = (Get-Location).Path,
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
-  [ValidateSet('Rollback')][string]$Action = 'Rollback',
+  [ValidateSet('Auto', 'Rollback', 'Cleanup')][string]$Action = 'Auto',
   [switch]$Apply,
   [switch]$HumanApproved,
   [switch]$Force,
   [switch]$Json,
-  [string]$OutputDir
+  [string]$OutputDir,
+  [int]$TestFailAfterRollback = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -30,9 +31,17 @@ $EffectiveOutputDir = Initialize-SafeDirectory -Path $EffectiveOutputDir
 
 $failures = New-Object System.Collections.Generic.List[string]
 $warnings = New-Object System.Collections.Generic.List[string]
-$lock = Get-LizardTransactionLock -TargetRoot $TargetRoot
+$lock = $null
+$recoveryInfo = $null
 $ownerRunning = $false
 $result = $null
+
+try {
+  $recoveryInfo = Get-LizardTransactionRecoveryInfo -TargetRoot $TargetRoot
+  if ($null -ne $recoveryInfo) { $lock = $recoveryInfo.lock }
+} catch {
+  $failures.Add("TRANSACTION_EVIDENCE_INVALID: $($_.Exception.Message)") | Out-Null
+}
 
 if ($null -eq $lock) {
   $warnings.Add('No transaction lock exists; the target has no recoverable operation.') | Out-Null
@@ -40,15 +49,21 @@ if ($null -eq $lock) {
   try { $ownerRunning = $null -ne (Get-Process -Id ([int]$lock.owner_pid) -ErrorAction Stop) }
   catch { $ownerRunning = $false }
   if ($Apply -and -not $HumanApproved) { $failures.Add('Apply requires -HumanApproved.') | Out-Null }
-  if ($Apply -and $ownerRunning -and -not $Force) { $failures.Add("Transaction owner PID $($lock.owner_pid) is still running. Use -Force only after confirming it is stale.") | Out-Null }
+  if ($Apply -and $recoveryInfo.recovery_kind -eq 'rollback' -and $ownerRunning -and -not $Force) { $failures.Add("Transaction owner PID $($lock.owner_pid) is still running. Use -Force only after confirming it is stale.") | Out-Null }
+  if ($Action -eq 'Rollback' -and $recoveryInfo.recovery_kind -ne 'rollback') { $failures.Add("Transaction state $($recoveryInfo.journal_state) permits cleanup only; use -Action Cleanup or -Action Auto.") | Out-Null }
+  if ($Action -eq 'Cleanup' -and $recoveryInfo.recovery_kind -ne 'cleanup') { $failures.Add("Transaction state $($recoveryInfo.journal_state) requires rollback; use -Action Rollback or -Action Auto.") | Out-Null }
 }
 
 if ($Apply -and $null -ne $lock -and $failures.Count -eq 0) {
-  Join-LizardTransaction -TargetRoot $TargetRoot -OperationId ([string]$lock.operation_id) | Out-Null
-  $result = Undo-LizardTransaction
+  if ($recoveryInfo.recovery_kind -eq 'rollback') {
+    Join-LizardTransaction -TargetRoot $TargetRoot -OperationId ([string]$lock.operation_id) | Out-Null
+    $result = Undo-LizardTransaction -TestFailAfterRollback $TestFailAfterRollback
+  } else {
+    $result = Complete-LizardTransactionCleanup -TargetRoot $TargetRoot -OperationId ([string]$lock.operation_id)
+  }
 }
 
-$status = if ($failures.Count -gt 0) { 'STOP' } elseif ($null -eq $lock) { 'CLEAN' } elseif ($Apply) { 'ROLLED_BACK' } else { 'RECOVERY_AVAILABLE' }
+$status = if ($failures.Count -gt 0) { 'STOP' } elseif ($null -eq $lock) { 'CLEAN' } elseif ($Apply -and $recoveryInfo.recovery_kind -eq 'rollback') { 'ROLLED_BACK' } elseif ($Apply) { 'CLEANED_UP' } elseif ($recoveryInfo.journal_state -eq 'committed') { 'COMMITTED_CLEANUP_AVAILABLE' } elseif ($recoveryInfo.journal_state -eq 'rolled-back') { 'ROLLED_BACK_CLEANUP_AVAILABLE' } else { 'RECOVERY_AVAILABLE' }
 $report = [ordered]@{
   generated_at = (Get-Date).ToUniversalTime().ToString('o')
   mode = if ($Apply) { 'APPLY' } else { 'PREVIEW' }
@@ -57,6 +72,8 @@ $report = [ordered]@{
   target = $TargetRoot
   operation_id = if ($lock) { [string]$lock.operation_id } else { $null }
   operation_name = if ($lock) { [string]$lock.operation_name } else { $null }
+  journal_state = if ($recoveryInfo) { [string]$recoveryInfo.journal_state } else { $null }
+  recovery_kind = if ($recoveryInfo) { [string]$recoveryInfo.recovery_kind } else { $null }
   owner_pid = if ($lock) { [int]$lock.owner_pid } else { $null }
   owner_running = $ownerRunning
   human_approved = $HumanApproved.IsPresent
@@ -78,6 +95,6 @@ if ($Json) {
   Write-Host "Operation: $($report.operation_id)"
   Write-Host "Owner running: $ownerRunning"
   Write-Host "Report: $jsonPath"
-  if (-not $Apply -and $null -ne $lock) { Write-Host 'Preview only. Re-run with -Apply -HumanApproved after confirming the owner process is stale.' }
+  if (-not $Apply -and $null -ne $lock) { Write-Host 'Preview only. Re-run with -Apply -HumanApproved after reviewing the classified action.' }
 }
 if ($failures.Count -gt 0) { exit 1 }

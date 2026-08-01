@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.dev/schemas/transaction-journal.schema.json",
+  "title": "lizard-agent-layer transaction journal v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "operation_id", "operation_name", "target_root", "target_root_hash", "owner_pid", "state", "started_at", "updated_at", "fail_after_mutation", "next_sequence", "mutations"],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "operation_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "operation_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "target_root": { "type": "string", "minLength": 1 },
+    "target_root_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "owner_pid": { "type": "integer", "minimum": 1 },
+    "state": { "enum": ["active", "recovery-required", "rolled-back", "committed"] },
+    "started_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "committed_at": { "type": "string", "format": "date-time" },
+    "fail_after_mutation": { "type": "integer", "minimum": 0 },
+    "next_sequence": { "type": "integer", "minimum": 1 },
+    "mutations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sequence", "path", "kind", "original_state", "original_hash", "backup_path", "status"],
+        "properties": {
+          "sequence": { "type": "integer", "minimum": 1 },
+          "path": { "type": "string", "minLength": 1, "maxLength": 1000, "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))(?!\\.lizard-agent-layer\\.lock$)(?!\\.lizard-agent-layer-transactions(?:/|$))[^\\\\:\\u0000-\\u001f]+$" },
+          "kind": { "enum": ["file", "directory"] },
+          "original_state": { "enum": ["missing", "file", "directory"] },
+          "original_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+          "backup_path": { "type": ["string", "null"], "pattern": "^backups/[0-9]{6}\\.bin$" },
+          "status": { "enum": ["pending", "applied", "rolled-back"] }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "original_state": { "const": "file" } }, "required": ["original_state"] },
+            "then": {
+              "properties": {
+                "kind": { "const": "file" },
+                "original_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+                "backup_path": { "type": "string", "pattern": "^backups/[0-9]{6}\\.bin$" }
+              }
+            },
+            "else": { "properties": { "original_hash": { "type": "null" }, "backup_path": { "type": "null" } } }
+          }
+        ]
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "state": { "const": "committed" } }, "required": ["state"] },
+      "then": { "properties": { "committed_at": true }, "required": ["committed_at"] },
+      "else": { "not": { "required": ["committed_at"] } }
+    }
+  ]
+}

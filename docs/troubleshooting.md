@@ -16,9 +16,15 @@ If status is `RECOVERY_AVAILABLE`, confirm the recorded process is no longer the
 pwsh -NoProfile -File .\scripts\transaction-recover.ps1 -TargetPath <project> -Apply -HumanApproved
 ```
 
+If preview reports `COMMITTED_CLEANUP_AVAILABLE` or `ROLLED_BACK_CLEANUP_AVAILABLE`, the same apply command removes validated control metadata only and preserves target content. Use `-Action Cleanup` when an operator wants the command to stop unless cleanup is the classified action.
+
 - `TRANSACTION_JOURNAL_MISSING` / `TRANSACTION_JOURNAL_INVALID`: keep the lock and transaction directory; do not start another apply. Recover the journal from backup or inspect affected paths manually.
 - `TRANSACTION_ROLLBACK_FAILED`: retain every backup and journal, repair the named mutation, then rerun preview recovery.
+- `TRANSACTION_LOCK_JOURNAL_MISMATCH`, `TRANSACTION_BACKUP_PATH_INVALID`, or `TRANSACTION_SEQUENCE_INVALID`: treat the evidence as tampered or corrupt; preserve it and do not force recovery.
+- `TRANSACTION_JOURNAL_SCHEMA_UNSUPPORTED`: v1 and future journals are not rewritten automatically. Preserve the lock, journal, backups, and target; perform a manual evidence-led recovery with the matching implementation version.
 - Use `-Force` only after proving the recorded PID is stale or unrelated.
+
+`doctor.ps1` reports transaction state decisively: `TRANSACTION_ACTIVE`, `TRANSACTION_RECOVERY_REQUIRED`, `TRANSACTION_CLEANUP_REQUIRED`, `TRANSACTION_EVIDENCE_INVALID`, or `TRANSACTION_ORPHAN_METADATA`. Any of these is an unhealthy result that must be resolved before another writer starts.
 
 ## Manifest Or Version Gate Stops
 

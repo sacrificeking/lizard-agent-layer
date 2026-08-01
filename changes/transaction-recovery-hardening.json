@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": "transaction-recovery-hardening",
+  "date": "2026-08-01",
+  "summary": "Harden transaction journal validation, retry-safe rollback, terminal cleanup, and transaction diagnostics.",
+  "changed_paths": [
+    "scripts/Lizard.Transaction.psm1",
+    "scripts/transaction-recover.ps1",
+    "scripts/doctor.ps1",
+    "scripts/validate.ps1",
+    "schemas/transaction-journal.schema.json",
+    "registry/drift-baseline.json",
+    "tests/integration/transaction.tests.ps1",
+    "docs/transactions.md",
+    "docs/troubleshooting.md",
+    "docs/remediation/remediation-ledger.md",
+    "docs/remediation/claim-ledger.md"
+  ],
+  "decision_records": [
+    "docs/adr/0003-ownership-and-manifest-identity.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0006-transaction-and-recovery-semantics.md"
+  ],
+  "migration": {
+    "disposition": "migration-required",
+    "note": "Interrupted v1 journals are rejected and require manual evidence-led recovery; clean targets have no retained transaction metadata to migrate."
+  },
+  "compatibility": {
+    "impact": "breaking",
+    "note": "Recovery of retained v1 transaction metadata is intentionally fail-closed; normal clean-target apply behavior remains compatible."
+  }
+}
