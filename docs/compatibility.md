@@ -12,6 +12,17 @@
 
 The GitHub workflow runs the complete gate set on the four PowerShell host identities. A local Windows pass is not evidence that remote Unix jobs have run.
 
+## Filesystem assurance status
+
+| Capability | Windows PowerShell 5.1 | Windows PowerShell 7 | Ubuntu/macOS PowerShell 7 |
+| --- | --- | --- | --- |
+| Lexical authorized-root containment | Local executable evidence | CI evidence required after change | CI evidence required after change |
+| Linked ancestor and terminal-object rejection for protected reads | Local unit and adversarial evidence | CI evidence required after change | CI symbolic-link evidence required after change |
+| Mount and bind-mount boundary detection | Not applicable to the current Windows claim | Not implemented | Not implemented |
+| Handle-bound/no-follow mutation | Not implemented | Not implemented | Not implemented |
+
+The protected read/hash work therefore narrows the established link-following exposure but does not by itself establish complete physical containment or close the synchronized path-swap risk.
+
 ## Manifest compatibility
 
 | Concern | Current contract |

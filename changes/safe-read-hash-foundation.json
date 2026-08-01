@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "safe-read-hash-foundation",
+  "date": "2026-08-01",
+  "summary": "Add shared protected file read, metadata, and hashing primitives and apply them to loop evidence collection.",
+  "changed_paths": [
+    "scripts/Lizard.SafeFs.psm1",
+    "scripts/Lizard.LoopEvidence.psm1",
+    "scripts/loop-verify.ps1"
+  ],
+  "decision_records": [
+    "docs/adr/0002-filesystem-and-report-containment.md",
+    "docs/adr/0008-loop-lifecycle-and-no-auto-merge.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "No target migration is required; existing ordinary evidence files remain readable through the protected primitives."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "The shared APIs are additive, while linked evidence that was already outside the documented safety contract now fails closed."
+  }
+}

@@ -20,6 +20,10 @@ Target writes are authorized only beneath the selected target root. Report write
 
 The guard is intentionally conservative: a target root or destination ancestry containing a link is rejected instead of followed. This keeps force modes from widening the filesystem boundary.
 
+Protected read consumers use the same authorized-root boundary. `Get-SafeContent`, `Get-SafeFileMetadata`, and `Get-SafeFileHash` require an existing ordinary file, reject linked terminal objects and linked ancestors, and revalidate observable file metadata after content or hash access. Loop verifier evidence and Git-reported untracked-file evidence use these primitives instead of direct `Get-Content`, `Get-Item`, or `Get-FileHash` access.
+
+This is a link-aware, name-based boundary, not a complete physical-filesystem proof. The current implementation does not identify Unix mount or bind-mount transitions and does not hold an operating-system file handle across validation and access. Pre/post metadata comparison detects some changes but cannot exclude every synchronized path-swap race. Workflows that require mount-aware or race-free guarantees must fail closed at a higher trust boundary until the host-specific capability is implemented and tested.
+
 ## Ownership and integrity
 
 Manifest v3 records each managed artifact separately. Layer-owned and adopted files carry source, installed, and current SHA-256 hashes; user-owned files are visible in the contract but are not claimed as generated content.

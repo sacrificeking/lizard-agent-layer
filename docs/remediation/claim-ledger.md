@@ -1,0 +1,36 @@
+# Remediation Claim Ledger
+
+Status vocabulary: `OPEN_CONFIRMED`, `OPEN_CHANGED`, `ALREADY_FIXED_UNVERIFIED`, `CLOSED_WITH_EVIDENCE`, `SUPERSEDED`, and `NOT_REPRODUCIBLE`.
+
+The baseline is commit `1797097d8a1c5ab5444ac82e83786ac1ccc841f6`. A finding is closed only when its complete measurable exit condition has executable evidence on every claimed host.
+
+| ID | Current status | Current evidence or change | Evidence still required for closure |
+| --- | --- | --- | --- |
+| H-01 | `OPEN_CONFIRMED` | Apply is not bound to an approved canonical plan | Plan/source/target/options/overlay/expiry mismatch matrix before first mutation |
+| H-02 | `OPEN_CONFIRMED` | Recovery still trusts mutable journal fields and unstable replay ordering | Tamper, repeated-path, retry and committed-cleanup recovery suite |
+| H-03 | `OPEN_CHANGED` | WP-01A adds protected read/metadata/hash primitives and migrates loop-evidence reads | Unix mount/bind-mount fixtures, terminal links on all hosts, and handle-bound/TOCTOU mutation evidence |
+| H-04 | `OPEN_CONFIRMED` | Updates still discard ownership records for deselected artifacts; no executable uninstaller exists | Contract-reduction and transactional uninstall lifecycle suite |
+| H-05 | `OPEN_CONFIRMED` | Memory artifacts and adapter references remain unconditional | Full `curated`, `private-episodic`, and `off` lifecycle matrix |
+| H-06 | `OPEN_CONFIRMED` | Regulated data alone does not force organization-owned approval | Missing, stale, revoked and mismatched approval matrix |
+| H-07 | `OPEN_CONFIRMED` | Free-form durable fields remain beside hard-coded privacy labels | Shared serializer and secret/personal-data canaries across every output channel |
+| H-08 | `OPEN_CONFIRMED` | Target prose and arbitrary verifier command strings remain unconstrained | Prompt-trust and constrained-runner hostile fixtures |
+| H-09 | `OPEN_CONFIRMED` | Evidence identity and attestation remain self-asserted | Approved trust model plus forgery, replay, principal and revocation tests |
+| M-01 | `OPEN_CONFIRMED` | Analyzer has not yet adopted the protected traversal/read contract | Linked-target, calibration and deterministic-order matrix |
+| M-02 | `OPEN_CONFIRMED` | Generated plans still hard-code Windows PowerShell | Emitted-command tests on every supported host |
+| M-03 | `OPEN_CONFIRMED` | Skill version, permission, dependency, migration and removal contracts remain incomplete | Executable end-to-end skill lifecycle |
+| M-04 | `OPEN_CONFIRMED` | No general retention, legal-hold, purge or deletion-receipt lifecycle exists | Boundary-time, hold, export, purge, interruption and deletion evidence |
+| M-05 | `OPEN_CONFIRMED` | Doctor and target-local report transaction gaps remain | Deterministic lock/journal state and failure-residue tests |
+| M-06 | `OPEN_CONFIRMED` | CI still installs without `--ignore-scripts` | Lifecycle-script canary and hardened workflow assertions |
+| M-07 | `OPEN_CONFIRMED` | Sensitive metadata lacks consistent sensitivity and retention fields | Cross-artifact metadata/redaction canaries |
+| M-08 | `OPEN_CONFIRMED` | Repository protocols do not constrain the IDE or agent host | External host-enforcement evidence or narrower documented claims |
+| L-01 | `OPEN_CONFIRMED` | Git refs remain inconsistently validated against option confusion | Invalid/option-like ref and base-reference negative tests |
+
+## Supported WP-01A claims
+
+The following narrow claims are supported locally on Windows PowerShell 5.1:
+
+- Ordinary contained files can be read and hashed through the shared safe-filesystem module.
+- Existing linked ancestors are rejected before loop evidence metadata or hashes are accepted.
+- A linked evidence failure cannot replace an already sealed verifier packet.
+
+These claims do not imply mount-aware containment, race-free mutation, sandboxing, Unix assurance, or full H-03 closure.

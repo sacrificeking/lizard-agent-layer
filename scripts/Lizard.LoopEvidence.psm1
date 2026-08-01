@@ -1,5 +1,7 @@
 Set-StrictMode -Version 2.0
 
+Import-Module (Join-Path $PSScriptRoot 'Lizard.SafeFs.psm1')
+
 function Get-LizardEvidenceSha256 {
   param([AllowNull()][string]$Value)
   if ($null -eq $Value) { $Value = '' }
@@ -68,7 +70,7 @@ function Get-LizardGitStateEvidence {
     $full = [System.IO.Path]::GetFullPath((Join-Path $root ([string]$relative)))
     $untracked.Add([pscustomobject][ordered]@{
       path = ([string]$relative).Replace('\', '/')
-      sha256 = (Get-FileHash -LiteralPath $full -Algorithm SHA256).Hash.ToLowerInvariant()
+      sha256 = Get-SafeFileHash -AuthorizedRoot $root -Path $full
     }) | Out-Null
   }
   $payload = [pscustomobject][ordered]@{

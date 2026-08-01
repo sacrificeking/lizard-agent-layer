@@ -188,11 +188,16 @@ if ($failures.Count -eq 0 -and $EffectiveWorktreePath) {
       $failures = Add-ResultItem $failures "Evidence file is missing or outside worktree: $relative"
       continue
     }
-    $evidenceFiles.Add([pscustomobject][ordered]@{
-      path = ([string]$relative).Replace('\', '/')
-      sha256 = (Get-FileHash -LiteralPath $full -Algorithm SHA256).Hash.ToLowerInvariant()
-      bytes = (Get-Item -LiteralPath $full).Length
-    }) | Out-Null
+    try {
+      $metadata = Get-SafeFileMetadata -AuthorizedRoot $EffectiveWorktreePath -Path $full
+      $evidenceFiles.Add([pscustomobject][ordered]@{
+        path = ([string]$relative).Replace('\', '/')
+        sha256 = Get-SafeFileHash -AuthorizedRoot $EffectiveWorktreePath -Path $full
+        bytes = [int64]$metadata.length
+      }) | Out-Null
+    } catch {
+      $failures = Add-ResultItem $failures ("Evidence file rejected: {0}: {1}" -f $relative, $_.Exception.Message)
+    }
   }
   try {
     $gitState = Get-LizardGitStateEvidence -WorktreePath $EffectiveWorktreePath

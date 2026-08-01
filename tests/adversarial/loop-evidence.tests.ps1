@@ -78,6 +78,25 @@ try {
   $targetVerifierMarkdown = Join-Path $target '.agent\loops\loop-verifier-report.md'
   $sealedMarkdownHashBeforeFailures = (Get-FileHash -LiteralPath $targetVerifierMarkdown -Algorithm SHA256).Hash
 
+  $outsideEvidence = Join-Path $fixtureRoot 'outside-evidence'
+  $linkedEvidence = Join-Path $worktree 'linked-evidence'
+  $outsideCanary = Join-Path $outsideEvidence 'canary.txt'
+  New-Item -ItemType Directory -Path $outsideEvidence -Force | Out-Null
+  Set-Content -LiteralPath $outsideCanary -Value 'outside evidence canary' -Encoding UTF8
+  $outsideCanaryHash = (Get-FileHash -LiteralPath $outsideCanary -Algorithm SHA256).Hash
+  New-DirectoryLink -Path $linkedEvidence -Target $outsideEvidence
+  try {
+    $linkedOutput = Join-Path $fixtureRoot 'verify-linked-evidence'
+    $linkedEvidenceResult = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'Linked evidence must fail.', '-VerificationCommand', 'git rev-parse HEAD', '-EvidenceFile', 'linked-evidence/canary.txt', '-OutputDir', $linkedOutput, '-Apply')
+  } finally {
+    Remove-DirectoryLink -Path $linkedEvidence
+  }
+  Assert-False ($linkedEvidenceResult.exit_code -eq 0) 'Evidence reached through a linked worktree ancestor must be rejected.'
+  $linkedReport = Get-Content -LiteralPath (Join-Path $linkedOutput 'loop-verify-report.json') -Raw | ConvertFrom-Json
+  Assert-True ((@($linkedReport.failures) -join ' ') -match 'SAFEFS_REPARSE_POINT') 'Linked evidence rejection must expose a stable safe-filesystem code.'
+  Assert-Equal $outsideCanaryHash (Get-FileHash -LiteralPath $outsideCanary -Algorithm SHA256).Hash 'Rejected linked evidence must not modify the outside canary.'
+  Assert-Equal $sealedHashBeforeFailures (Get-FileHash -LiteralPath $targetEvidence -Algorithm SHA256).Hash 'Rejected linked evidence must not replace sealed target evidence.'
+
   $faultedWrite = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'This packet must roll back.', '-VerificationCommand', 'git rev-parse HEAD', '-OutputDir', (Join-Path $fixtureRoot 'verify-write-fault'), '-Apply', '-TestFailAfterMutation', '1')
   Assert-False ($faultedWrite.exit_code -eq 0) 'Fault-injected verifier target write must fail.'
   Assert-Equal $sealedHashBeforeFailures (Get-FileHash -LiteralPath $targetEvidence -Algorithm SHA256).Hash 'Verifier evidence write must roll back atomically.'
