@@ -112,7 +112,7 @@ Ask the user to correct this record. Do not infer approval from silence.
 Build the command with the confirmed values:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -RoutingPolicy <routing-policy> -ModelMode inherit-current -WritePlan
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -RoutingPolicy <routing-policy> -ModelMode inherit-current -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
 ```
 
 Omit `-Packs` when none were selected. Review the console output and plan report. If existing instruction files require integration, generate metadata-only merge suggestions:
@@ -129,10 +129,12 @@ Ask:
 
 > Do you approve this exact installation plan and authorize the local target writes shown above?
 
+Record the canonical plan path and independently verify or retain its lowercase SHA-256. Do not treat the generated `.sha256` sidecar as approval by itself.
+
 Only an explicit approval permits:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -RoutingPolicy <routing-policy> -ModelMode inherit-current -Apply
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -RoutingPolicy <routing-policy> -ModelMode inherit-current -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
 ```
 
 Do not add `-Force` or `-ForceManaged` during initial installation.

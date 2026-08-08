@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/operation-plan.schema.json",
+  "title": "lizard-agent-layer approved operation plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "plan_id", "operation_kind", "created_at", "expires_at", "intent_sha256", "intent"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "plan_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "operation_kind": { "enum": ["install", "update"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "intent_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "intent": { "$ref": "#/$defs/intent" }
+  },
+  "$defs": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000,
+      "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\\\:\\u0000-\\u001f]+$"
+    },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "canonicalValue": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "boolean" },
+        { "type": "integer" },
+        { "type": "string" },
+        { "type": "array", "items": { "$ref": "#/$defs/canonicalValue" } },
+        { "type": "object", "additionalProperties": { "$ref": "#/$defs/canonicalValue" } }
+      ]
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "path", "sha256"],
+      "properties": {
+        "scope": { "enum": ["layer", "target"] },
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "targetEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "kind", "action", "precondition_kind", "precondition_sha256", "ownership", "intended_sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath" },
+        "kind": { "enum": ["file", "directory"] },
+        "action": { "enum": ["create", "replace", "preserve"] },
+        "precondition_kind": { "enum": ["absent", "file", "directory", "other"] },
+        "precondition_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "ownership": { "enum": ["unmanaged", "layer-owned", "user-owned", "adopted"] },
+        "intended_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "precondition_kind": { "const": "file" } }, "required": ["precondition_kind"] },
+          "then": { "properties": { "precondition_sha256": { "$ref": "#/$defs/sha256" } } },
+          "else": { "properties": { "precondition_sha256": { "type": "null" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "directory" } }, "required": ["kind"] },
+          "then": { "properties": { "intended_sha256": { "type": "null" } } }
+        }
+      ]
+    },
+    "nestedPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan_id", "operation_kind", "sha256", "intent_sha256"],
+      "properties": {
+        "plan_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+        "operation_kind": { "enum": ["install", "update"] },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "intent_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_root", "target_root_hash", "layer_root", "layer_version", "source_git_head", "options", "inputs", "target_entries", "nested_plan"],
+      "properties": {
+        "target_root": { "type": "string", "minLength": 1 },
+        "target_root_hash": { "$ref": "#/$defs/sha256" },
+        "layer_root": { "type": "string", "minLength": 1 },
+        "layer_version": { "type": "string", "minLength": 1 },
+        "source_git_head": { "type": ["string", "null"], "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$" },
+        "options": { "type": "object", "additionalProperties": { "$ref": "#/$defs/canonicalValue" } },
+        "inputs": { "type": "array", "items": { "$ref": "#/$defs/input" } },
+        "target_entries": { "type": "array", "items": { "$ref": "#/$defs/targetEntry" } },
+        "nested_plan": { "oneOf": [{ "$ref": "#/$defs/nestedPlan" }, { "type": "null" }] }
+      }
+    }
+  }
+}

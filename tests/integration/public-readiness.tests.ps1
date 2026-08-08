@@ -65,13 +65,15 @@ try {
   Assert-Equal 0 $networkHits.Count 'Repository scripts must not contain undeclared HTTP clients or transfer commands.'
 
   $installPath = Join-Path $LayerRoot 'scripts\install.ps1'
-  $freshInstall = Invoke-TestPowerShell -ScriptPath $installPath -Arguments @('-TargetPath', $freshTarget, '-Profile', 'minimal', '-Harnesses', 'github-copilot', '-Apply')
+  $freshApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $freshTarget, '-Profile', 'minimal', '-Harnesses', 'github-copilot')
+  $freshInstall = Invoke-TestPowerShell -ScriptPath $installPath -Arguments $freshApproval.arguments
   Assert-Equal 0 $freshInstall.exit_code "Fresh GitHub Copilot installation failed: $($freshInstall.output)"
   $freshInstruction = Join-Path $freshTarget '.github\copilot-instructions.md'
   Assert-True (Test-Path -LiteralPath $freshInstruction -PathType Leaf) 'Fresh target must receive Copilot repository instructions.'
   Assert-True ((Get-Content -LiteralPath $freshInstruction -Raw) -match 'lizard-agent-layer') 'Fresh Copilot instructions must identify the layer.'
 
-  $existingInstall = Invoke-TestPowerShell -ScriptPath $installPath -Arguments @('-TargetPath', $existingTarget, '-Profile', 'minimal', '-Harnesses', 'github-copilot', '-Apply')
+  $existingApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $existingTarget, '-Profile', 'minimal', '-Harnesses', 'github-copilot')
+  $existingInstall = Invoke-TestPowerShell -ScriptPath $installPath -Arguments $existingApproval.arguments
   Assert-Equal 0 $existingInstall.exit_code "Existing GitHub Copilot installation failed: $($existingInstall.output)"
   Assert-Equal $existingInstruction ((Get-Content -LiteralPath (Join-Path $existingTarget '.github\copilot-instructions.md') -Raw).Trim()) 'Existing organization-owned Copilot instructions must remain unchanged.'
   Assert-True (Test-Path -LiteralPath (Join-Path $existingTarget '.github\copilot-instructions.lizard-agent-layer.md') -PathType Leaf) 'Existing target must receive a reviewable Copilot sidecar.'

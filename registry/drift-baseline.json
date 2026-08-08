@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-08-01T09:45:06.2844152Z",
+    "generated_at":  "2026-08-01T12:02:14.7770088Z",
     "layer_version":  "1.1.0",
-    "artifact_count":  117,
-    "total_bytes":  157802,
-    "token_estimate":  39494,
+    "artifact_count":  118,
+    "total_bytes":  162841,
+    "token_estimate":  40754,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -720,11 +720,11 @@
                       {
                           "kind":  "registry",
                           "path":  "registry/contracts.json",
-                          "sha256":  "123474ede384fc5ab445c80233c874deaaa5f609b4ec587d3a85862e20774a15",
-                          "bytes":  3582,
-                          "lines":  66,
-                          "words":  158,
-                          "token_estimate":  896
+                          "sha256":  "b3d657828c9493e047597a4eb43b3b52d44711fccce460c651f031f5091f42b3",
+                          "bytes":  4042,
+                          "lines":  72,
+                          "words":  175,
+                          "token_estimate":  1011
                       },
                       {
                           "kind":  "registry",
@@ -837,11 +837,11 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/install-manifest.schema.json",
-                          "sha256":  "55011cab73bd6d1aca0d96d641d1633b0e658e01b6adfaf9006a4f1f52258ee7",
-                          "bytes":  5491,
-                          "lines":  122,
-                          "words":  534,
-                          "token_estimate":  1373
+                          "sha256":  "ee4322db49d64ad68d452dbb62e85e00d2ee6268a62e5da29778596a6fcf9c05",
+                          "bytes":  5643,
+                          "lines":  124,
+                          "words":  548,
+                          "token_estimate":  1411
                       },
                       {
                           "kind":  "schema",
@@ -968,6 +968,15 @@
                           "lines":  19,
                           "words":  79,
                           "token_estimate":  188
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/operation-plan.schema.json",
+                          "sha256":  "d9d934deecf975724403c814c1e5224564ac078c69660a029116fa0929d5b485",
+                          "bytes":  4427,
+                          "lines":  99,
+                          "words":  437,
+                          "token_estimate":  1107
                       },
                       {
                           "kind":  "schema",

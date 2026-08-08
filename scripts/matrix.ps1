@@ -64,7 +64,12 @@ foreach ($profile in $selectedProfiles) {
     $status = 'pass'
     $message = ''
     try {
-      $installOutput = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $target -Profile $profile -Harnesses $harness -Apply 2>&1 | Out-String
+      $installScript = Join-Path $LayerRoot 'scripts\install.ps1'
+      $canonicalPlanPath = Join-Path $tmpRoot ("{0}--{1}.install.json" -f $profile, $harness)
+      $previewOutput = & $PowerShellHost @PowerShellFilePrefix $installScript -TargetPath $target -Profile $profile -Harnesses $harness -CanonicalPlanPath $canonicalPlanPath 2>&1 | Out-String
+      if ($LASTEXITCODE -ne 0) { throw "install plan failed: $previewOutput" }
+      $approvedSha256 = (Get-FileHash -LiteralPath $canonicalPlanPath -Algorithm SHA256).Hash.ToLowerInvariant()
+      $installOutput = & $PowerShellHost @PowerShellFilePrefix $installScript -TargetPath $target -Profile $profile -Harnesses $harness -Apply -ApprovedPlanPath $canonicalPlanPath -ApprovedPlanSha256 $approvedSha256 -HumanApproved 2>&1 | Out-String
       if ($LASTEXITCODE -ne 0) { throw "install failed: $installOutput" }
       $doctorOutput = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\doctor.ps1') -TargetPath $target -Strict 2>&1 | Out-String
       if ($LASTEXITCODE -ne 0) { throw "doctor failed: $doctorOutput" }

@@ -40,6 +40,8 @@ Codex, Claude Code, Gemini, Cursor, and generic `AGENTS.md` adapters share the s
 
 ## Change compatibility
 
+Beginning with the exact-plan approval contract, direct install or update `-Apply` calls are unsupported. Existing targets need no manifest migration, but callers must generate a fresh schema-v1 canonical operation plan and pass `-ApprovedPlanPath`, `-ApprovedPlanSha256`, and `-HumanApproved`. Legacy Markdown plans cannot be upgraded into approvals.
+
 Loop installations created before the executable runtime remain readable. Preview and apply `loop-sync.ps1` to add missing runtime manifest fields and files; sync never overwrites runtime state, events, leases, or budget.
 
 Contract-sensitive changes require a file under `changes/` that links the relevant ADR and states migration plus compatibility disposition. Run:

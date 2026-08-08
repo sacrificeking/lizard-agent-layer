@@ -121,7 +121,7 @@ L2 is not autonomy. It cannot auto-merge, push, release, deploy, change dependen
 Example:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -RoutingPolicy staged-balanced -WritePlan
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -RoutingPolicy staged-balanced -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
 ```
 
 The plan includes profile, risk, memory, harnesses, packs, skills, planned paths, skipped paths, conflicts, sidecars, and exact preview/apply commands. Preview plus `-WritePlan` writes only the selected report outside the target.
@@ -139,7 +139,7 @@ Default suggestions are metadata-only and bind existing instructions by path and
 Use the same selections as the approved plan:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -RoutingPolicy staged-balanced -Apply
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -RoutingPolicy staged-balanced -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
 ```
 
 Do not use `-Force` during ordinary initial installation. Existing target instructions receive sidecars and manual merge records.
@@ -192,13 +192,13 @@ Use `loop-run.ps1` to acquire a bounded run lease and record enforced budgets an
 After obtaining a newer trusted source checkout, preview:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir .\.tmp\update-plan
 ```
 
 Review version relation, requested packs, expanded packs, harnesses, migrations, manifest differences, and ownership conflicts. Apply conservatively:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir .\.tmp\update-plan -Apply -ApprovedPlanPath .\.tmp\update-plan\update-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
 ```
 
 `-ForceManaged` is not a general overwrite mode. It refreshes only artifacts with unchanged layer-owned provenance and preserves ambiguous or modified files.

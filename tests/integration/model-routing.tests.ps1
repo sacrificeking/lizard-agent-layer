@@ -34,7 +34,8 @@ try {
   Assert-True ($preview.output -match 'Daily use: Submit normal task prompts; keep the current IDE model') 'Install preview must explain everyday use without routing jargon.'
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.agent')) 'Install preview must not mutate the target.'
 
-  $apply = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $target, '-Profile', 'standard', '-Harnesses', 'codex', '-Apply')
+  $installApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Profile', 'standard', '-Harnesses', 'codex')
+  $apply = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $installApproval.arguments
   Assert-Equal 0 $apply.exit_code "Staged execution install apply must succeed: $($apply.output)"
   foreach ($relative in @(
     '.agent\routing\policy.json',
@@ -56,7 +57,8 @@ try {
 
   $policyPath = Join-Path $target '.agent\routing\policy.json'
   $policyHash = Get-LizardSha256 $policyPath
-  $rerun = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $target, '-Profile', 'standard', '-Harnesses', 'codex', '-Apply')
+  $rerunApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Profile', 'standard', '-Harnesses', 'codex')
+  $rerun = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $rerunApproval.arguments
   Assert-Equal 0 $rerun.exit_code 'Staged execution install rerun must succeed.'
   Assert-Equal $policyHash (Get-LizardSha256 $policyPath) 'Staged execution install rerun must be idempotent.'
 
@@ -205,7 +207,8 @@ try {
   $advancedPreview = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $advancedTarget, '-Profile', 'standard', '-Harnesses', 'codex', '-ModelMode', 'inventory-routing')
   Assert-Equal 0 $advancedPreview.exit_code "Advanced inventory preview must succeed: $($advancedPreview.output)"
   Assert-False (Test-Path -LiteralPath (Join-Path $advancedTarget '.agent\project-profile.json')) 'Advanced preview must not install target artifacts.'
-  $advancedInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $advancedTarget, '-Profile', 'standard', '-Harnesses', 'codex', '-ModelMode', 'inventory-routing', '-Apply')
+  $advancedApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $advancedTarget, '-Profile', 'standard', '-Harnesses', 'codex', '-ModelMode', 'inventory-routing')
+  $advancedInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $advancedApproval.arguments
   Assert-Equal 0 $advancedInstall.exit_code "Advanced inventory install must succeed: $($advancedInstall.output)"
   $advancedDoctor = Invoke-TestPowerShell -ScriptPath $doctorScript -Arguments @('-TargetPath', $advancedTarget, '-Strict')
   Assert-Equal 0 $advancedDoctor.exit_code "Advanced inventory doctor must pass: $($advancedDoctor.output)"
@@ -288,7 +291,8 @@ try {
   $canaryPolicyPath = Join-Path $canaryPolicyRoot 'policy.json'
   Set-Content -LiteralPath $canaryPolicyPath -Value '{"project":"owned-canary"}' -Encoding UTF8
   $canaryHash = Get-LizardSha256 $canaryPolicyPath
-  $canaryInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $canaryTarget, '-Profile', 'minimal', '-Apply')
+  $canaryApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $canaryTarget, '-Profile', 'minimal')
+  $canaryInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $canaryApproval.arguments
   Assert-Equal 0 $canaryInstall.exit_code 'Install with existing target routing policy must succeed.'
   Assert-Equal $canaryHash (Get-LizardSha256 $canaryPolicyPath) 'Installer must not clobber an existing target routing policy.'
   $canaryManifest = Get-Content -LiteralPath (Join-Path $canaryTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json

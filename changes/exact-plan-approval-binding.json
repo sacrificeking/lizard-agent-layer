@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "exact-plan-approval-binding",
+  "date": "2026-08-01",
+  "summary": "Require canonical, independently digested, human-approved operation plans before install or update mutation.",
+  "changed_paths": [
+    "scripts/Lizard.Plan.psm1",
+    "scripts/install.ps1",
+    "scripts/update-target.ps1",
+    "scripts/matrix.ps1",
+    "schemas/operation-plan.schema.json",
+    "schemas/install-manifest.schema.json",
+    "tools/schema-validator/bindings.json",
+    "tools/schema-validator/mutation-corpus.json",
+    "registry/contracts.json",
+    "tests/unit/plan.tests.ps1",
+    "tests/run-focused.ps1",
+    "tests/integration/transaction.tests.ps1",
+    "tests/integration/public-readiness.tests.ps1",
+    "tests/integration/install-plan-binding.tests.ps1",
+    "tests/integration/update-plan-binding.tests.ps1",
+    "tests/adversarial/install-plan-tamper.tests.ps1"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0002-filesystem-and-report-containment.md",
+    "docs/adr/0003-ownership-and-manifest-identity.md",
+    "docs/adr/0004-adapter-composition-and-precedence.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0006-transaction-and-recovery-semantics.md",
+    "docs/adr/0010-exact-plan-approval-binding.md"
+  ],
+  "migration": {
+    "disposition": "migration-required",
+    "note": "Existing targets need no data rewrite, but every apply caller must first generate a fresh canonical plan and independently supply its SHA-256. Legacy Markdown plans cannot authorize mutation."
+  },
+  "compatibility": {
+    "impact": "breaking",
+    "note": "Direct install and update apply invocations without an exact approved canonical plan now fail closed."
+  }
+}

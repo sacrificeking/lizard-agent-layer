@@ -42,7 +42,8 @@ try {
   Assert-GitSuccess @('-C', $target, 'add', 'README.md') 'git add failed'
   Assert-GitSuccess @('-C', $target, 'commit', '--quiet', '-m', 'fixture') 'git commit failed'
 
-  $install = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $target, '-Profile', 'minimal', '-Packs', 'loop-engineering', '-Apply')
+  $installApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Profile', 'minimal', '-Packs', 'loop-engineering')
+  $install = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $installApproval.arguments
   Assert-Equal 0 $install.exit_code "Loop pack install failed: $($install.output)"
   $loopInit = Invoke-TestPowerShell -ScriptPath $loopInitScript -Arguments @('-TargetPath', $target, '-Pattern', 'minimal-fix-assist', '-OutputDir', (Join-Path $fixtureRoot 'init-output'), '-Apply')
   Assert-Equal 0 $loopInit.exit_code "Loop init failed: $($loopInit.output)"

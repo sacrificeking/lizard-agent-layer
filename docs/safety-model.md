@@ -5,6 +5,7 @@ The layer is built around conservative filesystem and workflow behavior.
 ## Installer safety
 
 - Preview mode is the default.
+- Install and update apply require a canonical, independently digested, human-approved plan; Markdown and `.sha256` sidecars alone never authorize mutation.
 - Existing files are skipped unless `-Force` is passed.
 - Existing harness instruction files receive sidecar merge files instead of being overwritten.
 - Apply mode writes an ownership manifest to `.agent/lizard-agent-layer.install.json`.
@@ -33,6 +34,8 @@ Manifest v3 records each managed artifact separately. Layer-owned and adopted fi
 Strict manifest checks fail on missing identities, content changes, source drift, incomplete mirrors, or adapter identity mismatches. A legacy manifest can report only `integrity-unknown`, never a strict pass.
 
 ## Transactions and recovery
+
+Exact-plan verification completes before transaction lock acquisition. Bound inputs and target preconditions are revalidated after the lock and before the first mutation. The applied plan digest is retained in the ownership manifest or update history.
 
 Apply operations acquire a per-target lock and journal every target mutation before it occurs. Replacements receive SHA-256-verified backups. Install, update, update history, loop init, loop sync, and verifier writes commit through the shared transaction module or replay the journal in reverse.
 

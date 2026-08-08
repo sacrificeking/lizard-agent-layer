@@ -35,7 +35,8 @@ try {
   New-Item -ItemType Directory -Path $protocolRoot -Force | Out-Null
   $userFile = Join-Path $protocolRoot 'permissions.md'
   Set-Content -LiteralPath $userFile -Value 'project-owned-canary' -Encoding UTF8
-  $install = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $ownedTarget, '-Profile', 'minimal', '-Apply')
+  $ownedApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $ownedTarget, '-Profile', 'minimal')
+  $install = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $ownedApproval.arguments
   Assert-Equal 0 $install.exit_code 'Fresh v3 install with a pre-existing file must succeed.'
   $manifest = Read-Manifest $ownedTarget
   Assert-Equal 3 ([int]$manifest.schema_version) 'Installer must emit manifest schema v3.'
@@ -47,14 +48,16 @@ try {
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$layerArtifact.installed_hash)) 'Layer-owned files require an installed hash.'
 
   Set-Content -LiteralPath $userFile -Value 'project-owned-customized' -Encoding UTF8
-  $forceManaged = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $ownedTarget, '-Profile', 'minimal', '-Apply', '-ForceManaged')
+  $forceManagedApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $ownedTarget, '-Profile', 'minimal', '-ForceManaged')
+  $forceManaged = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $forceManagedApproval.arguments
   Assert-Equal 0 $forceManaged.exit_code 'ForceManaged must complete while preserving user-owned conflicts.'
   Assert-True ((Get-Content -LiteralPath $userFile -Raw) -match 'project-owned-customized') 'ForceManaged must not replace user-owned content.'
   $manifest = Read-Manifest $ownedTarget
   Assert-True (@($manifest.conflicts | Where-Object { $_ -match 'permissions.md' }).Count -gt 0) 'Preserved ForceManaged conflicts must be recorded.'
 
   $tamperTarget = New-Target 'tamper'
-  $install = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $tamperTarget, '-Profile', 'minimal', '-Harnesses', 'generic-agents-md,codex', '-Apply')
+  $tamperApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $tamperTarget, '-Profile', 'minimal', '-Harnesses', 'generic-agents-md,codex')
+  $install = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $tamperApproval.arguments
   Assert-Equal 0 $install.exit_code 'Combined compatible adapter install must succeed.'
   $manifest = Read-Manifest $tamperTarget
   Assert-Equal 'codex' ([string]$manifest.adapters[0]) 'Codex must win declared AGENTS.md precedence.'
@@ -76,14 +79,16 @@ try {
   $tamperedHash = Get-LizardSha256 $tamperedPath
   $tamperedInstructionHash = Get-LizardSha256 $tamperedInstructionPath
   $tamperedMirrorHash = Get-LizardSha256 $tamperedMirrorPath
-  $forceTamper = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $tamperTarget, '-Profile', 'minimal', '-Harnesses', 'generic-agents-md,codex', '-Apply', '-ForceManaged')
+  $forceTamperApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $tamperTarget, '-Profile', 'minimal', '-Harnesses', 'generic-agents-md,codex', '-ForceManaged')
+  $forceTamper = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $forceTamperApproval.arguments
   Assert-Equal 0 $forceTamper.exit_code 'ForceManaged must fail closed per artifact without aborting the reviewed install.'
   Assert-Equal $tamperedHash (Get-LizardSha256 $tamperedPath) 'ForceManaged must preserve locally modified layer-owned files.'
   Assert-Equal $tamperedInstructionHash (Get-LizardSha256 $tamperedInstructionPath) 'ForceManaged must preserve a locally modified adapter instruction.'
   Assert-Equal $tamperedMirrorHash (Get-LizardSha256 $tamperedMirrorPath) 'ForceManaged must preserve a locally modified harness mirror.'
 
   $legacyTarget = New-Target 'legacy-v2'
-  $install = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $legacyTarget, '-Profile', 'minimal', '-Apply')
+  $legacyApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $legacyTarget, '-Profile', 'minimal')
+  $install = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $legacyApproval.arguments
   Assert-Equal 0 $install.exit_code 'Legacy migration fixture setup must install.'
   $v3 = Read-Manifest $legacyTarget
   $v2 = [ordered]@{
@@ -100,7 +105,8 @@ try {
   Assert-Equal 'integrity-unknown' ([string]$legacyDiffReport.status) 'Legacy strict diff must report integrity-unknown.'
   $legacyFile = Join-Path $legacyTarget '.agent\protocols\permissions.md'
   Set-Content -LiteralPath $legacyFile -Value 'legacy-customization' -Encoding UTF8
-  $migration = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $legacyTarget, '-Profile', 'minimal', '-Apply', '-ForceManaged')
+  $migrationApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $legacyTarget, '-Profile', 'minimal', '-ForceManaged')
+  $migration = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $migrationApproval.arguments
   Assert-Equal 0 $migration.exit_code 'Conservative v2-to-v3 migration must succeed.'
   Assert-True ((Get-Content -LiteralPath $legacyFile -Raw) -match 'legacy-customization') 'Ambiguous v2 content must remain untouched.'
   $migrated = Read-Manifest $legacyTarget

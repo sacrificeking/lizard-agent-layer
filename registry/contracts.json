@@ -26,6 +26,12 @@
       "paths": ["scripts/Lizard.Transaction.psm1", "scripts/transaction-recover.ps1", "tests/integration/transaction.tests.ps1"]
     },
     {
+      "id": "exact-plan-approval",
+      "adr": "docs/adr/0010-exact-plan-approval-binding.md",
+      "migration_required": true,
+      "paths": ["scripts/Lizard.Plan.psm1", "scripts/install.ps1", "scripts/update-target.ps1", "schemas/operation-plan.schema.json", "tests/unit/plan.tests.ps1", "tests/integration/install-plan-binding.tests.ps1", "tests/integration/update-plan-binding.tests.ps1", "tests/adversarial/install-plan-tamper.tests.ps1"]
+    },
+    {
       "id": "report-boundaries",
       "adr": "docs/adr/0007-report-boundaries-and-privacy.md",
       "migration_required": false,

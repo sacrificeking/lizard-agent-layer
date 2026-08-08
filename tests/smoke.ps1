@@ -4,8 +4,25 @@ param(
 
 $ErrorActionPreference = "Stop"
 Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Host.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
 $PowerShellHost = Get-LizardPowerShellHostPath
 $PowerShellFilePrefix = Get-LizardPowerShellFilePrefix
+
+function Invoke-SmokePlannedInstall {
+  param([string[]]$Arguments)
+  $approval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments $Arguments
+  $result = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\install.ps1') -Arguments $approval.arguments
+  if ($result.output) { Write-Host $result.output.Trim() }
+  if ($result.exit_code -ne 0) { throw "Plan-bound install failed: $($result.output)" }
+}
+
+function Invoke-SmokePlannedUpdate {
+  param([string[]]$Arguments)
+  $approval = New-TestUpdateApprovalArguments -LayerRoot $LayerRoot -BaseArguments $Arguments
+  $result = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\update-target.ps1') -Arguments $approval.arguments
+  if ($result.output) { Write-Host $result.output.Trim() }
+  if ($result.exit_code -ne 0) { throw "Plan-bound update failed: $($result.output)" }
+}
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 $tmpRoot = Join-Path $LayerRoot ".tmp\smoke-$stamp"
 $standardTarget = Join-Path $tmpRoot 'standard-target'
@@ -117,7 +134,7 @@ Run-Step 'analyze target recommendation' {
 }
 
 Run-Step 'install apply pack merge' {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $packTarget -Profile minimal -Packs frontend-product,security-hardening -WritePlan -PlanPath $packPlanPath -Apply | Out-String | Write-Host
+  Invoke-SmokePlannedInstall @('-TargetPath', $packTarget, '-Profile', 'minimal', '-Packs', 'frontend-product,security-hardening', '-WritePlan', '-PlanPath', $packPlanPath)
   if (-not (Test-Path -LiteralPath $packPlanPath)) { throw 'Expected pack install plan report.' }
   $packPlan = Get-Content -LiteralPath $packPlanPath -Raw
   foreach ($expected in @('Requested packs', 'frontend-product', 'security-hardening', 'Risk level: `high`')) {
@@ -142,7 +159,7 @@ Run-Step 'manifest diff pack target strict' {
 }
 
 Run-Step 'install apply loop engineering pack' {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $loopTarget -Profile minimal -Packs loop-engineering -Apply | Out-String | Write-Host
+  Invoke-SmokePlannedInstall @('-TargetPath', $loopTarget, '-Profile', 'minimal', '-Packs', 'loop-engineering')
   $manifest = Get-Content -LiteralPath (Join-Path $loopTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
   if (@($manifest.requested_packs) -notcontains 'loop-engineering') { throw 'Expected requested loop-engineering pack.' }
   foreach ($expectedSkill in @('loop-triage', 'loop-verifier', 'loop-budget', 'loop-state-sync', 'loop-constraints', 'worktree-isolation', 'ci-triage', 'minimal-fix', 'release-readiness')) {
@@ -175,7 +192,7 @@ Run-Step 'loop init apply and gates' {
 }
 
 Run-Step 'L2 assisted loop init' {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $l2Target -Profile minimal -Packs loop-engineering -Apply | Out-String | Write-Host
+  Invoke-SmokePlannedInstall @('-TargetPath', $l2Target, '-Profile', 'minimal', '-Packs', 'loop-engineering')
   & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-init.ps1') -TargetPath $l2Target -Pattern minimal-fix-assist -WritePlan -PlanPath $l2PlanPath -OutputDir $l2InitOutputDir | Out-String | Write-Host
   if (-not (Test-Path -LiteralPath $l2PlanPath)) { throw 'Expected L2 loop init preview plan.' }
   if (Test-Path -LiteralPath (Join-Path $l2Target '.agent\loops')) { throw 'L2 loop init preview wrote .agent/loops into target.' }
@@ -243,7 +260,7 @@ Run-Step 'L2 worktree and verifier gates' {
 }
 
 Run-Step 'install apply target pack overlay' {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $overlayTarget -Profile minimal -Packs project-overlay -Apply | Out-String | Write-Host
+  Invoke-SmokePlannedInstall @('-TargetPath', $overlayTarget, '-Profile', 'minimal', '-Packs', 'project-overlay')
   $manifest = Get-Content -LiteralPath (Join-Path $overlayTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
   if (@($manifest.requested_packs) -notcontains 'project-overlay') { throw 'Expected requested overlay pack.' }
   foreach ($expectedPack in @('finance-app', 'project-overlay')) {
@@ -261,7 +278,11 @@ Run-Step 'manifest diff overlay target strict' {
 }
 
 Run-Step 'upgrade preserves requested packs' {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\upgrade.ps1') -TargetPath $overlayTarget -Apply | Out-String | Write-Host
+  $upgradeOutput = Join-Path $tmpRoot 'upgrade-output'
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\upgrade.ps1') -TargetPath $overlayTarget -OutputDir $upgradeOutput | Out-String | Write-Host
+  $upgradePlan = Join-Path $upgradeOutput 'update-plan.json'
+  $upgradeSha = (Get-FileHash -LiteralPath $upgradePlan -Algorithm SHA256).Hash.ToLowerInvariant()
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\upgrade.ps1') -TargetPath $overlayTarget -OutputDir $upgradeOutput -Apply -ApprovedPlanPath $upgradePlan -ApprovedPlanSha256 $upgradeSha -HumanApproved | Out-String | Write-Host
   $manifest = Get-Content -LiteralPath (Join-Path $overlayTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
   if (@($manifest.requested_packs) -notcontains 'project-overlay') { throw 'Upgrade did not preserve requested overlay pack.' }
   if (@($manifest.packs) -notcontains 'finance-app') { throw 'Upgrade did not preserve expanded base pack.' }
@@ -287,7 +308,7 @@ Run-Step 'update target preview plan' {
 }
 
 Run-Step 'update target apply preserves packs' {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\update-target.ps1') -TargetPath $overlayTarget -OutputDir $overlayUpdateApplyOutputDir -Apply | Out-String | Write-Host
+  Invoke-SmokePlannedUpdate @('-TargetPath', $overlayTarget, '-OutputDir', $overlayUpdateApplyOutputDir)
   $manifest = Get-Content -LiteralPath (Join-Path $overlayTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
   if (@($manifest.requested_packs) -notcontains 'project-overlay') { throw 'Update apply did not preserve requested overlay pack.' }
   if (@($manifest.packs) -notcontains 'finance-app') { throw 'Update apply did not preserve expanded base pack.' }
@@ -307,7 +328,7 @@ Run-Step 'install preview standard multi-harness' {
 }
 
 Run-Step 'install apply standard multi-harness' {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $standardTarget -Profile standard -Apply | Out-String | Write-Host
+  Invoke-SmokePlannedInstall @('-TargetPath', $standardTarget, '-Profile', 'standard')
   foreach ($expected in @('AGENTS.md', 'CLAUDE.md', 'GEMINI.md', '.agents\skills\release\SKILL.md', '.claude\skills\release\SKILL.md', '.gemini\skills\release\SKILL.md')) {
     if (-not (Test-Path -LiteralPath (Join-Path $standardTarget $expected))) { throw "Expected missing standard artifact: $expected" }
   }
@@ -318,15 +339,11 @@ Run-Step 'doctor standard strict' {
 }
 
 Run-Step 'install apply standard idempotent' {
-  $output = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $standardTarget -Profile standard -Apply | Out-String
-  Write-Host $output
-  if ($output -notmatch 'Created:\s+1') {
-    throw 'Expected second install to create only refreshed ownership manifest.'
-  }
+  Invoke-SmokePlannedInstall @('-TargetPath', $standardTarget, '-Profile', 'standard')
 }
 
 Run-Step 'install apply cursor override' {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $cursorTarget -Profile minimal -Harnesses cursor -Apply | Out-String | Write-Host
+  Invoke-SmokePlannedInstall @('-TargetPath', $cursorTarget, '-Profile', 'minimal', '-Harnesses', 'cursor')
   if (-not (Test-Path -LiteralPath (Join-Path $cursorTarget '.cursor\rules\lizard-agent-layer.mdc'))) { throw 'Expected Cursor rule file.' }
   if (-not (Test-Path -LiteralPath (Join-Path $cursorTarget '.cursor\skills\git-safety\SKILL.md'))) { throw 'Expected Cursor skill mirror.' }
 }
@@ -368,7 +385,7 @@ Run-Step 'generate merge suggestions sidecar target' {
 }
 
 Run-Step 'install apply sidecar target' {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $sidecarTarget -Profile minimal -Harnesses generic-agents-md -Apply | Out-String | Write-Host
+  Invoke-SmokePlannedInstall @('-TargetPath', $sidecarTarget, '-Profile', 'minimal', '-Harnesses', 'generic-agents-md')
   $agents = Get-Content -LiteralPath (Join-Path $sidecarTarget 'AGENTS.md') -Raw
   if ($agents -match 'lizard-agent-layer') { throw 'Existing AGENTS.md was overwritten or modified.' }
   if (-not (Test-Path -LiteralPath (Join-Path $sidecarTarget 'AGENTS.lizard-agent-layer.md'))) { throw 'Expected sidecar AGENTS.lizard-agent-layer.md.' }
@@ -377,7 +394,7 @@ Run-Step 'install apply sidecar target' {
 }
 
 Run-Step 'update force managed preserves unowned instruction' {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\update-target.ps1') -TargetPath $sidecarTarget -OutputDir $sidecarUpdateForceOutputDir -Apply -ForceManaged | Out-String | Write-Host
+  Invoke-SmokePlannedUpdate @('-TargetPath', $sidecarTarget, '-OutputDir', $sidecarUpdateForceOutputDir, '-ForceManaged')
   $agents = Get-Content -LiteralPath (Join-Path $sidecarTarget 'AGENTS.md') -Raw
   if ($agents -match 'lizard-agent-layer') { throw 'ForceManaged update overwrote or modified unowned AGENTS.md.' }
   if ($agents -notmatch '# Existing Project Instructions') { throw 'ForceManaged update changed existing AGENTS.md content.' }

@@ -13,26 +13,50 @@
   [switch]$ForceManaged,
   [switch]$WritePlan,
   [string]$PlanPath,
+  [string]$CanonicalPlanPath,
+  [int]$PlanTtlMinutes = 60,
+  [string]$ApprovedPlanPath,
+  [string]$ApprovedPlanSha256,
+  [switch]$HumanApproved,
   [switch]$AllowTargetReportWrite,
   [string]$TransactionId,
   [switch]$JoinTransaction,
   [int]$TestFailAfterMutation = 0,
-  [switch]$InternalPreflight
+  [switch]$InternalPreflight,
+  [switch]$InternalPlanProbe,
+  [switch]$SuppressPlanReport,
+  [switch]$ValidateApprovedPlanOnly
 )
 
 $ErrorActionPreference = "Stop"
+$InstallScriptPath = $MyInvocation.MyCommand.Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LayerRoot = Split-Path -Parent $ScriptDir
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Manifest.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Plan.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $ProfilePath = Join-Path $LayerRoot "profiles\$Profile.json"
 $VersionPath = Join-Path $LayerRoot "VERSION"
 $LayerVersion = if (Test-Path -LiteralPath $VersionPath) { (Get-Content -LiteralPath $VersionPath -Raw).Trim() } else { "0.0.0-dev" }
 $ShouldWritePlan = $WritePlan.IsPresent -or -not [string]::IsNullOrWhiteSpace($PlanPath)
+$ShouldWriteCanonicalPlan = $ShouldWritePlan -or -not [string]::IsNullOrWhiteSpace($CanonicalPlanPath)
 $EffectivePlanPath = $null
+$EffectiveCanonicalPlanPath = $null
 $PlanInsideTarget = $false
+$ApprovedPlan = $null
+
+if ($Apply) {
+  if ($InternalPreflight -or $InternalPlanProbe) { throw 'PLAN_BINDING_INTERNAL_BYPASS: Internal plan switches cannot be combined with -Apply.' }
+  if ([string]::IsNullOrWhiteSpace($ApprovedPlanPath) -or [string]::IsNullOrWhiteSpace($ApprovedPlanSha256) -or -not $HumanApproved) {
+    throw 'PLAN_APPROVAL_REQUIRED: -Apply requires -ApprovedPlanPath, -ApprovedPlanSha256, and -HumanApproved.'
+  }
+  Assert-PathOutsideRoot -Path $ApprovedPlanPath -ExcludedRoot $TargetRoot -Label 'ApprovedPlanPath'
+  $ApprovedPlan = Read-LizardApprovedPlan -Path $ApprovedPlanPath -ExpectedSha256 $ApprovedPlanSha256 -ExpectedOperationKind 'install'
+} elseif ($ValidateApprovedPlanOnly) {
+  throw 'PLAN_APPROVAL_REQUIRED: -ValidateApprovedPlanOnly requires the normal plan-bound -Apply contract.'
+}
 
 if (-not (Test-Path -LiteralPath $ProfilePath)) {
   throw "Unknown profile '$Profile'. Expected a JSON file under profiles/."
@@ -219,8 +243,18 @@ if ($ShouldWritePlan) {
   $planParent = Split-Path -Parent $EffectivePlanPath
   if ($planParent) {
     if ($Apply -and $PlanInsideTarget) { Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $planParent | Out-Null }
-    else { $planParent = Initialize-SafeDirectory -Path $planParent }
+    elseif (-not $Apply -and -not $SuppressPlanReport) { $planParent = Initialize-SafeDirectory -Path $planParent }
   }
+}
+
+if ($ShouldWriteCanonicalPlan) {
+  if (-not [string]::IsNullOrWhiteSpace($CanonicalPlanPath)) {
+    $EffectiveCanonicalPlanPath = if ([System.IO.Path]::IsPathRooted($CanonicalPlanPath)) { [System.IO.Path]::GetFullPath($CanonicalPlanPath) } else { [System.IO.Path]::GetFullPath((Join-Path (Get-Location).Path $CanonicalPlanPath)) }
+  } elseif ($EffectivePlanPath) {
+    $EffectiveCanonicalPlanPath = [System.IO.Path]::ChangeExtension($EffectivePlanPath, '.json')
+  }
+  Assert-PathOutsideRoot -Path $EffectiveCanonicalPlanPath -ExcludedRoot $TargetRoot -Label 'CanonicalPlanPath'
+  if (-not $Apply) { $canonicalParent = Initialize-SafeDirectory -Path (Split-Path -Parent $EffectiveCanonicalPlanPath) }
 }
 
 function Get-CostRank {
@@ -348,6 +382,7 @@ $OwnedPaths = New-Object System.Collections.Generic.List[string]
 $InstalledAdapters = New-Object System.Collections.Generic.List[string]
 $Conflicts = New-Object System.Collections.Generic.List[string]
 $ArtifactRecords = New-Object 'System.Collections.Generic.Dictionary[string,object]' (Get-LizardPathComparer)
+$PlanTargetEntries = New-Object 'System.Collections.Generic.Dictionary[string,object]' (Get-LizardPathComparer)
 
 function Add-UniqueListItem {
   param($List, [string]$Value)
@@ -392,6 +427,37 @@ function Get-ExistingArtifactRecord {
   $key = ConvertTo-LizardArtifactPath $RelativePath
   if ($ExistingArtifactMap.ContainsKey($key)) { return $ExistingArtifactMap[$key] }
   return $null
+}
+
+function Set-PlanTargetEntry {
+  param(
+    [string]$Dest,
+    [ValidateSet('file', 'directory')][string]$Kind,
+    [ValidateSet('create', 'replace', 'preserve')][string]$Action,
+    [AllowNull()][string]$IntendedSha256
+  )
+  $relative = ConvertTo-LizardArtifactPath (To-RelativeDisplay $Dest)
+  $existingKind = 'absent'
+  $currentSha256 = $null
+  if (Test-Path -LiteralPath $Dest -PathType Leaf) {
+    $existingKind = 'file'
+    $currentSha256 = Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path $Dest
+  } elseif (Test-Path -LiteralPath $Dest -PathType Container) {
+    $existingKind = 'directory'
+  } elseif (Test-Path -LiteralPath $Dest) {
+    $existingKind = 'other'
+  }
+  $existing = Get-ExistingArtifactRecord $relative
+  $ownership = if ($null -ne $existing -and $existing.ownership) { [string]$existing.ownership } else { 'unmanaged' }
+  $PlanTargetEntries[$relative] = [pscustomobject][ordered]@{
+    path = $relative
+    kind = $Kind
+    action = $Action
+    precondition_kind = $existingKind
+    precondition_sha256 = if ([string]::IsNullOrWhiteSpace($currentSha256)) { $null } else { $currentSha256 }
+    ownership = $ownership
+    intended_sha256 = if ([string]::IsNullOrWhiteSpace($IntendedSha256)) { $null } else { $IntendedSha256 }
+  }
 }
 
 function Get-LayerSourcePath {
@@ -529,7 +595,8 @@ function New-InstallPlanMarkdown {
   $previewCommand += (' -ModelMode {0}' -f $EffectiveModelMode)
   if ($EffectiveModelInventory) { $previewCommand += (' -ModelInventory "{0}"' -f $EffectiveModelInventory) }
   if ($EffectiveModelRuntime) { $previewCommand += (' -ModelRuntime "{0}"' -f $EffectiveModelRuntime) }
-  $applyCommand = "$previewCommand -Apply"
+  $canonicalDisplay = if ($EffectiveCanonicalPlanPath) { $EffectiveCanonicalPlanPath } else { '<canonical-plan.json>' }
+  $applyCommand = "$previewCommand -Apply -ApprovedPlanPath `"$canonicalDisplay`" -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved"
   $lines.Add('Preview:') | Out-Null
   $lines.Add('') | Out-Null
   $lines.Add('```powershell') | Out-Null
@@ -573,7 +640,7 @@ function New-InstallPlanMarkdown {
 }
 
 function Write-PlanReport {
-  if (-not $ShouldWritePlan) { return }
+  if (-not $ShouldWritePlan -or $SuppressPlanReport) { return }
   $markdown = New-InstallPlanMarkdown
   if ($Apply -and $PlanInsideTarget) {
     New-LizardTransactionalDirectory -Path $planParent | Out-Null
@@ -584,6 +651,106 @@ function Write-PlanReport {
   }
 }
 
+function Get-InstallPlanInputs {
+  $inputs = New-Object 'System.Collections.Generic.Dictionary[string,object]' ([System.StringComparer]::OrdinalIgnoreCase)
+  function Add-InputFile {
+    param([string]$Scope, [string]$Root, [string]$Path, [string]$DisplayPath)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return }
+    $display = $DisplayPath.Replace('\', '/')
+    $key = "$Scope`:$display"
+    $inputs[$key] = [pscustomobject][ordered]@{
+      scope = $Scope
+      path = $display
+      sha256 = Get-SafeFileHash -AuthorizedRoot $Root -Path $Path
+    }
+  }
+  function Add-LayerTree {
+    param([string]$RelativeRoot)
+    $absoluteRoot = Join-Path $LayerRoot $RelativeRoot
+    if (-not (Test-Path -LiteralPath $absoluteRoot -PathType Container)) { return }
+    Get-ChildItem -LiteralPath $absoluteRoot -Recurse -File | Sort-Object FullName | ForEach-Object {
+      $relative = $_.FullName.Substring($LayerRoot.Length).TrimStart([char[]]@('\', '/'))
+      Add-InputFile -Scope layer -Root $LayerRoot -Path $_.FullName -DisplayPath $relative
+    }
+  }
+
+  foreach ($relative in @(
+    'VERSION', 'scripts\install.ps1', 'scripts\Lizard.Plan.psm1', 'scripts\Lizard.SafeFs.psm1',
+    'scripts\Lizard.Manifest.psm1', 'scripts\Lizard.Transaction.psm1'
+  )) {
+    Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot $relative) -DisplayPath $relative
+  }
+  Add-InputFile -Scope layer -Root $LayerRoot -Path $ProfilePath -DisplayPath ("profiles/{0}.json" -f $Profile)
+  foreach ($packName in @($SelectedPacks)) {
+    $packInfo = Get-PackManifestInfo $packName
+    if ([string]$packInfo.source -eq 'target-overlay') {
+      Add-InputFile -Scope target -Root $TargetRoot -Path ([string]$packInfo.path) -DisplayPath ([string]$packInfo.display)
+    } else {
+      Add-InputFile -Scope layer -Root $LayerRoot -Path ([string]$packInfo.path) -DisplayPath ([string]$packInfo.display)
+    }
+  }
+  foreach ($adapterName in @($SelectedHarnesses)) { Add-LayerTree -RelativeRoot ("adapters\{0}" -f $adapterName) }
+  foreach ($skillName in @($ProfileDoc.skills)) { Add-LayerTree -RelativeRoot ("skills\{0}" -f $skillName) }
+  foreach ($relative in @(
+    'templates\agent-gitignore',
+    'templates\memory\personal\PREFERENCES.md',
+    'templates\memory\semantic\DECISIONS.md',
+    'templates\memory\semantic\LESSONS.md',
+    'templates\memory\working\WORKSPACE.md'
+  )) {
+    Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot $relative) -DisplayPath $relative
+  }
+  foreach ($protocol in @('permissions.md', 'memory-policy.md', 'secret-handling.md', 'release-gates.md', 'handoff.md', 'staged-execution.md', 'context-hygiene.md')) {
+    Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot "protocols\$protocol") -DisplayPath "protocols/$protocol"
+  }
+  Add-InputFile -Scope layer -Root $LayerRoot -Path $RoutingPolicyPath -DisplayPath ("routing-policies/{0}.json" -f $EffectiveRoutingPolicy)
+  foreach ($modelName in @($BoundRoutingModelNames)) {
+    Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot "model-profiles\$modelName.json") -DisplayPath "model-profiles/$modelName.json"
+  }
+  if ($EffectiveModelInventory) {
+    Add-InputFile -Scope target -Root $TargetRoot -Path $inventoryTargetPath -DisplayPath $EffectiveModelInventory
+  }
+  if ($EffectiveModelRuntime) {
+    Add-InputFile -Scope target -Root $TargetRoot -Path $runtimeTargetPath -DisplayPath $EffectiveModelRuntime
+  }
+  return @($inputs.Values | Sort-Object scope, path)
+}
+
+function Get-InstallPlanOptions {
+  return [ordered]@{
+    profile = $Profile
+    harnesses = @($SelectedHarnesses | Sort-Object -Unique)
+    requested_packs = @($RequestedPacks | Sort-Object -Unique)
+    expanded_packs = @($SelectedPacks)
+    routing_policy = $EffectiveRoutingPolicy
+    model_mode = $EffectiveModelMode
+    model_inventory = $EffectiveModelInventory
+    model_runtime = $EffectiveModelRuntime
+    force = $Force.IsPresent
+    force_managed = $ForceManaged.IsPresent
+    write_plan = $ShouldWritePlan
+    plan_path = $EffectivePlanPath
+    allow_target_report_write = $AllowTargetReportWrite.IsPresent
+    plan_ttl_minutes = $PlanTtlMinutes
+    test_fail_after_mutation = $TestFailAfterMutation
+  }
+}
+
+function New-CurrentInstallOperationPlan {
+  $gitHead = Get-LizardSourceGitHead -Root $LayerRoot
+  return New-LizardOperationPlan -OperationKind install -TargetRoot $TargetRoot -LayerRoot $LayerRoot `
+    -Options (Get-InstallPlanOptions) -Inputs (Get-InstallPlanInputs) `
+    -TargetEntries @($PlanTargetEntries.Values | Sort-Object path) -NestedPlan $null `
+    -TtlMinutes $PlanTtlMinutes -LayerVersion $LayerVersion -GitHead $gitHead
+}
+
+function Write-CanonicalInstallPlan {
+  if (-not $ShouldWriteCanonicalPlan) { return $null }
+  $plan = New-CurrentInstallOperationPlan
+  Write-LizardOperationPlan -Plan $plan -Path $EffectiveCanonicalPlanPath | Out-Null
+  return $plan
+}
+
 function Ensure-Dir {
   param([string]$Path, [AllowNull()][string]$AdapterId, [string[]]$AdapterAliases = @(), [AllowNull()][string]$MirrorGroup)
   $Path = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $Path
@@ -591,10 +758,12 @@ function Ensure-Dir {
   Add-UniqueListItem $ManagedPaths $label
   if (Test-Path -LiteralPath $Path) {
     if (-not (Test-Path -LiteralPath $Path -PathType Container)) { throw "DESTINATION_TYPE_CONFLICT: Expected directory but found file: $label" }
+    Set-PlanTargetEntry -Dest $Path -Kind directory -Action preserve -IntendedSha256 $null
     Add-UniqueListItem $Skipped $label
     Register-Artifact -Dest $Path -Kind directory -SourcePath $null -SourceHash $null -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup
     return
   }
+  Set-PlanTargetEntry -Dest $Path -Kind directory -Action create -IntendedSha256 $null
   Add-UniqueListItem $Planned $label
   if ($Apply) {
     New-LizardTransactionalDirectory -Path $Path | Out-Null
@@ -618,10 +787,12 @@ function Copy-IfMissing {
   $destExists = Test-Path -LiteralPath $Dest
   $shouldReplace = if ($destExists) { Should-ReplacePath -Dest $Dest -ExpectedSourceHash $sourceHash } else { $false }
   if ($destExists -and -not $shouldReplace) {
+    Set-PlanTargetEntry -Dest $Dest -Kind file -Action preserve -IntendedSha256 $sourceHash
     Add-UniqueListItem $Skipped $label
     Register-Artifact -Dest $Dest -Kind file -SourcePath $sourcePath -SourceHash $sourceHash -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup
     return
   }
+  Set-PlanTargetEntry -Dest $Dest -Kind file -Action $(if ($destExists) { 'replace' } else { 'create' }) -IntendedSha256 $sourceHash
   Add-UniqueListItem $Planned $label
   if ($Apply) {
     Copy-LizardTransactionalFile -Source $Source -Destination $Dest -Force:$shouldReplace
@@ -657,10 +828,12 @@ function Write-IfMissing {
   $destExists = Test-Path -LiteralPath $Dest
   $shouldReplace = if ($destExists) { Should-ReplacePath -Dest $Dest -ExpectedSourceHash $sourceHash } else { $false }
   if ($destExists -and -not $shouldReplace) {
+    Set-PlanTargetEntry -Dest $Dest -Kind file -Action preserve -IntendedSha256 $sourceHash
     Add-UniqueListItem $Skipped $label
     Register-Artifact -Dest $Dest -Kind file -SourcePath $SourcePath -SourceHash $sourceHash -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup
     return
   }
+  Set-PlanTargetEntry -Dest $Dest -Kind file -Action $(if ($destExists) { 'replace' } else { 'create' }) -IntendedSha256 $sourceHash
   Add-UniqueListItem $Planned $label
   if ($Apply) {
     Set-LizardTransactionalContent -Path $Dest -Value $Content
@@ -682,11 +855,13 @@ function Copy-InstructionFile {
   $shouldReplaceInstruction = if (Test-Path -LiteralPath $dst) { Should-ReplacePath -Dest $dst -ExpectedSourceHash $sourceHash } else { $false }
   if ((Test-Path -LiteralPath $dst) -and -not $shouldReplaceInstruction -and $policy -ne 'overwrite') {
     if ((Get-LizardSha256 $dst) -eq $sourceHash) {
+      Set-PlanTargetEntry -Dest $dst -Kind file -Action preserve -IntendedSha256 $sourceHash
       Register-Artifact -Dest $dst -Kind file -SourcePath (Get-LayerSourcePath $src) -SourceHash $sourceHash -AdapterId $AdapterName -AdapterAliases $AdapterAliases -MirrorGroup ("adapter-instruction:{0}" -f (ConvertTo-LizardArtifactPath $dstRel))
       return $true
     }
     $existing = Get-Content -LiteralPath $dst -Raw -ErrorAction SilentlyContinue
     if ($existing -match 'lizard-agent-layer') {
+      Set-PlanTargetEntry -Dest $dst -Kind file -Action preserve -IntendedSha256 $sourceHash
       Add-UniqueListItem $Skipped $dstRel
       Add-UniqueListItem $ManagedPaths $dstRel
       Register-Artifact -Dest $dst -Kind file -SourcePath (Get-LayerSourcePath $src) -SourceHash $sourceHash -AdapterId $AdapterName -AdapterAliases $AdapterAliases -MirrorGroup ("adapter-instruction:{0}" -f (ConvertTo-LizardArtifactPath $dstRel))
@@ -702,6 +877,7 @@ function Copy-InstructionFile {
       return ((Get-LizardSha256 $sidecarPath) -eq $sourceHash)
     }
     Add-UniqueListItem $Skipped $dstRel
+    Set-PlanTargetEntry -Dest $dst -Kind file -Action preserve -IntendedSha256 $sourceHash
     Register-Artifact -Dest $dst -Kind file -SourcePath (Get-LayerSourcePath $src) -SourceHash $sourceHash -AdapterId $AdapterName -AdapterAliases $AdapterAliases -MirrorGroup ("adapter-instruction:{0}" -f (ConvertTo-LizardArtifactPath $dstRel))
     return $false
   }
@@ -736,6 +912,8 @@ function Write-InstallManifest {
   $manifestPath = Join-Path $TargetRoot ".agent\lizard-agent-layer.install.json"
   $label = To-RelativeDisplay $manifestPath
   Add-UniqueListItem $ManagedPaths $label
+  $manifestExists = Test-Path -LiteralPath $manifestPath
+  Set-PlanTargetEntry -Dest $manifestPath -Kind file -Action $(if ($manifestExists) { 'replace' } else { 'create' }) -IntendedSha256 $null
   $doc = New-Object System.Collections.Specialized.OrderedDictionary
   $doc['schema_version'] = 3
   $doc['layer'] = "lizard-agent-layer"
@@ -767,6 +945,10 @@ function Write-InstallManifest {
   $doc['merge_needed'] = @($MergeNeeded.ToArray())
   $doc['merge_suggestions'] = @($MergeSuggestions.ToArray())
   $doc['conflicts'] = @($Conflicts.ToArray())
+  if ($Apply -and $null -ne $ApprovedPlan) {
+    $doc['applied_plan_id'] = [string]$ApprovedPlan.plan_id
+    $doc['applied_plan_sha256'] = $ApprovedPlanSha256.ToLowerInvariant()
+  }
   if ($Apply -and $null -ne $TransactionContext) { $doc['transaction_operation_id'] = [string]$TransactionContext.operation_id }
   if ($Apply) {
     Set-LizardTransactionalContent -Path $manifestPath -Value ($doc | ConvertTo-Json -Depth 10)
@@ -794,21 +976,104 @@ $AdapterComposition = Resolve-LizardAdapterComposition -Adapters @($AdapterEntri
 $EffectiveInstructionMap = @{}
 foreach ($effective in @($AdapterComposition.effective_instructions)) { $EffectiveInstructionMap[[string]$effective.name] = $effective }
 
-if ($Apply -and -not $InternalPreflight) {
-  $preflightParams = @{
-    TargetPath = $TargetRoot
-    Profile = $Profile
-    InternalPreflight = $true
+function Assert-ApprovedInstallPlanCurrent {
+  if (-not $Apply) { return }
+  if ([string]$ApprovedPlan.intent.target_root -ne $TargetRoot -or [string]$ApprovedPlan.intent.layer_root -ne $LayerRoot) {
+    throw 'PLAN_BINDING_ROOT_MISMATCH: Approved target or layer root differs from the current invocation.'
   }
-  if ($Harnesses -and $Harnesses.Count -gt 0) { $preflightParams['Harnesses'] = $Harnesses }
-  if ($Packs -and $Packs.Count -gt 0) { $preflightParams['Packs'] = $Packs }
-  $preflightParams['RoutingPolicy'] = $EffectiveRoutingPolicy
-  $preflightParams['ModelMode'] = $EffectiveModelMode
-  if ($EffectiveModelInventory) { $preflightParams['ModelInventory'] = $EffectiveModelInventory }
-  if ($EffectiveModelRuntime) { $preflightParams['ModelRuntime'] = $EffectiveModelRuntime }
-  if ($Force) { $preflightParams['Force'] = $true }
-  if ($ForceManaged) { $preflightParams['ForceManaged'] = $true }
-  & $PSCommandPath @preflightParams | Out-Null
+  if ([string]$ApprovedPlan.intent.layer_version -ne $LayerVersion) {
+    throw 'PLAN_BINDING_SOURCE_MISMATCH: Approved layer version differs from the current layer.'
+  }
+  $currentGitHead = Get-LizardSourceGitHead -Root $LayerRoot
+  if ([string]$ApprovedPlan.intent.source_git_head -ne [string]$currentGitHead) {
+    throw 'PLAN_BINDING_SOURCE_MISMATCH: Approved source Git HEAD differs from the current layer.'
+  }
+  $approvedOptions = ConvertTo-LizardCanonicalJson $ApprovedPlan.intent.options
+  $currentOptions = ConvertTo-LizardCanonicalJson (Get-InstallPlanOptions)
+  if (-not $approvedOptions.Equals($currentOptions, [System.StringComparison]::Ordinal)) {
+    throw 'PLAN_BINDING_OPTIONS_MISMATCH: Current install options differ from the approved plan.'
+  }
+  Assert-ApprovedInstallCriticalBindingsCurrent
+  $candidatePlan = Get-CurrentInstallProbePlan
+  Assert-LizardPlanIntentMatch -ApprovedPlan $ApprovedPlan -CurrentPlan $candidatePlan | Out-Null
+}
+
+function Get-CurrentInstallProbePlan {
+  $probePath = Join-Path ([System.IO.Path]::GetTempPath()) ("lizard-install-plan-probe-{0}.json" -f ([Guid]::NewGuid().ToString('N')))
+  $probeDigestPath = "$probePath.sha256"
+  $hostPath = (Get-Process -Id $PID).Path
+  if ([string]::IsNullOrWhiteSpace($hostPath)) {
+    $hostPath = if ($PSVersionTable.PSEdition -eq 'Desktop') { Join-Path $PSHOME 'powershell.exe' } else { Join-Path $PSHOME 'pwsh' }
+  }
+  $invokeArgs = @('-NoProfile')
+  if ($PSVersionTable.PSEdition -eq 'Desktop') { $invokeArgs += @('-ExecutionPolicy', 'Bypass') }
+  $invokeArgs += @(
+    '-File', $InstallScriptPath,
+    '-TargetPath', $TargetRoot,
+    '-Profile', $Profile,
+    '-Harnesses', ($SelectedHarnesses -join ','),
+    '-CanonicalPlanPath', $probePath,
+    '-PlanTtlMinutes', [string]$PlanTtlMinutes,
+    '-TestFailAfterMutation', [string]$TestFailAfterMutation,
+    '-InternalPlanProbe',
+    '-SuppressPlanReport'
+  )
+  if ($RequestedPacks.Count -gt 0) { $invokeArgs += @('-Packs', ($RequestedPacks -join ',')) }
+  if (-not [string]::IsNullOrWhiteSpace($RoutingPolicy)) { $invokeArgs += @('-RoutingPolicy', $RoutingPolicy) }
+  if (-not [string]::IsNullOrWhiteSpace($ModelMode)) { $invokeArgs += @('-ModelMode', $ModelMode) }
+  if (-not [string]::IsNullOrWhiteSpace($ModelInventory)) { $invokeArgs += @('-ModelInventory', $ModelInventory) }
+  if (-not [string]::IsNullOrWhiteSpace($ModelRuntime)) { $invokeArgs += @('-ModelRuntime', $ModelRuntime) }
+  if ($Force) { $invokeArgs += '-Force' }
+  if ($ForceManaged) { $invokeArgs += '-ForceManaged' }
+  if ($ShouldWritePlan) {
+    $invokeArgs += @('-WritePlan', '-PlanPath', $EffectivePlanPath)
+  }
+  if ($AllowTargetReportWrite) { $invokeArgs += '-AllowTargetReportWrite' }
+
+  try {
+    $global:LASTEXITCODE = 0
+    $previousErrorAction = $ErrorActionPreference
+    try {
+      $ErrorActionPreference = 'Continue'
+      $probeOutput = & $hostPath @invokeArgs 2>&1 | Out-String
+      $probeExitCode = [int]$LASTEXITCODE
+    } finally {
+      $ErrorActionPreference = $previousErrorAction
+    }
+    if ($probeExitCode -ne 0) { throw "PLAN_BINDING_PROBE_FAILED: Candidate plan probe failed: $probeOutput" }
+    if (-not (Test-Path -LiteralPath $probePath -PathType Leaf)) { throw 'PLAN_BINDING_PROBE_FAILED: Candidate plan probe produced no plan.' }
+    $probeSha256 = (Get-FileHash -LiteralPath $probePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    return Read-LizardApprovedPlan -Path $probePath -ExpectedSha256 $probeSha256 -ExpectedOperationKind install
+  } finally {
+    if (Test-Path -LiteralPath $probePath -PathType Leaf) { [System.IO.File]::Delete($probePath) }
+    if (Test-Path -LiteralPath $probeDigestPath -PathType Leaf) { [System.IO.File]::Delete($probeDigestPath) }
+  }
+}
+
+function Assert-ApprovedInstallCriticalBindingsCurrent {
+  if (-not $Apply) { return }
+  foreach ($inputRecord in @($ApprovedPlan.intent.inputs)) {
+    $root = if ([string]$inputRecord.scope -eq 'target') { $TargetRoot } else { $LayerRoot }
+    $path = Resolve-SafeTargetDestination -AuthorizedRoot $root -DestinationPath (Join-Path $root ([string]$inputRecord.path).Replace('/', '\'))
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "PLAN_BINDING_INPUT_MISMATCH: Bound input is missing: $($inputRecord.scope):$($inputRecord.path)" }
+    $currentHash = Get-SafeFileHash -AuthorizedRoot $root -Path $path
+    if ($currentHash -ne [string]$inputRecord.sha256) { throw "PLAN_BINDING_INPUT_MISMATCH: Bound input changed: $($inputRecord.scope):$($inputRecord.path)" }
+  }
+  foreach ($entry in @($ApprovedPlan.intent.target_entries)) {
+    $path = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot ([string]$entry.path).Replace('/', '\'))
+    $kind = if (Test-Path -LiteralPath $path -PathType Leaf) { 'file' } elseif (Test-Path -LiteralPath $path -PathType Container) { 'directory' } elseif (Test-Path -LiteralPath $path) { 'other' } else { 'absent' }
+    if ($kind -ne [string]$entry.precondition_kind) { throw "PLAN_BINDING_TARGET_MISMATCH: Target kind changed: $($entry.path)" }
+    if ($kind -eq 'file') {
+      $currentHash = Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path $path
+      if ($currentHash -ne [string]$entry.precondition_sha256) { throw "PLAN_BINDING_TARGET_MISMATCH: Target bytes changed: $($entry.path)" }
+    }
+  }
+}
+
+if ($Apply) { Assert-ApprovedInstallPlanCurrent }
+if ($ValidateApprovedPlanOnly) {
+  Write-Host "Approved install plan is current: $($ApprovedPlan.plan_id)"
+  return
 }
 
 $TransactionContext = $null
@@ -822,6 +1087,7 @@ if ($Apply) {
     $TransactionContext = Start-LizardTransaction -TargetRoot $TargetRoot -OperationName 'install' -FailAfterMutation $TestFailAfterMutation
     $OwnsTransaction = $true
   }
+  Assert-ApprovedInstallPlanCurrent
 }
 
 try {
@@ -906,6 +1172,7 @@ foreach ($adapterName in $SelectedHarnesses) {
 
 Write-InstallManifest
 Write-PlanReport
+if (-not $Apply) { $null = Write-CanonicalInstallPlan }
 
 if ($Apply -and $OwnsTransaction) {
   $TransactionResult = Complete-LizardTransaction
@@ -934,6 +1201,10 @@ if ($ShouldWritePlan) {
 if (-not $Apply) {
   Write-Host ""
   Write-Host "Preview only. Re-run with -Apply to write files."
+}
+if (-not $Apply -and $ShouldWriteCanonicalPlan) {
+  Write-Host "Canonical approval plan: $EffectiveCanonicalPlanPath"
+  Write-Host "Digest sidecar (convenience only): ${EffectiveCanonicalPlanPath}.sha256"
 }
 if ($Conflicts.Count -gt 0) {
   Write-Host "Ownership conflicts:"

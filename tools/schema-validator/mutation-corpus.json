@@ -107,6 +107,20 @@
       "expected_keyword": "enum"
     },
     {
+      "name": "operation-plan-rejects-unknown-field",
+      "schema": "schemas/operation-plan.schema.json",
+      "base": "tests/schema/fixtures/operation-plan.valid.json",
+      "mutations": [{ "op": "add", "path": "/unexpected", "value": true }],
+      "expected_keyword": "additionalProperties"
+    },
+    {
+      "name": "operation-plan-requires-intent-hash",
+      "schema": "schemas/operation-plan.schema.json",
+      "base": "tests/schema/fixtures/operation-plan.valid.json",
+      "mutations": [{ "op": "remove", "path": "/intent_sha256" }],
+      "expected_keyword": "required"
+    },
+    {
       "name": "contract-registry-adr-path",
       "schema": "schemas/contracts.schema.json",
       "base": "registry/contracts.json",

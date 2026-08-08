@@ -82,13 +82,13 @@ pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\projec
 Generate a reviewable plan:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -WritePlan
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
 ```
 
 Apply only after reviewing that exact plan:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -Apply
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
 ```
 
 Verify the installed target:
@@ -127,13 +127,13 @@ Profiles are starting points. Packs and explicit harness overrides adapt them wi
 Preview an update against the current source checkout:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir .\.tmp\update-plan
 ```
 
 The update plan reports version relation, profile, requested and expanded packs, harnesses, managed-path differences, ownership conflicts, and migration requirements. Apply only after review:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Apply
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir .\.tmp\update-plan -Apply -ApprovedPlanPath .\.tmp\update-plan\update-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
 ```
 
 Locally modified, user-owned, adopted, and integrity-unknown files are preserved unless a separate evidence-based decision is made.
@@ -150,6 +150,7 @@ There is intentionally no blanket uninstall command that recursively deletes com
 - All target and report writes are authorized against explicit roots immediately before mutation.
 - Existing linked ancestors are rejected instead of followed.
 - Apply operations use per-target locks and write-ahead transaction journals.
+- Install and update apply are bound to canonical JSON plans and independently supplied SHA-256 values; generated sidecars are convenience only.
 - Layer ownership is artifact-specific and hash-bound.
 - Default reports are metadata-only and do not copy existing private instructions.
 - Push, release, deploy, dependency, CI, secret, migration, and production actions require explicit approval.

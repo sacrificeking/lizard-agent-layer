@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "plan_id": "0123456789abcdef0123456789abcdef",
+  "operation_kind": "install",
+  "created_at": "2026-08-01T10:00:00.0000000+00:00",
+  "expires_at": "2026-08-01T10:30:00.0000000+00:00",
+  "intent_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "intent": {
+    "target_root": "C:\\target",
+    "target_root_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "layer_root": "C:\\layer",
+    "layer_version": "1.1.0",
+    "source_git_head": null,
+    "options": {
+      "force": false,
+      "profile": "minimal"
+    },
+    "inputs": [
+      {
+        "scope": "layer",
+        "path": "profiles/minimal.json",
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    ],
+    "target_entries": [
+      {
+        "path": ".agent/project-profile.json",
+        "kind": "file",
+        "action": "create",
+        "precondition_kind": "absent",
+        "precondition_sha256": null,
+        "ownership": "unmanaged",
+        "intended_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    ],
+    "nested_plan": null
+  }
+}

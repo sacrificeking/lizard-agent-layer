@@ -70,6 +70,51 @@ function Invoke-TestPowerShell {
   return [pscustomobject]@{ exit_code = $exitCode; output = $output }
 }
 
+function New-TestInstallApprovalArguments {
+  param(
+    [Parameter(Mandatory = $true)][string]$LayerRoot,
+    [Parameter(Mandatory = $true)][string[]]$BaseArguments
+  )
+  if (@($BaseArguments) -contains '-Apply') { throw 'TEST_PLAN_ARGUMENTS_INVALID: BaseArguments must describe preview, not apply.' }
+  $planRoot = Join-Path $LayerRoot '.tmp\tests\approved-plans'
+  New-Item -ItemType Directory -Path $planRoot -Force | Out-Null
+  $planPath = Join-Path $planRoot ("install-{0}.json" -f ([Guid]::NewGuid().ToString('N')))
+  $installScript = Join-Path $LayerRoot 'scripts\install.ps1'
+  $previewArguments = @($BaseArguments) + @('-CanonicalPlanPath', $planPath)
+  $preview = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $previewArguments
+  if ($preview.exit_code -ne 0) { throw "TEST_PLAN_PREVIEW_FAILED: $($preview.output)" }
+  if (-not (Test-Path -LiteralPath $planPath -PathType Leaf)) { throw "TEST_PLAN_MISSING: $planPath" }
+  $sha256 = (Get-FileHash -LiteralPath $planPath -Algorithm SHA256).Hash.ToLowerInvariant()
+  return [pscustomobject]@{
+    plan_path = $planPath
+    sha256 = $sha256
+    preview = $preview
+    arguments = @($BaseArguments) + @('-Apply', '-ApprovedPlanPath', $planPath, '-ApprovedPlanSha256', $sha256, '-HumanApproved')
+  }
+}
+
+function New-TestUpdateApprovalArguments {
+  param(
+    [Parameter(Mandatory = $true)][string]$LayerRoot,
+    [Parameter(Mandatory = $true)][string[]]$BaseArguments
+  )
+  if (@($BaseArguments) -contains '-Apply') { throw 'TEST_PLAN_ARGUMENTS_INVALID: BaseArguments must describe preview, not apply.' }
+  $planRoot = Join-Path $LayerRoot '.tmp\tests\approved-plans'
+  New-Item -ItemType Directory -Path $planRoot -Force | Out-Null
+  $planPath = Join-Path $planRoot ("update-{0}.json" -f ([Guid]::NewGuid().ToString('N')))
+  $updateScript = Join-Path $LayerRoot 'scripts\update-target.ps1'
+  $preview = Invoke-TestPowerShell -ScriptPath $updateScript -Arguments (@($BaseArguments) + @('-CanonicalPlanPath', $planPath))
+  if ($preview.exit_code -ne 0) { throw "TEST_UPDATE_PLAN_PREVIEW_FAILED: $($preview.output)" }
+  if (-not (Test-Path -LiteralPath $planPath -PathType Leaf)) { throw "TEST_UPDATE_PLAN_MISSING: $planPath" }
+  $sha256 = (Get-FileHash -LiteralPath $planPath -Algorithm SHA256).Hash.ToLowerInvariant()
+  return [pscustomobject]@{
+    plan_path = $planPath
+    sha256 = $sha256
+    preview = $preview
+    arguments = @($BaseArguments) + @('-Apply', '-ApprovedPlanPath', $planPath, '-ApprovedPlanSha256', $sha256, '-HumanApproved')
+  }
+}
+
 function Assert-JsonSchemaValid {
   param(
     [string]$LayerRoot,
@@ -107,5 +152,5 @@ function Clear-TestDirectory {
 Export-ModuleMember -Function @(
   'Assert-Equal', 'Assert-False', 'Assert-JsonSchemaValid', 'Assert-ThrowsCode', 'Assert-True',
   'Clear-TestDirectory', 'Get-CurrentPowerShellPath', 'Invoke-TestPowerShell',
-  'New-DirectoryLink', 'Remove-DirectoryLink', 'Test-LizardWindows'
+  'New-DirectoryLink', 'New-TestInstallApprovalArguments', 'New-TestUpdateApprovalArguments', 'Remove-DirectoryLink', 'Test-LizardWindows'
 )

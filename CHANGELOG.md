@@ -4,6 +4,14 @@ All notable public changes to lizard-agent-layer are documented here.
 
 ## Unreleased
 
+### Security
+
+- Install and update mutations now require immutable canonical operation plans, an independently supplied SHA-256, explicit human approval, pre-lock validation, and post-lock/pre-mutation revalidation. Applied plan identities are recorded in manifests and update history.
+
+### Breaking
+
+- Direct `install.ps1 -Apply` and `update-target.ps1 -Apply` calls without `-ApprovedPlanPath`, `-ApprovedPlanSha256`, and `-HumanApproved` now fail closed. Existing targets require no data rewrite; regenerate legacy Markdown plans as canonical JSON.
+
 ## 1.1.0 - 2026-07-19
 
 ### Added

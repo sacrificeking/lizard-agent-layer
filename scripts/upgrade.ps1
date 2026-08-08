@@ -4,7 +4,12 @@ param(
   [switch]$Apply,
   [switch]$Force,
   [switch]$AllowDowngrade,
-  [switch]$HumanApproved
+  [switch]$HumanApproved,
+  [string]$OutputDir,
+  [string]$PlanPath,
+  [string]$CanonicalPlanPath,
+  [string]$ApprovedPlanPath,
+  [string]$ApprovedPlanSha256
 )
 
 $ErrorActionPreference = "Stop"
@@ -53,10 +58,20 @@ if ($workflowScript -eq 'install.ps1') {
   $argsList += @('-Profile', $profile)
   if ($selectedHarnesses -and $selectedHarnesses.Count -gt 0) { $argsList += '-Harnesses'; $argsList += ($selectedHarnesses -join ',') }
   if ($selectedPacks -and $selectedPacks.Count -gt 0) { $argsList += '-Packs'; $argsList += ($selectedPacks -join ',') }
+  if ($PlanPath) { $argsList += @('-WritePlan', '-PlanPath', $PlanPath) }
+  if ($CanonicalPlanPath) { $argsList += @('-CanonicalPlanPath', $CanonicalPlanPath) }
 } else {
   if ($Force) { $argsList += '-ForceManaged' }
   if ($AllowDowngrade) { $argsList += '-AllowDowngrade' }
   if ($HumanApproved) { $argsList += '-HumanApproved' }
+  if ($OutputDir) { $argsList += @('-OutputDir', $OutputDir) }
+  if ($PlanPath) { $argsList += @('-PlanPath', $PlanPath) }
+  if ($CanonicalPlanPath) { $argsList += @('-CanonicalPlanPath', $CanonicalPlanPath) }
 }
-if ($Apply) { $argsList += '-Apply' }
+if ($Apply) {
+  $argsList += '-Apply'
+  if ($ApprovedPlanPath) { $argsList += @('-ApprovedPlanPath', $ApprovedPlanPath) }
+  if ($ApprovedPlanSha256) { $argsList += @('-ApprovedPlanSha256', $ApprovedPlanSha256) }
+  if ($HumanApproved -and $workflowScript -eq 'install.ps1') { $argsList += '-HumanApproved' }
+}
 & $PowerShellHost @argsList

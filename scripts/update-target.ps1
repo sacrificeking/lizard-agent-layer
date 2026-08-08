@@ -13,6 +13,10 @@
   [switch]$ForceManaged,
   [switch]$Json,
   [string]$PlanPath,
+  [string]$CanonicalPlanPath,
+  [int]$PlanTtlMinutes = 60,
+  [string]$ApprovedPlanPath,
+  [string]$ApprovedPlanSha256,
   [string]$OutputDir,
   [switch]$AllowTargetReportWrite,
   [switch]$AllowDowngrade,
@@ -26,12 +30,22 @@ $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Host.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Plan.psm1') -Force
 $PowerShellHost = Get-LizardPowerShellHostPath
 $PowerShellFilePrefix = Get-LizardPowerShellFilePrefix
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $manifestPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.install.json'
 $profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
 $versionPath = Join-Path $LayerRoot 'VERSION'
+$ApprovedUpdatePlan = $null
+
+if ($Apply) {
+  if ([string]::IsNullOrWhiteSpace($ApprovedPlanPath) -or [string]::IsNullOrWhiteSpace($ApprovedPlanSha256) -or -not $HumanApproved) {
+    throw 'PLAN_APPROVAL_REQUIRED: Update -Apply requires -ApprovedPlanPath, -ApprovedPlanSha256, and -HumanApproved.'
+  }
+  Assert-PathOutsideRoot -Path $ApprovedPlanPath -ExcludedRoot $TargetRoot -Label 'ApprovedPlanPath'
+  $ApprovedUpdatePlan = Read-LizardApprovedPlan -Path $ApprovedPlanPath -ExpectedSha256 $ApprovedPlanSha256 -ExpectedOperationKind update
+}
 
 function Write-Status {
   param([string]$Message)
@@ -53,8 +67,8 @@ function Expand-ValueList {
 function Resolve-UserPath {
   param([string]$Path, [string]$Fallback)
   $candidate = if ([string]::IsNullOrWhiteSpace($Path)) { $Fallback } else { $Path }
-  if ([System.IO.Path]::IsPathRooted($candidate)) { return $candidate }
-  return (Join-Path (Get-Location).Path $candidate)
+  $combined = if ([System.IO.Path]::IsPathRooted($candidate)) { $candidate } else { Join-Path (Get-Location).Path $candidate }
+  return [System.IO.Path]::GetFullPath($combined)
 }
 
 function Format-ListValue {
@@ -78,10 +92,18 @@ function Format-CommandLine {
   if (-not [string]::IsNullOrWhiteSpace($SelectedModelMode)) { $parts.Add(('-ModelMode {0}' -f $SelectedModelMode)) | Out-Null }
   if (-not [string]::IsNullOrWhiteSpace($SelectedModelInventory)) { $parts.Add(('-ModelInventory "{0}"' -f $SelectedModelInventory)) | Out-Null }
   if (-not [string]::IsNullOrWhiteSpace($SelectedModelRuntime)) { $parts.Add(('-ModelRuntime "{0}"' -f $SelectedModelRuntime)) | Out-Null }
-  if ($AsApply) { $parts.Add('-Apply') | Out-Null }
+  $parts.Add(('-OutputDir "{0}"' -f $effectiveOutputDir)) | Out-Null
+  $parts.Add(('-PlanPath "{0}"' -f $effectivePlanPath)) | Out-Null
+  if ($AsApply) {
+    $parts.Add('-Apply') | Out-Null
+    $parts.Add(('-ApprovedPlanPath "{0}"' -f $effectiveCanonicalPlanPath)) | Out-Null
+    $parts.Add('-ApprovedPlanSha256 <independently-reviewed-sha256>') | Out-Null
+    $parts.Add('-HumanApproved') | Out-Null
+  } else {
+    $parts.Add(('-CanonicalPlanPath "{0}"' -f $effectiveCanonicalPlanPath)) | Out-Null
+  }
   if ($AsForce) { $parts.Add('-ForceManaged') | Out-Null }
   if ($AllowDowngrade) { $parts.Add('-AllowDowngrade') | Out-Null }
-  if ($HumanApproved) { $parts.Add('-HumanApproved') | Out-Null }
   return ($parts -join ' ')
 }
 
@@ -257,21 +279,146 @@ if ($Apply -and $VersionRelation -eq 'installed-target-newer' -and (-not $AllowD
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
 $effectiveOutputDir = Resolve-UserPath -Path $OutputDir -Fallback (Join-Path $LayerRoot ".tmp\updates\$stamp")
 $effectivePlanPath = Resolve-UserPath -Path $PlanPath -Fallback (Join-Path $effectiveOutputDir 'update-plan.md')
+$effectiveCanonicalPlanPath = Resolve-UserPath -Path $CanonicalPlanPath -Fallback (Join-Path $effectiveOutputDir 'update-plan.json')
 if (-not $AllowTargetReportWrite) {
   Assert-PathOutsideRoot -Path $effectiveOutputDir -ExcludedRoot $TargetRoot -Label 'OutputDir'
   Assert-PathOutsideRoot -Path $effectivePlanPath -ExcludedRoot $TargetRoot -Label 'PlanPath'
 }
-$effectiveOutputDir = Initialize-SafeDirectory -Path $effectiveOutputDir
+Assert-PathOutsideRoot -Path $effectiveCanonicalPlanPath -ExcludedRoot $TargetRoot -Label 'CanonicalPlanPath'
 $planParent = Split-Path -Parent $effectivePlanPath
-if ($planParent) { $planParent = Initialize-SafeDirectory -Path $planParent }
 $preDiffDir = Join-Path $effectiveOutputDir 'pre-manifest-diff'
 $postDiffDir = Join-Path $effectiveOutputDir 'post-manifest-diff'
 $installPlanPath = Join-Path $effectiveOutputDir 'install-plan.md'
+$installCanonicalPlanPath = Join-Path $effectiveOutputDir 'install-plan.json'
 $reportPath = Join-Path $effectiveOutputDir 'update-report.json'
 
+function Get-UpdatePlanOptions {
+  return [ordered]@{
+    profile = $SelectedProfile
+    harnesses = @($SelectedHarnesses | Sort-Object -Unique)
+    requested_packs = @($SelectedPacks | Sort-Object -Unique)
+    routing_policy = $SelectedRoutingPolicy
+    model_mode = $SelectedModelMode
+    model_inventory = $SelectedModelInventory
+    model_runtime = $SelectedModelRuntime
+    force_managed = $ForceManaged.IsPresent
+    allow_downgrade = $AllowDowngrade.IsPresent
+    output_dir = $effectiveOutputDir
+    plan_path = $effectivePlanPath
+    install_plan_path = $installPlanPath
+    install_canonical_plan_path = $installCanonicalPlanPath
+    allow_target_report_write = $AllowTargetReportWrite.IsPresent
+    plan_ttl_minutes = $PlanTtlMinutes
+    test_fail_after_mutation = $TestFailAfterMutation
+  }
+}
+
+function Get-UpdatePlanInputs {
+  $records = New-Object System.Collections.Generic.List[object]
+  foreach ($relative in @(
+    'VERSION', 'scripts\update-target.ps1', 'scripts\install.ps1', 'scripts\manifest-diff.ps1',
+    'scripts\Lizard.Host.psm1', 'scripts\Lizard.Plan.psm1'
+  )) {
+    $path = Join-Path $LayerRoot $relative
+    $records.Add([pscustomobject][ordered]@{ scope = 'layer'; path = $relative.Replace('\', '/'); sha256 = Get-SafeFileHash -AuthorizedRoot $LayerRoot -Path $path }) | Out-Null
+  }
+  foreach ($entry in @(
+    [pscustomobject]@{ path = $manifestPath; display = '.agent/lizard-agent-layer.install.json' },
+    [pscustomobject]@{ path = $profilePath; display = '.agent/project-profile.json' }
+  )) {
+    $records.Add([pscustomobject][ordered]@{ scope = 'target'; path = $entry.display; sha256 = Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path $entry.path }) | Out-Null
+  }
+  return @($records.ToArray() | Sort-Object scope, path)
+}
+
+function Get-UpdatePlanTargetEntries {
+  $historyPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.update-history.jsonl'
+  $kind = if (Test-Path -LiteralPath $historyPath -PathType Leaf) { 'file' } elseif (Test-Path -LiteralPath $historyPath -PathType Container) { 'directory' } elseif (Test-Path -LiteralPath $historyPath) { 'other' } else { 'absent' }
+  $hash = if ($kind -eq 'file') { Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path $historyPath } else { $null }
+  return @([pscustomobject][ordered]@{
+    path = '.agent/lizard-agent-layer.update-history.jsonl'
+    kind = 'file'
+    action = if ($kind -eq 'absent') { 'create' } else { 'replace' }
+    precondition_kind = $kind
+    precondition_sha256 = $hash
+    ownership = 'unmanaged'
+    intended_sha256 = $null
+  })
+}
+
+function Get-InstallPlanArguments {
+  param([switch]$ForApply, [string]$CanonicalPath, [string]$ApprovedPath, [string]$ApprovedSha256)
+  $args = @($PowerShellFilePrefix) + @(
+    (Join-Path $ScriptDir 'install.ps1'), '-TargetPath', $TargetRoot, '-Profile', $SelectedProfile,
+    '-WritePlan', '-PlanPath', $installPlanPath, '-PlanTtlMinutes', [string]$PlanTtlMinutes,
+    '-TestFailAfterMutation', [string]$TestFailAfterMutation
+  )
+  if ($SelectedHarnesses.Count -gt 0) { $args += '-Harnesses'; $args += ($SelectedHarnesses -join ',') }
+  if ($SelectedPacks.Count -gt 0) { $args += '-Packs'; $args += ($SelectedPacks -join ',') }
+  $args += '-RoutingPolicy'; $args += $SelectedRoutingPolicy
+  $args += '-ModelMode'; $args += $SelectedModelMode
+  if ($SelectedModelInventory) { $args += '-ModelInventory'; $args += $SelectedModelInventory }
+  if ($SelectedModelRuntime) { $args += '-ModelRuntime'; $args += $SelectedModelRuntime }
+  if ($ForceManaged) { $args += '-ForceManaged' }
+  if ($AllowTargetReportWrite) { $args += '-AllowTargetReportWrite' }
+  if ($ForApply) {
+    $args += @('-Apply', '-ApprovedPlanPath', $ApprovedPath, '-ApprovedPlanSha256', $ApprovedSha256, '-HumanApproved')
+  } else {
+    $args += @('-CanonicalPlanPath', $CanonicalPath)
+  }
+  return $args
+}
+
+function New-CurrentUpdateOperationPlan {
+  param($NestedPlan)
+  $gitHead = Get-LizardSourceGitHead -Root $LayerRoot
+  return New-LizardOperationPlan -OperationKind update -TargetRoot $TargetRoot -LayerRoot $LayerRoot `
+    -Options (Get-UpdatePlanOptions) -Inputs (Get-UpdatePlanInputs) -TargetEntries (Get-UpdatePlanTargetEntries) `
+    -NestedPlan $NestedPlan -TtlMinutes $PlanTtlMinutes -LayerVersion $CurrentVersion -GitHead $gitHead
+}
+
+function Assert-ApprovedUpdatePlanCurrent {
+  $nested = $ApprovedUpdatePlan.intent.nested_plan
+  if ($null -eq $nested -or [string]$nested.operation_kind -ne 'install') { throw 'PLAN_BINDING_NESTED_INVALID: Approved update plan must bind an install plan.' }
+  $approvedChildPath = [string]$ApprovedUpdatePlan.intent.options.install_canonical_plan_path
+  Assert-PathOutsideRoot -Path $approvedChildPath -ExcludedRoot $TargetRoot -Label 'ApprovedNestedPlanPath'
+  $null = Read-LizardApprovedPlan -Path $approvedChildPath -ExpectedSha256 ([string]$nested.sha256) -ExpectedOperationKind install
+  $validationArgs = Get-InstallPlanArguments -ForApply -ApprovedPath $approvedChildPath -ApprovedSha256 ([string]$nested.sha256)
+  $validationArgs += '-ValidateApprovedPlanOnly'
+  $previousErrorAction = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = 'Continue'
+    $global:LASTEXITCODE = 0
+    $validationOutput = & $PowerShellHost @validationArgs 2>&1 | Out-String
+    $validationExitCode = [int]$LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorAction
+  }
+  if ($validationExitCode -ne 0) { throw "PLAN_BINDING_NESTED_MISMATCH: $validationOutput" }
+  $candidate = New-CurrentUpdateOperationPlan -NestedPlan $nested
+  Assert-LizardPlanIntentMatch -ApprovedPlan $ApprovedUpdatePlan -CurrentPlan $candidate | Out-Null
+  return $approvedChildPath
+}
+
+$approvedInstallPlanPath = $null
+if ($Apply) {
+  $approvedInstallPlanPath = Assert-ApprovedUpdatePlanCurrent
+}
+
+$effectiveOutputDir = Initialize-SafeDirectory -Path $effectiveOutputDir
+if ($planParent) { $planParent = Initialize-SafeDirectory -Path $planParent }
 $preDiff = Invoke-ManifestDiff -DiffOutputDir $preDiffDir
 $updatePlan = New-UpdatePlanMarkdown -DiffReport $preDiff
-Set-SafeContent -AuthorizedRoot $planParent -Path $effectivePlanPath -Value $updatePlan
+if (-not $Apply) {
+  Set-SafeContent -AuthorizedRoot $planParent -Path $effectivePlanPath -Value $updatePlan
+  $installPreviewArgs = Get-InstallPlanArguments -CanonicalPath $installCanonicalPlanPath
+  $installPreviewOutput = & $PowerShellHost @installPreviewArgs 2>&1 | Out-String
+  if ($LASTEXITCODE -ne 0) { throw "INSTALL_PLAN_PREVIEW_FAILED: $installPreviewOutput" }
+  $installPlanSha256 = (Get-FileHash -LiteralPath $installCanonicalPlanPath -Algorithm SHA256).Hash.ToLowerInvariant()
+  $installApprovalPlan = Read-LizardApprovedPlan -Path $installCanonicalPlanPath -ExpectedSha256 $installPlanSha256 -ExpectedOperationKind install
+  $updateApprovalPlan = New-CurrentUpdateOperationPlan -NestedPlan $installApprovalPlan
+  Write-LizardOperationPlan -Plan $updateApprovalPlan -Path $effectiveCanonicalPlanPath | Out-Null
+}
 
 $postDiff = $null
 $installOutput = $null
@@ -281,24 +428,10 @@ if ($Apply) {
   $updateTransaction = Start-LizardTransaction -TargetRoot $TargetRoot -OperationName 'update' -FailAfterMutation $TestFailAfterMutation
   $transactionOperationId = [string]$updateTransaction.operation_id
   try {
-    $installArgs = @($PowerShellFilePrefix) + @(
-      (Join-Path $ScriptDir 'install.ps1'),
-      '-TargetPath', $TargetRoot,
-      '-Profile', $SelectedProfile,
-      '-WritePlan',
-      '-PlanPath', $installPlanPath,
-      '-Apply',
-      '-JoinTransaction',
-      '-TransactionId', $transactionOperationId
-    )
-    if ($SelectedHarnesses.Count -gt 0) { $installArgs += '-Harnesses'; $installArgs += ($SelectedHarnesses -join ',') }
-    if ($SelectedPacks.Count -gt 0) { $installArgs += '-Packs'; $installArgs += ($SelectedPacks -join ',') }
-    $installArgs += '-RoutingPolicy'; $installArgs += $SelectedRoutingPolicy
-    $installArgs += '-ModelMode'; $installArgs += $SelectedModelMode
-    if ($SelectedModelInventory) { $installArgs += '-ModelInventory'; $installArgs += $SelectedModelInventory }
-    if ($SelectedModelRuntime) { $installArgs += '-ModelRuntime'; $installArgs += $SelectedModelRuntime }
-    if ($ForceManaged) { $installArgs += '-ForceManaged' }
-    if ($TestFailAfterMutation -gt 0) { $installArgs += '-TestFailAfterMutation'; $installArgs += [string]$TestFailAfterMutation }
+    $approvedInstallSha256 = [string]$ApprovedUpdatePlan.intent.nested_plan.sha256
+    $approvedInstallPlanPath = Assert-ApprovedUpdatePlanCurrent
+    $installArgs = Get-InstallPlanArguments -ForApply -ApprovedPath $approvedInstallPlanPath -ApprovedSha256 $approvedInstallSha256
+    $installArgs += @('-JoinTransaction', '-TransactionId', $transactionOperationId)
     $global:LASTEXITCODE = 0
     $installOutput = & $PowerShellHost @installArgs | Out-String
     if (-not $Json) { Write-Host $installOutput }
@@ -325,8 +458,14 @@ if ($Apply) {
       force_managed = $ForceManaged.IsPresent
       allow_downgrade = $AllowDowngrade.IsPresent
       human_approved = $HumanApproved.IsPresent
+      applied_plan_id = [string]$ApprovedUpdatePlan.plan_id
+      applied_plan_sha256 = $ApprovedPlanSha256.ToLowerInvariant()
+      applied_install_plan_id = [string]$ApprovedUpdatePlan.intent.nested_plan.plan_id
+      applied_install_plan_sha256 = $approvedInstallSha256
       update_plan_path = $effectivePlanPath
+      update_canonical_plan_path = $ApprovedPlanPath
       install_plan_path = $installPlanPath
+      install_canonical_plan_path = $approvedInstallPlanPath
       pre_manifest_status = [string]$preDiff.status
       pre_manifest_differences = [int]$preDiff.summary.differences
       post_manifest_status = [string]$postDiff.status
@@ -367,9 +506,12 @@ $report = [ordered]@{
   force_managed = $ForceManaged.IsPresent
   allow_downgrade = $AllowDowngrade.IsPresent
   human_approved = $HumanApproved.IsPresent
+  applied_plan_id = if ($ApprovedUpdatePlan) { [string]$ApprovedUpdatePlan.plan_id } else { $null }
+  applied_plan_sha256 = if ($Apply) { $ApprovedPlanSha256.ToLowerInvariant() } else { $null }
   transaction_operation_id = $transactionOperationId
   transaction = $transactionResult
   plan_path = $effectivePlanPath
+  canonical_plan_path = if ($Apply) { $ApprovedPlanPath } else { $effectiveCanonicalPlanPath }
   output_dir = $effectiveOutputDir
   install_plan_path = if ($Apply) { $installPlanPath } else { $null }
   pre_manifest_diff = [ordered]@{ status = [string]$preDiff.status; differences = [int]$preDiff.summary.differences; report_dir = $preDiffDir }
@@ -396,12 +538,13 @@ Write-Status "Daily use: $(if ($SelectedModelMode -eq 'inherit-current') { 'Subm
 if ($SelectedModelRuntime) { Write-Status "Model runtime: $SelectedModelRuntime" }
 Write-Status "Manifest diff: $($preDiff.status) ($($preDiff.summary.differences) differences)"
 Write-Status "Update plan: $effectivePlanPath"
+Write-Status "Canonical approval plan: $(if ($Apply) { $ApprovedPlanPath } else { $effectiveCanonicalPlanPath })"
 Write-Status "Report: $reportPath"
 if ($Apply) {
   Write-Status "Post-update manifest diff: $($postDiff.status) ($($postDiff.summary.differences) differences)"
   Write-Status "Update history: $(Join-Path $TargetRoot '.agent\lizard-agent-layer.update-history.jsonl')"
 } else {
-  Write-Status "Preview only. Review the update plan, then rerun with -Apply to update the target."
+  Write-Status "Preview only. Review the canonical plan and independently retain its SHA-256 before using -Apply with -ApprovedPlanPath, -ApprovedPlanSha256, and -HumanApproved."
 }
 
 

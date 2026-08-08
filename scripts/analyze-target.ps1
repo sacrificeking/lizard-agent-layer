@@ -164,6 +164,7 @@ if ($risk -eq 'high' -or $signals.Contains('database-migrations') -or $signals.C
 
 $previewCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath `"$TargetRoot`" -Profile $profile -Harnesses $($harnesses -join ',')"
 if ($packs.Count -gt 0) { $previewCommand += " -Packs $($packs -join ',')" }
+$previewCommand += ' -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json'
 
 $result = [ordered]@{
   target = $TargetRoot

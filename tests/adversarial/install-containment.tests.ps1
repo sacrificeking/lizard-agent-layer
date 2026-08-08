@@ -30,20 +30,22 @@ function Assert-OutsideEmpty {
 try {
   foreach ($forceMode in @('-Force', '-ForceManaged')) {
     $case = New-CaseDirectories -Name ("agent-link-{0}" -f $forceMode.TrimStart('-').ToLowerInvariant())
+    $approval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $case.target, '-Profile', 'minimal', $forceMode)
     $agentLink = Join-Path $case.target '.agent'
     New-DirectoryLink -Path $agentLink -Target $case.outside
     $links.Add($agentLink) | Out-Null
-    $result = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $case.target, '-Profile', 'minimal', '-Apply', $forceMode)
+    $result = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $approval.arguments
     Assert-False ($result.exit_code -eq 0) "$forceMode must reject a linked .agent destination."
     Assert-True ($result.output -match 'SAFEFS_REPARSE_POINT') "$forceMode must expose the stable reparse-point rejection code."
     Assert-OutsideEmpty -Path $case.outside -Case $forceMode
   }
 
   $mirrorCase = New-CaseDirectories -Name 'adapter-mirror-link'
+  $mirrorApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $mirrorCase.target, '-Profile', 'minimal', '-Harnesses', 'codex')
   $agentsLink = Join-Path $mirrorCase.target '.agents'
   New-DirectoryLink -Path $agentsLink -Target $mirrorCase.outside
   $links.Add($agentsLink) | Out-Null
-  $mirrorResult = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $mirrorCase.target, '-Profile', 'minimal', '-Harnesses', 'codex', '-Apply')
+  $mirrorResult = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $mirrorApproval.arguments
   Assert-False ($mirrorResult.exit_code -eq 0) 'A linked harness mirror must fail installation.'
   Assert-True ($mirrorResult.output -match 'SAFEFS_REPARSE_POINT') 'Harness mirror rejection must expose SAFEFS_REPARSE_POINT.'
   Assert-OutsideEmpty -Path $mirrorCase.outside -Case 'adapter mirror'

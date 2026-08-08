@@ -143,7 +143,8 @@ try {
   New-Item -ItemType Directory -Path $failedTarget -Force | Out-Null
   Set-Content -LiteralPath (Join-Path $failedTarget 'sentinel.txt') -Value 'preserve-me'
   $beforeFailure = Get-TargetSnapshot $failedTarget
-  $failedInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $failedTarget, '-Profile', 'minimal', '-Apply', '-TestFailAfterMutation', '4')
+  $failedApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $failedTarget, '-Profile', 'minimal', '-TestFailAfterMutation', '4')
+  $failedInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $failedApproval.arguments
   Assert-False ($failedInstall.exit_code -eq 0) 'Fault-injected install must fail.'
   Assert-True ($failedInstall.output -match 'TRANSACTION_FAULT_INJECTED') 'Fault injection must expose a stable error code.'
   Assert-Equal $beforeFailure (Get-TargetSnapshot $failedTarget) 'Failed install must restore the exact target tree.'
@@ -151,14 +152,16 @@ try {
 
   $successTarget = Join-Path $fixtureRoot 'successful-install'
   New-Item -ItemType Directory -Path $successTarget -Force | Out-Null
-  $successfulInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $successTarget, '-Profile', 'minimal', '-Apply')
+  $successApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $successTarget, '-Profile', 'minimal')
+  $successfulInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $successApproval.arguments
   Assert-Equal 0 $successfulInstall.exit_code "Successful transaction install failed: $($successfulInstall.output)"
   $manifest = Get-Content -LiteralPath (Join-Path $successTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$manifest.transaction_operation_id)) 'Install manifest must bind to its transaction operation ID.'
   Assert-NoTransactionMetadata $successTarget
 
   $beforeUpdate = Get-TargetSnapshot $successTarget
-  $failedUpdate = Invoke-TestPowerShell -ScriptPath $updateScript -Arguments @('-TargetPath', $successTarget, '-Profile', 'minimal', '-Apply', '-ForceManaged', '-TestFailAfterMutation', '3', '-OutputDir', (Join-Path $fixtureRoot 'failed-update-report'))
+  $failedUpdateApproval = New-TestUpdateApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $successTarget, '-Profile', 'minimal', '-ForceManaged', '-TestFailAfterMutation', '3', '-OutputDir', (Join-Path $fixtureRoot 'failed-update-report'))
+  $failedUpdate = Invoke-TestPowerShell -ScriptPath $updateScript -Arguments $failedUpdateApproval.arguments
   Assert-False ($failedUpdate.exit_code -eq 0) 'Fault-injected update must fail.'
   Assert-Equal $beforeUpdate (Get-TargetSnapshot $successTarget) 'Failed update must roll back install and history as one unit.'
   Assert-NoTransactionMetadata $successTarget
@@ -180,8 +183,9 @@ try {
 
   $lockedTarget = Join-Path $fixtureRoot 'locked-target'
   New-Item -ItemType Directory -Path $lockedTarget -Force | Out-Null
+  $lockedApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $lockedTarget, '-Profile', 'minimal')
   $lockTransaction = Start-LizardTransaction -TargetRoot $lockedTarget -OperationName 'test-lock'
-  $lockedInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $lockedTarget, '-Profile', 'minimal', '-Apply')
+  $lockedInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $lockedApproval.arguments
   Assert-False ($lockedInstall.exit_code -eq 0) 'Concurrent writer must be rejected.'
   Assert-True ($lockedInstall.output -match 'TRANSACTION_LOCK_HELD') 'Lock rejection must expose a stable error code.'
   Undo-LizardTransaction | Out-Null
@@ -191,7 +195,7 @@ try {
   New-Item -ItemType Directory -Path $collisionTarget -Force | Out-Null
   Set-Content -LiteralPath (Join-Path $collisionTarget '.agent') -Value 'not-a-directory'
   $beforeCollision = Get-TargetSnapshot $collisionTarget
-  $collision = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $collisionTarget, '-Profile', 'minimal', '-Apply')
+  $collision = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $collisionTarget, '-Profile', 'minimal')
   Assert-False ($collision.exit_code -eq 0) 'Destination type collision must fail.'
   Assert-True ($collision.output -match 'DESTINATION_TYPE_CONFLICT') 'Preflight collision must expose a stable error code.'
   Assert-Equal $beforeCollision (Get-TargetSnapshot $collisionTarget) 'Preflight failure must not mutate the target.'

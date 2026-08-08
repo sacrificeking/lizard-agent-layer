@@ -16,7 +16,8 @@ function Read-Manifest { Get-Content -LiteralPath (Join-Path $target '.agent\liz
 function Write-Manifest { param($Manifest) $Manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Encoding UTF8 }
 
 try {
-  $install = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $target, '-Profile', 'minimal', '-Apply')
+  $installApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Profile', 'minimal')
+  $install = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $installApproval.arguments
   Assert-Equal 0 $install.exit_code 'Version gate fixture install must succeed.'
   $manifest = Read-Manifest
   $manifest.layer_version = '99.0.0'
@@ -32,12 +33,13 @@ try {
   $blockedDir = Join-Path $fixture 'blocked'
   $blocked = Invoke-TestPowerShell -ScriptPath $updateScript -Arguments @('-TargetPath', $target, '-OutputDir', $blockedDir, '-Apply')
   Assert-False ($blocked.exit_code -eq 0) 'Unapproved downgrade apply must fail.'
-  Assert-True ($blocked.output -match 'DOWNGRADE_APPROVAL_REQUIRED') 'Blocked downgrade must expose an actionable stable code.'
+  Assert-True ($blocked.output -match 'PLAN_APPROVAL_REQUIRED') 'Unbound downgrade must fail at the exact-plan approval gate.'
   Assert-Equal $before ((Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash) 'Blocked downgrade must leave target state unchanged.'
   Assert-False (Test-Path -LiteralPath $blockedDir) 'Downgrade gate must run before report-directory writes.'
 
   $approvedDir = Join-Path $fixture 'approved'
-  $approved = Invoke-TestPowerShell -ScriptPath $updateScript -Arguments @('-TargetPath', $target, '-OutputDir', $approvedDir, '-Apply', '-AllowDowngrade', '-HumanApproved')
+  $downgradeApproval = New-TestUpdateApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-OutputDir', $approvedDir, '-AllowDowngrade')
+  $approved = Invoke-TestPowerShell -ScriptPath $updateScript -Arguments $downgradeApproval.arguments
   Assert-Equal 0 $approved.exit_code 'Explicitly approved downgrade must apply.'
   $currentVersion = (Get-Content -LiteralPath (Join-Path $LayerRoot 'VERSION') -Raw).Trim()
   Assert-Equal $currentVersion ([string](Read-Manifest).layer_version) 'Approved downgrade must write the current layer version.'
