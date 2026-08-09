@@ -1,0 +1,22 @@
+{
+  "schema_version": 4,
+  "layer": "lizard-agent-layer",
+  "layer_version": "1.1.0",
+  "minimum_reader_schema_version": 4,
+  "writer_schema_version": 4,
+  "profile": "minimal",
+  "harnesses": ["codex"],
+  "artifacts": [
+    {
+      "path": ".agent/protocols/permissions.md",
+      "kind": "file",
+      "lifecycle": "active",
+      "ownership": "layer-owned",
+      "state": "layer-owned",
+      "source_version": "1.1.0",
+      "installed_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "current_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapter_aliases": []
+    }
+  ]
+}

@@ -9,9 +9,9 @@
     },
     {
       "id": "ownership-and-manifest",
-      "adr": "docs/adr/0003-ownership-and-manifest-identity.md",
+      "adr": "docs/adr/0011-continuous-artifact-lifecycle.md",
       "migration_required": true,
-      "paths": ["scripts/Lizard.Manifest.psm1", "scripts/install.ps1", "scripts/manifest-diff.ps1", "scripts/doctor.ps1", "schemas/install-manifest.schema.json", "registry/manifest-migrations.json"]
+      "paths": ["scripts/Lizard.Manifest.psm1", "scripts/install.ps1", "scripts/manifest-diff.ps1", "scripts/doctor.ps1", "scripts/update-target.ps1", "schemas/install-manifest.schema.json", "registry/manifest-migrations.json", "tests/integration/manifest-v3.tests.ps1", "tests/integration/manifest-lifecycle.tests.ps1"]
     },
     {
       "id": "adapter-composition",

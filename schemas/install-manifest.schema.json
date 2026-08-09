@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lizard-agent-layer.local/schemas/install-manifest.schema.json",
-  "title": "lizard-agent-layer install manifest v3",
+  "title": "lizard-agent-layer install manifest v4",
   "type": "object",
   "required": [
     "schema_version",
@@ -14,12 +14,12 @@
     "artifacts"
   ],
   "properties": {
-    "schema_version": { "const": 3 },
+    "schema_version": { "const": 4 },
     "layer": { "const": "lizard-agent-layer" },
     "layer_version": { "type": "string" },
-    "minimum_reader_schema_version": { "type": "integer", "minimum": 2, "maximum": 3 },
-    "writer_schema_version": { "const": 3 },
-    "migrated_from_schema_version": { "type": "integer", "minimum": 1, "maximum": 2 },
+    "minimum_reader_schema_version": { "const": 4 },
+    "writer_schema_version": { "const": 4 },
+    "migrated_from_schema_version": { "type": "integer", "minimum": 1, "maximum": 3 },
     "profile": { "type": "string" },
     "requested_packs": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
     "pack_sources": {
@@ -66,10 +66,11 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["path", "kind", "ownership", "state", "source_version", "adapter_aliases"],
+        "required": ["path", "kind", "lifecycle", "ownership", "state", "source_version", "adapter_aliases"],
         "properties": {
           "path": { "type": "string", "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(^|/)\\.\\.(/|$)).+$" },
           "kind": { "enum": ["file", "directory"] },
+          "lifecycle": { "enum": ["active", "retired-present", "retired-missing", "removed"] },
           "ownership": { "enum": ["layer-owned", "user-owned", "adopted"] },
           "state": { "enum": ["layer-owned", "user-owned", "adopted", "locally-modified", "stale-unmodified", "missing", "conflict", "integrity-unknown"] },
           "source_path": { "type": ["string", "null"] },

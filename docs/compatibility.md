@@ -27,10 +27,11 @@ The protected read/hash work therefore narrows the established link-following ex
 
 | Concern | Current contract |
 | --- | --- |
-| Writer schema | 3 |
+| Writer schema | 4 |
 | Minimum readable schema | 2 |
-| Maximum readable schema | 3 |
+| Maximum readable schema | 4 |
 | Schema 2 migration | Conservative; ambiguous artifacts become user-owned |
+| Schema 3 migration | Existing records become active; deselected records are retained on the next approved apply |
 | Future schemas | Rejected before report or target writes |
 | Downgrade | Requires `-AllowDowngrade -HumanApproved` |
 
@@ -41,6 +42,8 @@ Codex, Claude Code, Gemini, Cursor, and generic `AGENTS.md` adapters share the s
 ## Change compatibility
 
 Beginning with the exact-plan approval contract, direct install or update `-Apply` calls are unsupported. Existing targets need no manifest migration, but callers must generate a fresh schema-v1 canonical operation plan and pass `-ApprovedPlanPath`, `-ApprovedPlanSha256`, and `-HumanApproved`. Legacy Markdown plans cannot be upgraded into approvals.
+
+Manifest schema v4 requires lifecycle-aware readers. Current tools read schema v3 conservatively and migrate it during the next approved apply. Older tools reject v4 through `minimum_reader_schema_version` instead of interpreting retained retired records as active artifacts.
 
 Loop installations created before the executable runtime remain readable. Preview and apply `loop-sync.ps1` to add missing runtime manifest fields and files; sync never overwrites runtime state, events, leases, or budget.
 

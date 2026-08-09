@@ -1,7 +1,7 @@
 {
-  "currentSchemaVersion": 3,
+  "currentSchemaVersion": 4,
   "minimumReadableSchemaVersion": 2,
-  "maximumReadableSchemaVersion": 3,
+  "maximumReadableSchemaVersion": 4,
   "migrations": [
     {
       "from": 2,
@@ -9,6 +9,13 @@
       "mode": "conservative",
       "ambiguousOwnership": "user-owned",
       "description": "Preserve every legacy artifact unless exact v3 ownership and installed-content evidence exists."
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "mode": "conservative",
+      "ambiguousOwnership": "user-owned",
+      "description": "Treat existing v3 records as active, preserve their ownership identity, and carry deselected records forward without deleting target content."
     }
   ]
 }

@@ -4,6 +4,10 @@ All notable public changes to lizard-agent-layer are documented here.
 
 ## Unreleased
 
+### Added
+
+- Manifest schema v4 retains `active`, `retired-present`, `retired-missing`, and future `removed` lifecycle records across profile, pack, skill, and harness contraction. Retired content is plan-bound and preserved by default.
+
 ### Security
 
 - Install and update mutations now require immutable canonical operation plans, an independently supplied SHA-256, explicit human approval, pre-lock validation, and post-lock/pre-mutation revalidation. Applied plan identities are recorded in manifests and update history.
@@ -11,6 +15,7 @@ All notable public changes to lizard-agent-layer are documented here.
 ### Breaking
 
 - Direct `install.ps1 -Apply` and `update-target.ps1 -Apply` calls without `-ApprovedPlanPath`, `-ApprovedPlanSha256`, and `-HumanApproved` now fail closed. Existing targets require no data rewrite; regenerate legacy Markdown plans as canonical JSON.
+- Schema-v4 install manifests require lifecycle-aware readers. Current tools migrate v3 records conservatively during the next approved apply.
 
 ## 1.1.0 - 2026-07-19
 

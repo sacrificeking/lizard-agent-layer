@@ -381,6 +381,7 @@ $ManagedPaths = New-Object System.Collections.Generic.List[string]
 $OwnedPaths = New-Object System.Collections.Generic.List[string]
 $InstalledAdapters = New-Object System.Collections.Generic.List[string]
 $Conflicts = New-Object System.Collections.Generic.List[string]
+$RetiredArtifacts = New-Object System.Collections.Generic.List[object]
 $ArtifactRecords = New-Object 'System.Collections.Generic.Dictionary[string,object]' (Get-LizardPathComparer)
 $PlanTargetEntries = New-Object 'System.Collections.Generic.Dictionary[string,object]' (Get-LizardPathComparer)
 
@@ -418,9 +419,9 @@ $ExistingManifestSchema = $null
 if (Test-Path -LiteralPath $ExistingInstallManifestPath) {
   $existingInstallManifest = Get-Content -LiteralPath $ExistingInstallManifestPath -Raw | ConvertFrom-Json
   $ExistingManifestSchema = if ($null -ne $existingInstallManifest.schema_version) { [int]$existingInstallManifest.schema_version } else { 1 }
-  if ($ExistingManifestSchema -gt 3) { throw "MANIFEST_READER_TOO_OLD: Target schema $ExistingManifestSchema is newer than supported schema 3." }
+  if ($ExistingManifestSchema -gt 4) { throw "MANIFEST_READER_TOO_OLD: Target schema $ExistingManifestSchema is newer than supported schema 4." }
 }
-$ExistingArtifactMap = Get-LizardArtifactMap -Manifest $existingInstallManifest
+$ExistingArtifactMap = Get-LizardArtifactMap -Manifest $existingInstallManifest -RequireLifecycle:($ExistingManifestSchema -ge 4)
 
 function Get-ExistingArtifactRecord {
   param([string]$RelativePath)
@@ -506,7 +507,38 @@ function Register-Artifact {
     $installedHash = $null
     $state = if (Test-Path -LiteralPath $Dest) { 'user-owned' } else { 'missing' }
   }
-  Set-ArtifactRecord (New-LizardArtifactRecord -Path $relative -Kind $Kind -Ownership $ownership -State $state -SourcePath $SourcePath -SourceVersion $LayerVersion -SourceHash $SourceHash -InstalledHash $installedHash -CurrentHash $currentHash -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup)
+  Set-ArtifactRecord (New-LizardArtifactRecord -Path $relative -Kind $Kind -Lifecycle active -Ownership $ownership -State $state -SourcePath $SourcePath -SourceVersion $LayerVersion -SourceHash $SourceHash -InstalledHash $installedHash -CurrentHash $currentHash -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup)
+}
+
+function Register-RetiredArtifacts {
+  foreach ($key in @($ExistingArtifactMap.Keys | Sort-Object)) {
+    if ($ArtifactRecords.ContainsKey($key)) { continue }
+    $existing = $ExistingArtifactMap[$key]
+    $relative = ConvertTo-LizardArtifactPath ([string]$existing.path)
+    $kind = [string]$existing.kind
+    if ($kind -notin @('file', 'directory')) { throw "MANIFEST_ARTIFACT_KIND_INVALID: $relative" }
+    $dest = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', '\'))
+    $pathExists = Test-Path -LiteralPath $dest
+    $exists = if ($kind -eq 'directory') { Test-Path -LiteralPath $dest -PathType Container } else { Test-Path -LiteralPath $dest -PathType Leaf }
+    if ($pathExists -and -not $exists) { throw "MANIFEST_ARTIFACT_KIND_MISMATCH: $relative expected $kind but another filesystem object exists." }
+    $previousLifecycle = Get-LizardArtifactLifecycle -Record $existing
+    if ($previousLifecycle -eq 'removed') {
+      $lifecycle = 'removed'
+      $state = if ($exists) { 'conflict' } else { 'missing' }
+      if ($exists) { Add-UniqueListItem $Conflicts ("{0}: removed artifact path reappeared and remains unmanaged." -f $relative) }
+    } else {
+      $lifecycle = if ($exists) { 'retired-present' } else { 'retired-missing' }
+      $state = if ($exists) { Get-LizardArtifactState -Record $existing -TargetPath $dest -ExpectedSourceHash ([string]$existing.source_hash) -Kind $kind } else { 'missing' }
+    }
+    $currentHash = if ($exists -and $kind -eq 'file') { Get-LizardSha256 $dest } else { $null }
+    Set-PlanTargetEntry -Dest $dest -Kind $kind -Action preserve -IntendedSha256 $currentHash
+    $record = New-LizardArtifactRecord -Path $relative -Kind $kind -Lifecycle $lifecycle -Ownership ([string]$existing.ownership) -State $state `
+      -SourcePath ([string]$existing.source_path) -SourceVersion ([string]$existing.source_version) -SourceHash ([string]$existing.source_hash) `
+      -InstalledHash ([string]$existing.installed_hash) -CurrentHash $currentHash -AdapterId ([string]$existing.adapter_id) `
+      -AdapterAliases @($existing.adapter_aliases) -MirrorGroup ([string]$existing.mirror_group)
+    Set-ArtifactRecord $record
+    $RetiredArtifacts.Add([pscustomobject][ordered]@{ path = $relative; lifecycle = $lifecycle }) | Out-Null
+  }
 }
 
 function Should-ReplacePath {
@@ -586,6 +618,7 @@ function New-InstallPlanMarkdown {
   $lines.Add(('- Skipped existing paths: `{0}`' -f $Skipped.Count)) | Out-Null
   $lines.Add(('- Manual merge items: `{0}`' -f $MergeNeeded.Count)) | Out-Null
   $lines.Add(('- Ownership conflicts: `{0}`' -f $Conflicts.Count)) | Out-Null
+  $lines.Add(('- Retired artifacts preserved: `{0}`' -f $RetiredArtifacts.Count)) | Out-Null
   $lines.Add('') | Out-Null
   $lines.Add('## Commands') | Out-Null
   $lines.Add('') | Out-Null
@@ -617,6 +650,7 @@ function New-InstallPlanMarkdown {
   Add-MarkdownList $lines 'Skipped existing paths' @($Skipped)
   Add-MarkdownList $lines 'Manual merge needed' @($MergeNeeded)
   Add-MarkdownList $lines 'Ownership conflicts' @($Conflicts)
+  Add-MarkdownList $lines 'Retired artifacts preserved' @($RetiredArtifacts.ToArray() | ForEach-Object { "$($_.lifecycle):$($_.path)" })
   $lines.Add('## Merge suggestions') | Out-Null
   $lines.Add('') | Out-Null
   if ($MergeSuggestions.Count -eq 0) {
@@ -716,7 +750,7 @@ function Get-InstallPlanInputs {
   return @($inputs.Values | Sort-Object scope, path)
 }
 
-function Get-InstallPlanOptions {
+function Get-InstallInvocationOptions {
   return [ordered]@{
     profile = $Profile
     harnesses = @($SelectedHarnesses | Sort-Object -Unique)
@@ -734,6 +768,14 @@ function Get-InstallPlanOptions {
     plan_ttl_minutes = $PlanTtlMinutes
     test_fail_after_mutation = $TestFailAfterMutation
   }
+}
+
+function Get-InstallPlanOptions {
+  $options = Get-InstallInvocationOptions
+  $options['retired_artifacts'] = @($RetiredArtifacts.ToArray() | Sort-Object path | ForEach-Object {
+    [ordered]@{ path = [string]$_.path; lifecycle = [string]$_.lifecycle }
+  })
+  return $options
 }
 
 function New-CurrentInstallOperationPlan {
@@ -915,12 +957,12 @@ function Write-InstallManifest {
   $manifestExists = Test-Path -LiteralPath $manifestPath
   Set-PlanTargetEntry -Dest $manifestPath -Kind file -Action $(if ($manifestExists) { 'replace' } else { 'create' }) -IntendedSha256 $null
   $doc = New-Object System.Collections.Specialized.OrderedDictionary
-  $doc['schema_version'] = 3
+  $doc['schema_version'] = 4
   $doc['layer'] = "lizard-agent-layer"
   $doc['layer_version'] = $LayerVersion
-  $doc['minimum_reader_schema_version'] = 2
-  $doc['writer_schema_version'] = 3
-  if ($ExistingManifestSchema -and $ExistingManifestSchema -lt 3) { $doc['migrated_from_schema_version'] = $ExistingManifestSchema }
+  $doc['minimum_reader_schema_version'] = 4
+  $doc['writer_schema_version'] = 4
+  if ($ExistingManifestSchema -and $ExistingManifestSchema -lt 4) { $doc['migrated_from_schema_version'] = $ExistingManifestSchema }
   $doc['profile'] = $Profile
   $doc['requested_packs'] = @($RequestedPacks)
   $doc['pack_sources'] = @($PackSources.ToArray())
@@ -988,8 +1030,14 @@ function Assert-ApprovedInstallPlanCurrent {
   if ([string]$ApprovedPlan.intent.source_git_head -ne [string]$currentGitHead) {
     throw 'PLAN_BINDING_SOURCE_MISMATCH: Approved source Git HEAD differs from the current layer.'
   }
-  $approvedOptions = ConvertTo-LizardCanonicalJson $ApprovedPlan.intent.options
-  $currentOptions = ConvertTo-LizardCanonicalJson (Get-InstallPlanOptions)
+  $currentInvocationOptions = Get-InstallInvocationOptions
+  $approvedInvocationOptions = [ordered]@{}
+  foreach ($key in @($currentInvocationOptions.Keys)) {
+    if ($ApprovedPlan.intent.options.PSObject.Properties.Name -notcontains $key) { throw "PLAN_BINDING_OPTIONS_MISMATCH: Approved plan lacks option '$key'." }
+    $approvedInvocationOptions[$key] = $ApprovedPlan.intent.options.$key
+  }
+  $approvedOptions = ConvertTo-LizardCanonicalJson $approvedInvocationOptions
+  $currentOptions = ConvertTo-LizardCanonicalJson $currentInvocationOptions
   if (-not $approvedOptions.Equals($currentOptions, [System.StringComparison]::Ordinal)) {
     throw 'PLAN_BINDING_OPTIONS_MISMATCH: Current install options differ from the approved plan.'
   }
@@ -1170,6 +1218,7 @@ foreach ($adapterName in $SelectedHarnesses) {
   Install-Adapter $adapterName
 }
 
+Register-RetiredArtifacts
 Write-InstallManifest
 Write-PlanReport
 if (-not $Apply) { $null = Write-CanonicalInstallPlan }

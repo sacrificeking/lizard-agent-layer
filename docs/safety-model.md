@@ -27,7 +27,7 @@ This is a link-aware, name-based boundary, not a complete physical-filesystem pr
 
 ## Ownership and integrity
 
-Manifest v3 records each managed artifact separately. Layer-owned and adopted files carry source, installed, and current SHA-256 hashes; user-owned files are visible in the contract but are not claimed as generated content.
+Manifest v4 records each managed artifact separately. Layer-owned and adopted files carry source, installed, and current SHA-256 hashes; user-owned files are visible in the contract but are not claimed as generated content. Deselected artifacts retain this evidence as `retired-present` or `retired-missing` and are never deleted by install or update.
 
 `-ForceManaged` is evidence-based. It may refresh an unchanged layer-owned artifact, but it preserves user-owned, adopted, locally modified, legacy-ambiguous, and integrity-unknown files. Schema v2 migration defaults ambiguous paths to user-owned.
 

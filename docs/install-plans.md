@@ -28,6 +28,7 @@ A plan report includes:
 - Preview and apply commands.
 - Selected skills.
 - Planned, created, skipped, and manual-merge paths.
+- Retired artifacts that contract reduction will preserve without deletion.
 - Merge suggestions for existing instruction files.
 - Suggested Markdown block for wiring the sidecar intentionally.
 
@@ -50,5 +51,7 @@ pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\pro
 Preview plus `-WritePlan` writes only the requested report file. It does not create `.agent/`, harness instruction files, skill mirrors, or sidecars in the target. The plan path must remain outside the target by default and is protected by the same linked-ancestor checks as target writes.
 
 Apply fails before lock acquisition when approval is missing or when canonical bytes, expiry, roots, options, source inputs, target inputs, or planned preconditions differ. Critical input and target bindings are checked again after lock acquisition and before mutation. Regenerate the plan after any mismatch; plans are immutable and are never migrated or overwritten.
+
+When a profile, pack, skill, or harness is deselected, its previously recorded artifacts remain preserve-only targets in the canonical plan. Apply carries their ownership and last installed identity forward as `retired-present` or `retired-missing`; install and update never delete them.
 
 For a deliberate compatibility case, `-AllowTargetReportWrite` permits a target-local plan after explicit opt-in. Such a plan is a report artifact and is not tracked as a layer-owned target path.

@@ -30,8 +30,8 @@ try {
   Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/contract-check-report.schema.json' -InstancePath $filesystemReportPath -Message 'Contract check report must satisfy its schema.'
 
   $manifestOutput = Join-Path $fixture 'manifest'
-  $manifest = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-LayerRoot', $LayerRoot, '-ChangedPaths', 'schemas/install-manifest.schema.json,changes/public-1-0-0-baseline.json', '-OutputDir', $manifestOutput, '-Strict')
-  Assert-Equal 0 $manifest.exit_code "Manifest declaration must include ownership and schema decisions: $($manifest.output)"
+  $manifest = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-LayerRoot', $LayerRoot, '-ChangedPaths', 'schemas/install-manifest.schema.json,changes/continuous-artifact-lifecycle.json', '-OutputDir', $manifestOutput, '-Strict')
+  Assert-Equal 0 $manifest.exit_code "Manifest lifecycle declaration must include current ownership and schema decisions: $($manifest.output)"
 
   $docsOutput = Join-Path $fixture 'docs-only'
   $docs = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-LayerRoot', $LayerRoot, '-ChangedPaths', 'docs/troubleshooting.md', '-OutputDir', $docsOutput, '-Strict')

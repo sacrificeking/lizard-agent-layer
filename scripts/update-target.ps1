@@ -142,7 +142,7 @@ function Invoke-ManifestDiff {
 }
 
 function New-UpdatePlanMarkdown {
-  param($DiffReport)
+  param($DiffReport, $RetiredArtifacts = @())
   $lines = New-Object System.Collections.Generic.List[string]
   $lines.Add('# lizard-agent-layer update plan') | Out-Null
   $lines.Add('') | Out-Null
@@ -153,7 +153,7 @@ function New-UpdatePlanMarkdown {
   $lines.Add(('- Current layer version: `{0}`' -f $CurrentVersion)) | Out-Null
   $lines.Add(('- Version relation: `{0}`' -f $VersionRelation)) | Out-Null
   $lines.Add(('- Installed manifest schema: `{0}`' -f $InstalledManifestSchema)) | Out-Null
-  $lines.Add(('- Target manifest schema after apply: `3`')) | Out-Null
+  $lines.Add(('- Target manifest schema after apply: `4`')) | Out-Null
   $lines.Add(('- Profile: `{0}`' -f $SelectedProfile)) | Out-Null
   $lines.Add(('- Harnesses: `{0}`' -f (Format-ListValue $SelectedHarnesses))) | Out-Null
   $lines.Add(('- Requested packs: `{0}`' -f (Format-ListValue $SelectedPacks))) | Out-Null
@@ -179,7 +179,8 @@ function New-UpdatePlanMarkdown {
   $lines.Add('- Without `-ForceManaged`, existing target files are preserved and missing/generated layer files are repaired.') | Out-Null
   $lines.Add('- With `-ForceManaged`, generated layer artifacts may be replaced from the current layer after reviewing this plan; unowned root instruction files remain merge-reviewed.') | Out-Null
   $lines.Add('- Existing project instruction files can still produce sidecar merge suggestions instead of silent edits, depending on adapter policy.') | Out-Null
-  $lines.Add('- Schema v2 manifests migrate conservatively to v3; ambiguous legacy files become user-owned and are not force-refreshed.') | Out-Null
+  $lines.Add('- Schema v2 manifests migrate conservatively to v4; ambiguous legacy files become user-owned and are not force-refreshed. Schema v3 records migrate as active.') | Out-Null
+  $lines.Add('- Deselected artifacts retain ownership evidence as retired-present or retired-missing and are never deleted by update.') | Out-Null
   $lines.Add('- A newer installed layer version requires both `-AllowDowngrade` and `-HumanApproved`.') | Out-Null
   $lines.Add('- After apply, manifest diff is run again in strict mode and an update-history JSONL entry is appended in `.agent/`.') | Out-Null
   $lines.Add('') | Out-Null
@@ -206,6 +207,7 @@ function New-UpdatePlanMarkdown {
   Add-MarkdownList $lines 'Requested packs' @($SelectedPacks)
   Add-MarkdownList $lines 'Installed expanded packs' @($InstalledExpandedPacks)
   Add-MarkdownList $lines 'Harnesses' @($SelectedHarnesses)
+  Add-MarkdownList $lines 'Retired artifacts preserved' @($RetiredArtifacts | ForEach-Object { '{0}:{1}' -f $_.lifecycle, $_.path })
   $lines.Add('## Manifest differences') | Out-Null
   $lines.Add('') | Out-Null
   if (@($DiffReport.differences).Count -eq 0) {
@@ -254,8 +256,8 @@ $CurrentVersion = (Get-Content -LiteralPath $versionPath -Raw).Trim()
 $InstalledVersion = if ($Manifest.layer_version) { [string]$Manifest.layer_version } else { 'unknown' }
 $InstalledManifestSchema = if ($null -ne $Manifest.schema_version) { try { [int]$Manifest.schema_version } catch { throw "MANIFEST_SCHEMA_INVALID: $($Manifest.schema_version)" } } else { 1 }
 if ($InstalledManifestSchema -lt 2) { throw "MANIFEST_SCHEMA_UNSUPPORTED: Schema $InstalledManifestSchema is older than minimum readable schema 2." }
-if ($InstalledManifestSchema -gt 3) { throw "MANIFEST_READER_TOO_OLD: Target schema $InstalledManifestSchema is newer than supported schema 3." }
-if ($Manifest.minimum_reader_schema_version -and [int]$Manifest.minimum_reader_schema_version -gt 3) { throw "MANIFEST_READER_TOO_OLD: Target requires reader schema $($Manifest.minimum_reader_schema_version)." }
+if ($InstalledManifestSchema -gt 4) { throw "MANIFEST_READER_TOO_OLD: Target schema $InstalledManifestSchema is newer than supported schema 4." }
+if ($Manifest.minimum_reader_schema_version -and [int]$Manifest.minimum_reader_schema_version -gt 4) { throw "MANIFEST_READER_TOO_OLD: Target requires reader schema $($Manifest.minimum_reader_schema_version)." }
 try { $null = [Version]$CurrentVersion } catch { throw "VERSION_FORMAT_INVALID: Current layer version '$CurrentVersion' is not a supported semantic version." }
 try { $null = [Version]$InstalledVersion } catch { throw "VERSION_FORMAT_INVALID: Installed layer version '$InstalledVersion' is not a supported semantic version." }
 $SelectedProfile = if (-not [string]::IsNullOrWhiteSpace($Profile)) { $Profile } elseif ($Manifest.profile) { [string]$Manifest.profile } elseif ($ProfileDoc.profile) { [string]$ProfileDoc.profile } else { 'standard' }
@@ -408,14 +410,14 @@ if ($Apply) {
 $effectiveOutputDir = Initialize-SafeDirectory -Path $effectiveOutputDir
 if ($planParent) { $planParent = Initialize-SafeDirectory -Path $planParent }
 $preDiff = Invoke-ManifestDiff -DiffOutputDir $preDiffDir
-$updatePlan = New-UpdatePlanMarkdown -DiffReport $preDiff
 if (-not $Apply) {
-  Set-SafeContent -AuthorizedRoot $planParent -Path $effectivePlanPath -Value $updatePlan
   $installPreviewArgs = Get-InstallPlanArguments -CanonicalPath $installCanonicalPlanPath
   $installPreviewOutput = & $PowerShellHost @installPreviewArgs 2>&1 | Out-String
   if ($LASTEXITCODE -ne 0) { throw "INSTALL_PLAN_PREVIEW_FAILED: $installPreviewOutput" }
   $installPlanSha256 = (Get-FileHash -LiteralPath $installCanonicalPlanPath -Algorithm SHA256).Hash.ToLowerInvariant()
   $installApprovalPlan = Read-LizardApprovedPlan -Path $installCanonicalPlanPath -ExpectedSha256 $installPlanSha256 -ExpectedOperationKind install
+  $updatePlan = New-UpdatePlanMarkdown -DiffReport $preDiff -RetiredArtifacts @($installApprovalPlan.intent.options.retired_artifacts)
+  Set-SafeContent -AuthorizedRoot $planParent -Path $effectivePlanPath -Value $updatePlan
   $updateApprovalPlan = New-CurrentUpdateOperationPlan -NestedPlan $installApprovalPlan
   Write-LizardOperationPlan -Plan $updateApprovalPlan -Path $effectiveCanonicalPlanPath | Out-Null
 }

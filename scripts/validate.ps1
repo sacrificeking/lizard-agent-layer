@@ -264,10 +264,12 @@ $null = Read-JsonFile (Join-Path $LayerRoot 'registry\behavioral-readiness.json'
 $null = Read-JsonFile (Join-Path $LayerRoot 'registry\contracts.json')
 $migrationRegistry = Read-JsonFile (Join-Path $LayerRoot 'registry\manifest-migrations.json')
 if ($migrationRegistry) {
-  if ([int]$migrationRegistry.currentSchemaVersion -ne 3) { Fail 'Manifest migration registry currentSchemaVersion must be 3.' }
-  if ([int]$migrationRegistry.minimumReadableSchemaVersion -ne 2 -or [int]$migrationRegistry.maximumReadableSchemaVersion -ne 3) { Fail 'Manifest migration reader range must be 2 through 3.' }
+  if ([int]$migrationRegistry.currentSchemaVersion -ne 4) { Fail 'Manifest migration registry currentSchemaVersion must be 4.' }
+  if ([int]$migrationRegistry.minimumReadableSchemaVersion -ne 2 -or [int]$migrationRegistry.maximumReadableSchemaVersion -ne 4) { Fail 'Manifest migration reader range must be 2 through 4.' }
   $v2Migration = @($migrationRegistry.migrations | Where-Object { [int]$_.from -eq 2 -and [int]$_.to -eq 3 })
   if ($v2Migration.Count -ne 1 -or [string]$v2Migration[0].ambiguousOwnership -ne 'user-owned') { Fail 'Manifest migration registry must define one conservative v2-to-v3 migration.' }
+  $v3Migration = @($migrationRegistry.migrations | Where-Object { [int]$_.from -eq 3 -and [int]$_.to -eq 4 })
+  if ($v3Migration.Count -ne 1 -or [string]$v3Migration[0].mode -ne 'conservative') { Fail 'Manifest migration registry must define one conservative v3-to-v4 lifecycle migration.' }
 }
 
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory | ForEach-Object {
@@ -310,7 +312,7 @@ foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifes
   catch { Fail "PowerShell parse failure in ${script}: $($_.Exception.Message)" }
 }
 
-foreach ($relative in @('scripts\Lizard.SafeFs.psm1', 'scripts\Lizard.Manifest.psm1', 'scripts\Lizard.Host.psm1', 'scripts\Lizard.Transaction.psm1', 'scripts\Lizard.LoopEvidence.psm1', 'scripts\Lizard.QualityEvidence.psm1', 'tests\TestHelpers.psm1', 'tests\run-focused.ps1', 'tests\unit\safe-fs.tests.ps1', 'tests\unit\host.tests.ps1', 'tests\integration\manifest-v3.tests.ps1', 'tests\integration\transaction.tests.ps1', 'tests\integration\model-routing.tests.ps1', 'tests\adversarial\install-containment.tests.ps1', 'tests\adversarial\report-privacy.tests.ps1', 'tests\adversarial\quality-evidence.tests.ps1', 'tests\adversarial\contract-governance.tests.ps1', 'tests\adversarial\version-gates.tests.ps1', 'tests\adversarial\loop-evidence.tests.ps1')) {
+foreach ($relative in @('scripts\Lizard.SafeFs.psm1', 'scripts\Lizard.Manifest.psm1', 'scripts\Lizard.Host.psm1', 'scripts\Lizard.Transaction.psm1', 'scripts\Lizard.LoopEvidence.psm1', 'scripts\Lizard.QualityEvidence.psm1', 'tests\TestHelpers.psm1', 'tests\run-focused.ps1', 'tests\unit\safe-fs.tests.ps1', 'tests\unit\host.tests.ps1', 'tests\integration\manifest-v3.tests.ps1', 'tests\integration\manifest-lifecycle.tests.ps1', 'tests\integration\transaction.tests.ps1', 'tests\integration\model-routing.tests.ps1', 'tests\adversarial\install-containment.tests.ps1', 'tests\adversarial\report-privacy.tests.ps1', 'tests\adversarial\quality-evidence.tests.ps1', 'tests\adversarial\contract-governance.tests.ps1', 'tests\adversarial\version-gates.tests.ps1', 'tests\adversarial\loop-evidence.tests.ps1')) {
   $path = Join-Path $LayerRoot $relative
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing safety artifact $relative."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }

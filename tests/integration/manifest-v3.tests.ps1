@@ -39,8 +39,8 @@ try {
   $install = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $ownedApproval.arguments
   Assert-Equal 0 $install.exit_code 'Fresh v3 install with a pre-existing file must succeed.'
   $manifest = Read-Manifest $ownedTarget
-  Assert-Equal 3 ([int]$manifest.schema_version) 'Installer must emit manifest schema v3.'
-  Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/install-manifest.schema.json' -InstancePath (Join-Path $ownedTarget '.agent\lizard-agent-layer.install.json') -Message 'Fresh installer output must satisfy manifest schema v3.'
+  Assert-Equal 4 ([int]$manifest.schema_version) 'Installer must emit manifest schema v4.'
+  Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/install-manifest.schema.json' -InstancePath (Join-Path $ownedTarget '.agent\lizard-agent-layer.install.json') -Message 'Fresh installer output must satisfy manifest schema v4.'
   $userArtifact = Find-Artifact $manifest '.agent/protocols/permissions.md'
   Assert-Equal 'user-owned' ([string]$userArtifact.ownership) 'Pre-existing files must remain user-owned.'
   $layerArtifact = Find-Artifact $manifest '.agent/protocols/handoff.md'
@@ -110,10 +110,27 @@ try {
   Assert-Equal 0 $migration.exit_code 'Conservative v2-to-v3 migration must succeed.'
   Assert-True ((Get-Content -LiteralPath $legacyFile -Raw) -match 'legacy-customization') 'Ambiguous v2 content must remain untouched.'
   $migrated = Read-Manifest $legacyTarget
-  Assert-Equal 3 ([int]$migrated.schema_version) 'Legacy manifest must migrate to v3.'
-  Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/install-manifest.schema.json' -InstancePath $legacyManifestPath -Message 'Migrated installer output must satisfy manifest schema v3.'
+  Assert-Equal 4 ([int]$migrated.schema_version) 'Legacy manifest must migrate to v4.'
+  Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/install-manifest.schema.json' -InstancePath $legacyManifestPath -Message 'Migrated installer output must satisfy manifest schema v4.'
   Assert-Equal 2 ([int]$migrated.migrated_from_schema_version) 'Migration provenance must record schema v2.'
   Assert-Equal 'user-owned' ([string](Find-Artifact $migrated '.agent/protocols/permissions.md').ownership) 'Ambiguous legacy content must migrate as user-owned.'
+
+  $legacyV3 = Read-Manifest $legacyTarget
+  $legacyV3.schema_version = 3
+  $legacyV3.minimum_reader_schema_version = 2
+  $legacyV3.writer_schema_version = 3
+  if ($legacyV3.PSObject.Properties.Name -contains 'migrated_from_schema_version') { $legacyV3.PSObject.Properties.Remove('migrated_from_schema_version') }
+  foreach ($artifact in @($legacyV3.artifacts)) {
+    if ($artifact.PSObject.Properties.Name -contains 'lifecycle') { $artifact.PSObject.Properties.Remove('lifecycle') }
+  }
+  $legacyV3 | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $legacyManifestPath -Encoding UTF8
+  $v3MigrationApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $legacyTarget, '-Profile', 'minimal')
+  $v3Migration = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $v3MigrationApproval.arguments
+  Assert-Equal 0 $v3Migration.exit_code 'Manifest v3 must migrate to lifecycle schema v4.'
+  $migratedV3 = Read-Manifest $legacyTarget
+  Assert-Equal 4 ([int]$migratedV3.schema_version) 'Manifest v3 migration must emit schema v4.'
+  Assert-Equal 3 ([int]$migratedV3.migrated_from_schema_version) 'Manifest v3 migration provenance must be recorded.'
+  Assert-True (@($migratedV3.artifacts | Where-Object { [string]$_.lifecycle -ne 'active' }).Count -eq 0) 'Selected v3 artifacts must migrate as active.'
 
   $collisionA = [pscustomobject]@{ name = 'one'; adapter_dir = $fixture; manifest = [pscustomobject]@{ instruction = [pscustomobject]@{ dst = 'AGENTS.md' }; skillMirrors = @() } }
   $collisionB = [pscustomobject]@{ name = 'two'; adapter_dir = $fixture; manifest = [pscustomobject]@{ instruction = [pscustomobject]@{ dst = 'AGENTS.md' }; skillMirrors = @() } }

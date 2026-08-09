@@ -121,6 +121,20 @@
       "expected_keyword": "required"
     },
     {
+      "name": "install-manifest-requires-lifecycle",
+      "schema": "schemas/install-manifest.schema.json",
+      "base": "tests/schema/fixtures/install-manifest-v4.valid.json",
+      "mutations": [{ "op": "remove", "path": "/artifacts/0/lifecycle" }],
+      "expected_keyword": "required"
+    },
+    {
+      "name": "install-manifest-lifecycle-enum",
+      "schema": "schemas/install-manifest.schema.json",
+      "base": "tests/schema/fixtures/install-manifest-v4.valid.json",
+      "mutations": [{ "op": "replace", "path": "/artifacts/0/lifecycle", "value": "forgotten" }],
+      "expected_keyword": "enum"
+    },
+    {
       "name": "contract-registry-adr-path",
       "schema": "schemas/contracts.schema.json",
       "base": "registry/contracts.json",

@@ -26,7 +26,8 @@ try {
     '0001-source-of-truth-and-layer-boundaries.md', '0002-filesystem-and-report-containment.md',
     '0003-ownership-and-manifest-identity.md', '0004-adapter-composition-and-precedence.md',
     '0005-schema-and-manifest-evolution.md', '0006-transaction-and-recovery-semantics.md',
-    '0007-report-boundaries-and-privacy.md', '0008-loop-lifecycle-and-no-auto-merge.md'
+    '0007-report-boundaries-and-privacy.md', '0008-loop-lifecycle-and-no-auto-merge.md',
+    '0009-provider-neutral-staged-routing.md', '0010-exact-plan-approval-binding.md', '0011-continuous-artifact-lifecycle.md'
   )) {
     $path = Join-Path $LayerRoot "docs\adr\$adr"
     Assert-True (Test-Path -LiteralPath $path -PathType Leaf) "Missing ADR $adr."

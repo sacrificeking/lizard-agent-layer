@@ -53,7 +53,7 @@ try {
   Assert-True ($futureResult.output -match 'MANIFEST_READER_TOO_OLD') 'Future schema rejection must expose MANIFEST_READER_TOO_OLD.'
   Assert-False (Test-Path -LiteralPath $futureDir) 'Future schema gate must run before report writes.'
 
-  $future.schema_version = 3
+  $future.schema_version = 4
   $future.layer_version = 'not-a-version'
   Write-Manifest $future
   $malformedDir = Join-Path $fixture 'malformed-version'

@@ -82,9 +82,10 @@ if (Test-Path -LiteralPath $manifestPath) {
   try {
     $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
     $manifestSchema = if ($null -ne $manifest.schema_version) { [int]$manifest.schema_version } else { 1 }
-    if ($manifestSchema -gt 3) { Add-Fail "install manifest schema $manifestSchema is newer than supported schema 3." }
-    elseif ($manifestSchema -lt 3) { Add-Warn "install manifest schema $manifestSchema has unknown content integrity; migrate to schema 3." }
-    else { Add-Ok "install manifest loaded: $($manifest.layer_version), schema 3" }
+    if ($manifestSchema -gt 4) { Add-Fail "install manifest schema $manifestSchema is newer than supported schema 4." }
+    elseif ($manifestSchema -lt 3) { Add-Warn "install manifest schema $manifestSchema has unknown content integrity; migrate to schema 4." }
+    elseif ($manifestSchema -lt 4) { Add-Warn "install manifest schema $manifestSchema has no continuous artifact lifecycle; migrate to schema 4." }
+    else { Add-Ok "install manifest loaded: $($manifest.layer_version), schema 4" }
   }
   catch { Add-Fail "install manifest is invalid JSON: $($_.Exception.Message)" }
 } else {
@@ -94,13 +95,29 @@ if (Test-Path -LiteralPath $manifestPath) {
 if ($null -ne $manifest -and $manifest.harnesses) { $harnesses = @($manifest.harnesses) }
 elseif ($null -ne $profile -and $profile.harnesses) { $harnesses = @($profile.harnesses) }
 
-if ($null -ne $manifest -and $manifestSchema -eq 3) {
-  try { $null = Get-LizardArtifactMap -Manifest $manifest }
+if ($null -ne $manifest -and $manifestSchema -ge 3 -and $manifestSchema -le 4) {
+  try { $null = Get-LizardArtifactMap -Manifest $manifest -RequireLifecycle:($manifestSchema -ge 4) }
   catch { Add-Fail $_.Exception.Message }
   foreach ($artifact in @($manifest.artifacts)) {
     $relative = ConvertTo-LizardArtifactPath ([string]$artifact.path)
     try { $artifactPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', '\')) }
     catch { Add-Fail "unsafe artifact path ${relative}: $($_.Exception.Message)"; continue }
+    try { $lifecycle = Get-LizardArtifactLifecycle -Record $artifact }
+    catch { Add-Fail $_.Exception.Message; continue }
+    $pathExists = Test-Path -LiteralPath $artifactPath
+    $artifactExists = if ([string]$artifact.kind -eq 'directory') { Test-Path -LiteralPath $artifactPath -PathType Container } else { Test-Path -LiteralPath $artifactPath -PathType Leaf }
+    if ($lifecycle -in @('retired-missing', 'removed')) {
+      if ($pathExists) { Add-Fail "artifact lifecycle expects absence but path exists: $relative ($lifecycle)" }
+      continue
+    }
+    if ($lifecycle -eq 'retired-present') {
+      if (-not $artifactExists) { Add-Fail "retired artifact is missing: $relative"; continue }
+      if ([string]$artifact.kind -eq 'file') {
+        if ([string]::IsNullOrWhiteSpace([string]$artifact.current_hash)) { Add-Fail "retired artifact has no current hash: $relative" }
+        elseif ((Get-LizardSha256 $artifactPath) -ne [string]$artifact.current_hash) { Add-Fail "retired artifact changed after retirement: $relative" }
+      }
+      continue
+    }
     if ([string]$artifact.kind -eq 'directory') {
       if (-not (Test-Path -LiteralPath $artifactPath -PathType Container)) { Add-Fail "artifact directory missing: $relative" }
       continue
@@ -212,7 +229,8 @@ if ($null -ne $profile) {
   foreach ($modelProfile in $boundModelProfiles) {
     Check-File ".agent\routing\models\$modelProfile.json" -Required | Out-Null
   }
-  foreach ($skill in @($profile.skills)) {
+  $activeSkills = if ($null -ne $manifest -and $manifestSchema -ge 4) { @($manifest.skills) } else { @($profile.skills) }
+  foreach ($skill in $activeSkills) {
     Check-File ".agent\skills\$skill\SKILL.md" -Required | Out-Null
   }
 }
@@ -228,11 +246,11 @@ foreach ($harness in $harnesses) {
   $sidecar = if ($adapter.instruction.sidecar) { Normalize-RelPath $adapter.instruction.sidecar } else { "$dst.lizard-agent-layer" }
   $dstPath = Join-Path $TargetRoot $dst
   $sidecarPath = Join-Path $TargetRoot $sidecar
-  if ($manifestSchema -eq 3) {
+  if ($manifestSchema -ge 3 -and $manifestSchema -le 4) {
     $effectiveAdapter = [string]$harness
     $alias = @($manifest.adapter_aliases | Where-Object { [string]$_.adapter -eq [string]$harness } | Select-Object -First 1)
     if ($alias.Count -gt 0) { $effectiveAdapter = [string]$alias[0].satisfied_by }
-    $identityArtifacts = @($manifest.artifacts | Where-Object { [string]$_.adapter_id -eq $effectiveAdapter -and [string]$_.mirror_group -like 'adapter-instruction:*' })
+    $identityArtifacts = @($manifest.artifacts | Where-Object { (Get-LizardArtifactLifecycle -Record $_) -eq 'active' -and [string]$_.adapter_id -eq $effectiveAdapter -and [string]$_.mirror_group -like 'adapter-instruction:*' })
     $identityValid = $false
     foreach ($identity in $identityArtifacts) {
       $identityPath = Join-Path $TargetRoot ([string]$identity.path).Replace('/', '\')
@@ -257,7 +275,8 @@ foreach ($harness in $harnesses) {
     $mirrorRel = Normalize-RelPath $mirror.dst
     Check-File $mirrorRel -Required | Out-Null
     if ($null -ne $profile) {
-      foreach ($skill in @($profile.skills)) {
+      $activeMirrorSkills = if ($null -ne $manifest -and $manifestSchema -ge 4) { @($manifest.skills) } else { @($profile.skills) }
+      foreach ($skill in $activeMirrorSkills) {
         Check-File "$mirrorRel\$skill\SKILL.md" -Required | Out-Null
       }
     }

@@ -16,6 +16,7 @@ $tests = @(
   'tests\adversarial\quality-evidence.tests.ps1',
   'tests\adversarial\contract-governance.tests.ps1',
   'tests\integration\manifest-v3.tests.ps1',
+  'tests\integration\manifest-lifecycle.tests.ps1',
   'tests\integration\install-plan-binding.tests.ps1',
   'tests\integration\update-plan-binding.tests.ps1',
   'tests\adversarial\version-gates.tests.ps1',

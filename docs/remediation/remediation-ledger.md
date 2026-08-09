@@ -6,7 +6,7 @@ This ledger tracks remediation of the findings in the [2026-08-01 Codex/VS Code 
 
 - Baseline branch: `main`
 - Baseline commit: `1797097d8a1c5ab5444ac82e83786ac1ccc841f6`
-- Current remediation branch: `remediation/wp03-canonical-plan-binding`
+- Current remediation branch: `remediation/wp04-continuous-ownership`
 - Baseline production-code drift: none
 - Initial worktree exception: the audit report was present as an untracked file
 - Local verification host: Windows PowerShell 5.1 on Windows 10
@@ -22,7 +22,7 @@ This ledger tracks remediation of the findings in the [2026-08-01 Codex/VS Code 
 | WP-01C: handle-bound mutation | H-03 | Not started | WP-01A, host capability contract | Supported hosts use no-follow/handle-bound mutation; unsupported hosts fail closed or state the reduced guarantee |
 | WP-02: transaction recovery | H-02, M-05 | Implemented and locally verified | WP-01A | Strict v2 runtime/schema validation, identity binding, contained canonical backups, retry-safe reverse replay, terminal cleanup, and decisive doctor classifications pass focused tests |
 | WP-03: canonical plan binding | H-01 | Implemented and locally verified | Canonical serialization | Apply rejects every plan, source, target, option and approval mismatch before mutation |
-| WP-04: continuous ownership | H-04 | Not started | WP-03 | Contract reduction retains retired ownership evidence |
+| WP-04: continuous ownership | H-04 | Implemented and locally verified | WP-03 | Contract reduction retains retired ownership evidence |
 | WP-05: transactional uninstall | H-04, M-04 | Not started | WP-01 through WP-04 | Bound preview/apply uninstall is reversible, resumable and idempotent |
 | WP-06: memory modes | H-05 | Not started | WP-04, WP-05 | `off` creates and retains no memory artifacts or references |
 | WP-07 through WP-10: governance, privacy, prompt trust and evidence trust | H-06 through H-09, M-07, M-08 | Not started | Trust-model ADR, WP-03, WP-08 foundations | Host and artifact trust claims have executable negative evidence and explicit external boundaries |
@@ -148,3 +148,33 @@ Residual limitations:
 - Logical target-root identity and name-based revalidation retain the physical containment limitations tracked by H-03.
 - PowerShell 7 and Unix supported-host verification remain pending; H-01 therefore remains `OPEN_CHANGED`, not closed.
 - Protected revalidation currently repeats broad source and target hashing; the controls fail closed but add material local gate latency, so bounded hash-cache/performance work remains an optimization item and must preserve post-lock freshness guarantees.
+
+## WP-04 implementation record
+
+Implemented controls:
+
+- Manifest schema v4 gives every artifact an explicit `active`, `retired-present`, `retired-missing`, or future `removed` lifecycle.
+- Contract reduction carries every deselected v3/v4 artifact record forward with its ownership, source identity, installed hash, adapter identity, aliases, and mirror group instead of discarding it.
+- Retired paths are preserve-only canonical plan targets, and the exact sorted retired path/lifecycle set is bound into install options and nested update approval plans.
+- Install and update never delete retired content. Present content is rehashed and classified; missing content retains the last installed identity; reselected artifacts return to active without overwriting local modifications.
+- Schema-v4 readers fail closed on missing or invalid lifecycle fields, duplicate identities, path/lifecycle disagreement, wrong filesystem object kinds, and retired-content hash drift.
+- Schema-v3 records migrate as active during the next exact-plan-approved apply. Schema-v4 manifests require lifecycle-aware readers, preventing older tools from interpreting retired records as active required artifacts.
+- ADR 0011 and `changes/continuous-artifact-lifecycle.json` declare the migration and intentional reader compatibility break. `removed` remains reserved for WP-05 transactional uninstall.
+
+Local Windows PowerShell 5.1 verification covers contract reduction, locally modified retirement, repeated contraction, physical disappearance, reactivation, missing/invalid lifecycle values, wrong-kind paths, reappeared removed paths, strict doctor/manifest-diff behavior, v2/v3 migration, canonical plan binding, and all supported profile/harness combinations.
+
+## WP-04 verification record
+
+| Gate | Result |
+| --- | --- |
+| Failure-first lifecycle assertion | Failed as expected before implementation because the writer emitted schema v3 and discarded deselected records |
+| Lifecycle integration suite | Passed after final fail-closed hardening in 358.2 seconds, including `active → retired-present → retired-missing → active`, local modification preservation, plan exposure/binding, idempotence, missing lifecycle, wrong-kind, and reappeared-path negatives |
+| Schema validation and mutations | Passed: 58/58 schema bindings and 24/24 mutation cases |
+| Contract governance | Passed with `changes/continuous-artifact-lifecycle.json`, ADR 0011, and the declared v3→v4 migration/reader compatibility break |
+| Focused safety suites | Passed: 19/19 suites on the final source state; report `.tmp/tests/focused-test-report.json`. The CI-reported duration includes a system suspend and is not a performance measurement |
+| Pack, drift, and quality gates | Passed: 7 packs/21 skills with no warnings; 118 drift artifacts with zero drift; quality average 87.77 and minimum 68 |
+| Standalone smoke | Passed in 1,510 seconds, including preview/apply/idempotence, nested update, transaction, overlay, cursor, and sidecar preservation under `.tmp/smoke-20260808190504` |
+| Standalone profile/harness matrix | Passed in 1,377 seconds: 18/18 combinations, 0 failures; report `.tmp/matrix-20260808193753/matrix-report.json` |
+| Full local CI | Passed all nine gates without skips; report `.tmp/ci/ci-report-20260809093416.json`. All 19 focused suites and all 18 matrix combinations passed; the reported wall duration includes two system suspensions and is not a performance measurement |
+
+H-04 remains `OPEN_CHANGED`, not closed: WP-04 fixes continuous ownership across contract reduction, while the executable plan-bound, transactional, reversible, resumable, and idempotent uninstall required by WP-05 does not yet exist. No network access, dependency installation, commit, push, merge, publication, or release was performed.

@@ -24,17 +24,34 @@ function Get-LizardStringSha256 {
 }
 
 function Get-LizardArtifactMap {
-  param($Manifest)
+  param(
+    $Manifest,
+    [switch]$RequireLifecycle
+  )
   $comparer = if ($PSVersionTable.ContainsKey('Platform') -and $PSVersionTable['Platform'] -eq 'Unix') { [System.StringComparer]::Ordinal } else { [System.StringComparer]::OrdinalIgnoreCase }
   $map = New-Object 'System.Collections.Generic.Dictionary[string,object]' $comparer
   if ($null -eq $Manifest -or -not ($Manifest.PSObject.Properties.Name -contains 'artifacts')) { return $map }
   foreach ($artifact in @($Manifest.artifacts)) {
     if ($null -eq $artifact -or [string]::IsNullOrWhiteSpace([string]$artifact.path)) { continue }
+    if ($RequireLifecycle -and $artifact.PSObject.Properties.Name -notcontains 'lifecycle') {
+      throw "MANIFEST_ARTIFACT_LIFECYCLE_MISSING: $($artifact.path)"
+    }
+    $null = Get-LizardArtifactLifecycle -Record $artifact
     $key = ConvertTo-LizardArtifactPath ([string]$artifact.path)
     if ($map.ContainsKey($key)) { throw "MANIFEST_DUPLICATE_ARTIFACT: $key" }
     $map.Add($key, $artifact)
   }
   return $map
+}
+
+function Get-LizardArtifactLifecycle {
+  param($Record)
+  if ($null -eq $Record -or $Record.PSObject.Properties.Name -notcontains 'lifecycle') { return 'active' }
+  $lifecycle = [string]$Record.lifecycle
+  if ($lifecycle -notin @('active', 'retired-present', 'retired-missing', 'removed')) {
+    throw "MANIFEST_ARTIFACT_LIFECYCLE_INVALID: $lifecycle"
+  }
+  return $lifecycle
 }
 
 function Get-LizardArtifactState {
@@ -69,6 +86,7 @@ function New-LizardArtifactRecord {
   param(
     [Parameter(Mandatory = $true)][string]$Path,
     [ValidateSet('file', 'directory')][string]$Kind,
+    [ValidateSet('active', 'retired-present', 'retired-missing', 'removed')][string]$Lifecycle = 'active',
     [ValidateSet('layer-owned', 'user-owned', 'adopted')][string]$Ownership,
     [Parameter(Mandatory = $true)][string]$State,
     [AllowNull()][string]$SourcePath,
@@ -84,6 +102,7 @@ function New-LizardArtifactRecord {
   return [pscustomobject][ordered]@{
     path = ConvertTo-LizardArtifactPath $Path
     kind = $Kind
+    lifecycle = $Lifecycle
     ownership = $Ownership
     state = $State
     source_path = if ([string]::IsNullOrWhiteSpace($SourcePath)) { $null } else { $SourcePath }
@@ -186,7 +205,7 @@ function Resolve-LizardAdapterComposition {
 }
 
 Export-ModuleMember -Function @(
-  'Get-LizardArtifactMap', 'Get-LizardArtifactState', 'Get-LizardSha256',
+  'Get-LizardArtifactLifecycle', 'Get-LizardArtifactMap', 'Get-LizardArtifactState', 'Get-LizardSha256',
   'ConvertTo-LizardArtifactPath', 'Get-LizardStringSha256', 'New-LizardArtifactRecord',
   'Resolve-LizardAdapterComposition', 'Test-LizardArtifactPathsOverlap'
 )

@@ -53,7 +53,9 @@ pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project
 pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir .\.tmp\project-update -ForceManaged -Apply -ApprovedPlanPath .\.tmp\project-update\update-plan.json -ApprovedPlanSha256 <sha256> -HumanApproved
 ```
 
-`-ForceManaged` refreshes only exact manifest-v3 entries whose current hash still matches their installed hash and whose ownership is `layer-owned`. User-owned, adopted, locally modified, legacy-ambiguous, missing-identity, or conflicting files remain untouched and are listed in the install plan and manifest conflicts.
+`-ForceManaged` refreshes only exact manifest records whose current hash still matches their installed hash and whose ownership is `layer-owned`. User-owned, adopted, locally modified, legacy-ambiguous, missing-identity, or conflicting files remain untouched and are listed in the install plan and manifest conflicts.
+
+Manifest v4 also preserves deselected ownership evidence. Artifacts removed from the selected profile, pack, skill, or harness contract become `retired-present` or `retired-missing`, remain preserve-only entries in the approved plan, and are not deleted by update. Reselecting the contract returns them to `active` without overwriting local modifications.
 
 Schema v2 targets migrate conservatively on apply. Because v2 cannot prove per-file provenance, existing ambiguous files become `user-owned`; `-ForceManaged` does not adopt or replace them implicitly.
 

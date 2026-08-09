@@ -30,13 +30,14 @@ pwsh -NoProfile -File .\scripts\manifest-diff.ps1 -TargetPath D:\path\to\project
 - Expected skills versus installed manifest skills.
 - Expected `.agent/skills/<skill>/SKILL.md` files.
 - Manifest-managed paths that are missing on disk.
-- Manifest v3 artifact coverage and ownership-index consistency.
+- Manifest v4 artifact lifecycle, coverage, and ownership-index consistency.
+- Active, retired-present, retired-missing, and removed path/byte consistency.
 - Current file hashes against the exact installed hashes for layer-owned and adopted artifacts.
 - Current layer source hashes against recorded source identity.
 - Skill and adapter mirror-group equality.
 - Exact effective adapter instruction or sidecar identity, including declared compatibility aliases.
 
-Schema v2 targets can still be inspected, but strict mode reports `integrity-unknown` and exits non-zero because legacy manifests cannot prove per-file ownership or content identity.
+Schema v2 targets can still be inspected, but strict mode reports `integrity-unknown` and exits non-zero because legacy manifests cannot prove per-file ownership or content identity. Schema v3 remains readable and migrates to explicit lifecycle records on the next approved apply.
 
 Reports are written under `.tmp/manifest-diff/`:
 

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "continuous-artifact-lifecycle",
+  "date": "2026-08-08",
+  "summary": "Preserve ownership and content identity when profiles, packs, skills, or harnesses are deselected.",
+  "changed_paths": [
+    "scripts/Lizard.Manifest.psm1",
+    "scripts/install.ps1",
+    "scripts/update-target.ps1",
+    "scripts/manifest-diff.ps1",
+    "scripts/doctor.ps1",
+    "schemas/install-manifest.schema.json",
+    "registry/manifest-migrations.json",
+    "registry/contracts.json",
+    "tools/schema-validator/bindings.json",
+    "tools/schema-validator/mutation-corpus.json",
+    "scripts/validate.ps1",
+    "tests/run-focused.ps1",
+    "tests/integration/manifest-v3.tests.ps1",
+    "tests/integration/manifest-lifecycle.tests.ps1",
+    "tests/adversarial/version-gates.tests.ps1"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0002-filesystem-and-report-containment.md",
+    "docs/adr/0003-ownership-and-manifest-identity.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0010-exact-plan-approval-binding.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "migration-required",
+    "note": "New readers accept schema v3 as active records and emit schema v4 on the next exact-plan-approved apply; no target content is deleted."
+  },
+  "compatibility": {
+    "impact": "breaking",
+    "note": "Schema-v4 manifests require v4-aware readers because retired records must not be interpreted as active required artifacts."
+  }
+}

@@ -24,6 +24,7 @@
     { "schema": "schemas/contracts.schema.json", "include": ["registry/contracts.json"] },
     { "schema": "schemas/contract-change.schema.json", "include": ["changes/*.json"] },
     { "schema": "schemas/operation-plan.schema.json", "include": ["tests/schema/fixtures/operation-plan.valid.json"] },
+    { "schema": "schemas/install-manifest.schema.json", "include": ["tests/schema/fixtures/install-manifest-v4.valid.json"] },
     { "schema": "schemas/loop-runtime-budget.schema.json", "include": ["templates/loops/loop-runtime-budget.json"] },
     { "schema": "schemas/loop-runtime-state.schema.json", "include": ["tests/schema/fixtures/loop-runtime-state.valid.json"] },
     { "schema": "schemas/loop-runtime-lease.schema.json", "include": ["tests/schema/fixtures/loop-runtime-lease.valid.json"] },

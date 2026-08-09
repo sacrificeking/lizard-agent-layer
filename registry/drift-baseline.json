@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-08-01T12:02:14.7770088Z",
+    "generated_at":  "2026-08-08T15:07:13.2232695Z",
     "layer_version":  "1.1.0",
     "artifact_count":  118,
-    "total_bytes":  162841,
-    "token_estimate":  40754,
+    "total_bytes":  163317,
+    "token_estimate":  40874,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -720,20 +720,20 @@
                       {
                           "kind":  "registry",
                           "path":  "registry/contracts.json",
-                          "sha256":  "b3d657828c9493e047597a4eb43b3b52d44711fccce460c651f031f5091f42b3",
-                          "bytes":  4042,
+                          "sha256":  "5b769e40aa471d6c885b27b2d0ac89fdf97c4d5a887d15c1caf3aff74fb793d1",
+                          "bytes":  4162,
                           "lines":  72,
-                          "words":  175,
-                          "token_estimate":  1011
+                          "words":  178,
+                          "token_estimate":  1041
                       },
                       {
                           "kind":  "registry",
                           "path":  "registry/manifest-migrations.json",
-                          "sha256":  "bd01337463439e155ce55767e81f15667aaa246537b59afb33955d6562f74ebf",
-                          "bytes":  364,
-                          "lines":  15,
-                          "words":  34,
-                          "token_estimate":  91
+                          "sha256":  "a955017ae5d950717a19938d83d7d805f290c3e96eeb4e15708f120e4fc5df6c",
+                          "bytes":  646,
+                          "lines":  22,
+                          "words":  64,
+                          "token_estimate":  162
                       },
                       {
                           "kind":  "registry",
@@ -837,11 +837,11 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/install-manifest.schema.json",
-                          "sha256":  "ee4322db49d64ad68d452dbb62e85e00d2ee6268a62e5da29778596a6fcf9c05",
-                          "bytes":  5643,
-                          "lines":  124,
-                          "words":  548,
-                          "token_estimate":  1411
+                          "sha256":  "2f77d718762d6f4800d964b84b0dc4c93c0c369c73cc934958f630dde8fb3a0f",
+                          "bytes":  5717,
+                          "lines":  125,
+                          "words":  553,
+                          "token_estimate":  1430
                       },
                       {
                           "kind":  "schema",

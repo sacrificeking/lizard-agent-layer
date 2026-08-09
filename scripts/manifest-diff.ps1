@@ -92,7 +92,7 @@ function Add-PackWithExtends {
 
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $manifestSchema = if ($null -ne $manifest.schema_version) { [int]$manifest.schema_version } else { 1 }
-if ($manifestSchema -gt 3) { throw "MANIFEST_READER_TOO_OLD: Target schema $manifestSchema is newer than supported schema 3." }
+if ($manifestSchema -gt 4) { throw "MANIFEST_READER_TOO_OLD: Target schema $manifestSchema is newer than supported schema 4." }
 $legacyIntegrityUnknown = $manifestSchema -lt 3
 $installedProfile = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
 $profileName = if ($manifest.profile) { [string]$manifest.profile } elseif ($installedProfile.profile) { [string]$installedProfile.profile } else { 'standard' }
@@ -143,19 +143,19 @@ foreach ($harness in @($manifest.harnesses)) {
 
 $mirrorHashes = @{}
 if (-not $legacyIntegrityUnknown) {
-  try { $artifactMap = Get-LizardArtifactMap -Manifest $manifest }
+  try { $artifactMap = Get-LizardArtifactMap -Manifest $manifest -RequireLifecycle:($manifestSchema -ge 4) }
   catch { Add-Diff 'invalid-artifact-index' 'artifacts' $_.Exception.Message; $artifactMap = $null }
 
   if ($artifactMap) {
     foreach ($managedPath in @($manifest.managed_paths)) {
       $managedRelative = ConvertTo-LizardArtifactPath ([string]$managedPath)
       if ([string]::IsNullOrWhiteSpace($managedRelative) -or $managedRelative -eq '.agent/lizard-agent-layer.install.json') { continue }
-      if (-not $artifactMap.ContainsKey($managedRelative)) { Add-Diff 'artifact-identity-missing' $managedRelative 'Managed path has no manifest v3 artifact identity.' }
+      if (-not $artifactMap.ContainsKey($managedRelative)) { Add-Diff 'artifact-identity-missing' $managedRelative 'Managed path has no manifest artifact identity.' }
     }
     foreach ($ownedPath in @($manifest.owned_paths)) {
       $ownedRelative = ConvertTo-LizardArtifactPath ([string]$ownedPath)
       if ([string]::IsNullOrWhiteSpace($ownedRelative) -or $ownedRelative -eq '.agent/lizard-agent-layer.install.json') { continue }
-      if (-not $artifactMap.ContainsKey($ownedRelative)) { Add-Diff 'owned-artifact-missing' $ownedRelative 'Owned path has no manifest v3 artifact identity.'; continue }
+      if (-not $artifactMap.ContainsKey($ownedRelative)) { Add-Diff 'owned-artifact-missing' $ownedRelative 'Owned path has no manifest artifact identity.'; continue }
       if ([string]$artifactMap[$ownedRelative].ownership -ne 'layer-owned') { Add-Diff 'ownership-index-mismatch' $ownedRelative ("owned_paths claims layer ownership, artifact records '{0}'." -f $artifactMap[$ownedRelative].ownership) }
     }
     foreach ($artifact in @($manifest.artifacts)) {
@@ -165,8 +165,24 @@ if (-not $legacyIntegrityUnknown) {
       catch { Add-Diff 'unsafe-artifact-path' $relative $_.Exception.Message; continue }
 
       $kind = [string]$artifact.kind
+      $pathExists = Test-Path -LiteralPath $targetArtifactPath
       $exists = if ($kind -eq 'directory') { Test-Path -LiteralPath $targetArtifactPath -PathType Container } else { Test-Path -LiteralPath $targetArtifactPath -PathType Leaf }
-      if (-not $exists) { Add-Diff 'missing-artifact' $relative "Manifest v3 $kind is missing."; continue }
+      try { $lifecycle = Get-LizardArtifactLifecycle -Record $artifact }
+      catch { Add-Diff 'invalid-artifact-lifecycle' $relative $_.Exception.Message; continue }
+      if ($lifecycle -in @('retired-missing', 'removed')) {
+        if ($pathExists) { Add-Diff 'artifact-lifecycle-mismatch' $relative "Lifecycle '$lifecycle' requires an absent path." }
+        continue
+      }
+      if ($lifecycle -eq 'retired-present') {
+        if (-not $exists) { Add-Diff 'retired-artifact-missing' $relative 'Retired-present artifact is missing.'; continue }
+        if ($kind -eq 'file') {
+          $retiredHash = Get-LizardSha256 $targetArtifactPath
+          if ([string]::IsNullOrWhiteSpace([string]$artifact.current_hash)) { Add-Diff 'integrity-unknown' $relative 'Retired-present artifact has no current hash.' }
+          elseif ($retiredHash -ne [string]$artifact.current_hash) { Add-Diff 'retired-content-modified' $relative ("Recorded retired hash {0}, actual {1}." -f $artifact.current_hash, $retiredHash) }
+        }
+        continue
+      }
+      if (-not $exists) { Add-Diff 'missing-artifact' $relative "Manifest $manifestSchema $kind is missing."; continue }
       if ($kind -eq 'directory') { continue }
       if ($kind -ne 'file') { Add-Diff 'invalid-artifact-kind' $relative "Unsupported kind '$kind'."; continue }
 
@@ -210,7 +226,7 @@ if (-not $legacyIntegrityUnknown) {
   }
 
   foreach ($adapterId in $effectiveAdapters) {
-    $identityArtifacts = @($manifest.artifacts | Where-Object { [string]$_.adapter_id -eq [string]$adapterId -and [string]$_.mirror_group -like 'adapter-instruction:*' })
+    $identityArtifacts = @($manifest.artifacts | Where-Object { (Get-LizardArtifactLifecycle -Record $_) -eq 'active' -and [string]$_.adapter_id -eq [string]$adapterId -and [string]$_.mirror_group -like 'adapter-instruction:*' })
     $identityValid = $false
     foreach ($identity in $identityArtifacts) {
       $identityPath = Join-Path $TargetRoot ([string]$identity.path).Replace('/', [System.IO.Path]::DirectorySeparatorChar)
@@ -226,6 +242,8 @@ foreach ($skill in @($expectedProfile.skills)) {
 }
 foreach ($managedPath in @($manifest.managed_paths)) {
   if ([string]::IsNullOrWhiteSpace([string]$managedPath)) { continue }
+  $managedRelative = ConvertTo-LizardArtifactPath ([string]$managedPath)
+  if ($artifactMap -and $artifactMap.ContainsKey($managedRelative) -and (Get-LizardArtifactLifecycle -Record $artifactMap[$managedRelative]) -in @('retired-missing', 'removed')) { continue }
   $fullPath = Join-Path $TargetRoot ([string]$managedPath)
   if (-not (Test-Path -LiteralPath $fullPath)) { Add-Diff 'missing-managed-path' ([string]$managedPath) 'Path is listed in install manifest but missing on disk.' }
 }
