@@ -19,11 +19,11 @@ The layer is built around conservative filesystem and workflow behavior.
 
 Target writes are authorized only beneath the selected target root. Report writes use a separate report root. Preview reports remain outside the target by default; commands that expose `-AllowTargetReportWrite` require that explicit opt-in for compatibility use cases.
 
-The guard is intentionally conservative: a target root or destination ancestry containing a link is rejected instead of followed. This keeps force modes from widening the filesystem boundary.
+The guard is intentionally conservative: a target root or destination ancestry containing a link is rejected instead of followed. On Unix, fresh mount identity is also compared for the authorized root and every destination component. Linux uses mount ID plus device identity so that same-device bind mounts and cross-device mounts both fail closed; macOS combines mounted-root enumeration with device identity. Missing or malformed identity evidence is a rejection, not a fallback. This keeps force modes from widening the filesystem boundary.
 
 Protected read consumers use the same authorized-root boundary. `Get-SafeContent`, `Get-SafeFileMetadata`, and `Get-SafeFileHash` require an existing ordinary file, reject linked terminal objects and linked ancestors, and revalidate observable file metadata after content or hash access. Loop verifier evidence and Git-reported untracked-file evidence use these primitives instead of direct `Get-Content`, `Get-Item`, or `Get-FileHash` access.
 
-This is a link-aware, name-based boundary, not a complete physical-filesystem proof. The current implementation does not identify Unix mount or bind-mount transitions and does not hold an operating-system file handle across validation and access. Pre/post metadata comparison detects some changes but cannot exclude every synchronized path-swap race. Workflows that require mount-aware or race-free guarantees must fail closed at a higher trust boundary until the host-specific capability is implemented and tested.
+This is a link- and mount-aware boundary in the current process mount namespace, but it remains name-based rather than handle-bound. It does not hold an operating-system file handle across validation and access. Pre/post metadata comparison detects some changes but cannot exclude a synchronized link, mount, or ancestor swap after validation. Race-resistant mutation remains WP-01C scope.
 
 ## Ownership and integrity
 

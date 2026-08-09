@@ -6,7 +6,7 @@ This ledger tracks remediation of the findings in the [2026-08-01 Codex/VS Code 
 
 - Baseline branch: `main`
 - Baseline commit: `1797097d8a1c5ab5444ac82e83786ac1ccc841f6`
-- Current remediation branch: `remediation/wp04-continuous-ownership`
+- Current remediation branch: `remediation/wp01b-mount-boundaries`
 - Baseline production-code drift: none
 - Initial worktree exception: the audit report was present as an untracked file
 - Local verification host: Windows PowerShell 5.1 on Windows 10
@@ -18,7 +18,7 @@ This ledger tracks remediation of the findings in the [2026-08-01 Codex/VS Code 
 | --- | --- | --- | --- | --- |
 | Wave 0: baseline and ledgers | All | Implemented | None | HEAD, instructions, worktree and classifications are recorded |
 | WP-01A: safe read/hash foundation | H-03 | Implemented and locally verified | Wave 0 | Contained reads succeed; linked terminal objects and ancestors fail with stable `SAFEFS_*` codes; loop evidence uses the shared primitives |
-| WP-01B: mount/device boundaries | H-03 | Not started | WP-01A, Unix fixtures | Unix mount and bind-mount escapes fail closed |
+| WP-01B: mount/device boundaries | H-03 | Implemented; privileged Unix evidence pending | WP-01A, Unix fixtures | Unix mount and bind-mount escapes fail closed |
 | WP-01C: handle-bound mutation | H-03 | Not started | WP-01A, host capability contract | Supported hosts use no-follow/handle-bound mutation; unsupported hosts fail closed or state the reduced guarantee |
 | WP-02: transaction recovery | H-02, M-05 | Implemented and locally verified | WP-01A | Strict v2 runtime/schema validation, identity binding, contained canonical backups, retry-safe reverse replay, terminal cleanup, and decisive doctor classifications pass focused tests |
 | WP-03: canonical plan binding | H-01 | Implemented and locally verified | Canonical serialization | Apply rejects every plan, source, target, option and approval mismatch before mutation |
@@ -56,7 +56,7 @@ Implemented controls:
 Residual limitations:
 
 - The operations remain name-based and cannot eliminate every synchronized ancestor-swap race.
-- Mount and bind-mount boundaries are not yet detected on Unix.
+- WP-01A alone did not detect Unix mount and bind-mount boundaries; WP-01B now adds that enforcement while retaining the name-based race limitation.
 - Pre/post length and timestamp comparison is a detection measure, not an authenticated file identity.
 - Current evidence is local Windows PowerShell 5.1 evidence; Unix and PowerShell 7 evidence remain pending.
 
@@ -74,6 +74,39 @@ Residual limitations:
 | Full local CI | Passed in 1,225 seconds: validation, schema mutations, contract governance, focused safety, packs, drift, quality, smoke, and 18/18 profile/harness matrix combinations |
 
 No commit, push, merge, publication or release is authorized by this ledger.
+
+## WP-01B implementation record
+
+Implemented controls:
+
+- Safe filesystem resolution now compares fresh Unix mount identity for the authorized root and every destination component before access or mutation.
+- Linux strictly parses `/proc/self/mountinfo`; a nested mount-ID transition on the same device fails with `SAFEFS_MOUNT_BOUNDARY`, while a device transition fails with `SAFEFS_DEVICE_BOUNDARY`.
+- macOS combines mounted-root enumeration with `stat` device identity and applies the same nested-boundary policy.
+- Missing, empty, malformed, or incomplete Unix mount identity fails closed with `SAFEFS_MOUNT_IDENTITY_UNAVAILABLE`; Windows retains its existing reparse-point path and performs no mount command.
+- The authorized root may itself be a mountpoint, but a nested mount below it is rejected.
+- A privileged, explicitly enabled Ubuntu fixture creates an isolated bind mount and `tmpfs`, proves that resolution and mutation reject both boundaries, verifies that the outside canary is untouched, and requires successful unmount cleanup.
+- The existing Ubuntu matrix job runs the fixture immediately after checkout, before dependency setup or the longer CI gates, and first requires non-interactive `sudo`.
+- ADR 0012 and `changes/unix-mount-boundaries.json` declare the current-namespace trust boundary and intentional Unix compatibility break.
+
+## WP-01B verification record
+
+| Gate | Result |
+| --- | --- |
+| Failure-first mount-boundary unit test | Failed as expected before implementation because `Lizard.MountBoundary.psm1` did not exist |
+| Synthetic Linux/macOS mount policy | Passed locally on Windows PowerShell 5.1, including escaped mountinfo paths, longest boundary-aware matching, same-device bind rejection, cross-device rejection, mounted authorized roots, and unavailable/malformed identity failures |
+| Existing SafeFs and installer containment regression suites | Passed locally |
+| Privileged mount fixture on the local Windows host | Skipped as not applicable; no privilege or mount operation was attempted |
+| Validation and schema mutations | Passed: 59/59 bindings and 24/24 mutation cases |
+| Contract, drift, documentation, and public-readiness gates | Passed; 4 impacted contracts are declared, 118 drift artifacts have zero drift, ADR recovery passes, and public readiness passes |
+| Focused safety suites | Passed: 20/20 suites in 2,619.2 seconds; report `.tmp/tests/focused-test-report.json`. An earlier attempt was interrupted during loop runtime and produced no current report, so both loop suites were rerun individually before the complete successful rerun |
+| Pack and quality gates | Passed: 7 packs/21 unique skills with no failures or warnings; quality average 87.77 and minimum 68 |
+| Standalone smoke | Passed in 1,493 seconds, including validation, approved apply, idempotence, upgrade, nested update, transaction, ownership conflict, sidecar preservation, and doctor; scratch `.tmp/smoke-20260809131718` |
+| Standalone profile/harness matrix | Passed in 1,357.2 seconds: 18/18 combinations, 0 failures; report `.tmp/matrix-20260809134216/matrix-report.json` |
+| Complete local CI constituent set | Passed all nine constituent gates on the same implementation state: validation, schema mutations, contract governance, focused safety, packs, strict drift, quality, smoke, and matrix |
+| Actual Ubuntu bind-mount and `tmpfs` fixture | Pending execution in the GitHub Ubuntu matrix; workflow wiring exists but no push or remote workflow run is authorized |
+| macOS runtime mount enumeration | Pending supported-host CI evidence |
+
+WP-01B is implemented but does not close H-03. Actual privileged Ubuntu evidence and macOS runtime evidence remain pending, and the validation-to-mutation race remains WP-01C scope. No dependency installation, network access, commit, push, merge, publication or release was performed.
 
 ## WP-02 implementation record
 

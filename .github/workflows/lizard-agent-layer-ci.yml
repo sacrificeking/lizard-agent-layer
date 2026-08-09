@@ -31,6 +31,16 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Require non-interactive fixture privilege
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: sudo -n true
+
+      - name: Reject bind and device mount boundaries
+        if: matrix.os == 'ubuntu-latest'
+        shell: pwsh
+        run: ./tests/adversarial/mount-boundary-fixtures.tests.ps1 -LayerRoot . -EnablePrivilegedFixtures
+
       - name: Set up Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:

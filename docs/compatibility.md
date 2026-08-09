@@ -6,22 +6,22 @@
 | --- | --- |
 | Windows PowerShell 5.1 | Compatibility host; complete local gates supported |
 | PowerShell 7 on Windows | Primary portable host |
-| PowerShell 7 on Ubuntu | Primary portable host; symbolic-link fixtures |
-| PowerShell 7 on macOS | Primary portable host; symbolic-link fixtures |
+| PowerShell 7 on Ubuntu | Primary portable host; symbolic-link and dedicated privileged mount fixtures |
+| PowerShell 7 on macOS | Primary portable host; symbolic-link and mount-identity policy fixtures |
 | Node.js 22+ | Required for executable Draft 2020-12 validation |
 
 The GitHub workflow runs the complete gate set on the four PowerShell host identities. A local Windows pass is not evidence that remote Unix jobs have run.
 
 ## Filesystem assurance status
 
-| Capability | Windows PowerShell 5.1 | Windows PowerShell 7 | Ubuntu/macOS PowerShell 7 |
-| --- | --- | --- | --- |
-| Lexical authorized-root containment | Local executable evidence | CI evidence required after change | CI evidence required after change |
-| Linked ancestor and terminal-object rejection for protected reads | Local unit and adversarial evidence | CI evidence required after change | CI symbolic-link evidence required after change |
-| Mount and bind-mount boundary detection | Not applicable to the current Windows claim | Not implemented | Not implemented |
-| Handle-bound/no-follow mutation | Not implemented | Not implemented | Not implemented |
+| Capability | Windows PowerShell 5.1 | Windows PowerShell 7 | Ubuntu PowerShell 7 | macOS PowerShell 7 |
+| --- | --- | --- | --- | --- |
+| Lexical authorized-root containment | Local executable evidence | CI evidence required after change | CI evidence required after change | CI evidence required after change |
+| Linked ancestor and terminal-object rejection for protected reads | Local unit and adversarial evidence | CI evidence required after change | CI symbolic-link evidence required after change | CI symbolic-link evidence required after change |
+| Mount and bind-mount boundary detection | Not applicable to the current Windows claim | Not applicable to the current Windows claim | Implemented through mount ID/device checks; privileged bind/tmpfs CI evidence required | Implemented through mounted-root/device checks; CI policy evidence required |
+| Handle-bound/no-follow mutation | Not implemented | Not implemented | Not implemented | Not implemented |
 
-The protected read/hash work therefore narrows the established link-following exposure but does not by itself establish complete physical containment or close the synchronized path-swap risk.
+Mount enforcement observes the current process mount namespace and rejects unavailable identity data. It does not establish handle-bound mutation or close the synchronized path-swap risk tracked by WP-01C.
 
 ## Manifest compatibility
 

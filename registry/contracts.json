@@ -3,9 +3,9 @@
   "contracts": [
     {
       "id": "filesystem-boundaries",
-      "adr": "docs/adr/0002-filesystem-and-report-containment.md",
+      "adr": "docs/adr/0012-unix-mount-boundary-enforcement.md",
       "migration_required": false,
-      "paths": ["scripts/Lizard.SafeFs.psm1", "scripts/install.ps1", "scripts/update-target.ps1", "scripts/merge-suggestions.ps1"]
+      "paths": ["scripts/Lizard.SafeFs.psm1", "scripts/Lizard.MountBoundary.psm1", "scripts/install.ps1", "scripts/update-target.ps1", "scripts/merge-suggestions.ps1", "tests/unit/mount-boundary.tests.ps1", "tests/adversarial/mount-boundary-fixtures.tests.ps1", ".github/workflows/lizard-agent-layer-ci.yml"]
     },
     {
       "id": "ownership-and-manifest",

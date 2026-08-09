@@ -10,12 +10,14 @@ All notable public changes to lizard-agent-layer are documented here.
 
 ### Security
 
+- Unix SafeFs validation now rejects nested same-device bind mounts and cross-device mount transitions, fails closed when mount identity is unavailable, and includes a dedicated privileged Ubuntu fixture.
 - Install and update mutations now require immutable canonical operation plans, an independently supplied SHA-256, explicit human approval, pre-lock validation, and post-lock/pre-mutation revalidation. Applied plan identities are recorded in manifests and update history.
 
 ### Breaking
 
 - Direct `install.ps1 -Apply` and `update-target.ps1 -Apply` calls without `-ApprovedPlanPath`, `-ApprovedPlanSha256`, and `-HumanApproved` now fail closed. Existing targets require no data rewrite; regenerate legacy Markdown plans as canonical JSON.
 - Schema-v4 install manifests require lifecycle-aware readers. Current tools migrate v3 records conservatively during the next approved apply.
+- Unix target layouts containing nested mounts now fail closed instead of being treated as ordinary contained directories.
 
 ## 1.1.0 - 2026-07-19
 

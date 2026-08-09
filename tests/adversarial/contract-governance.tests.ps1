@@ -22,7 +22,7 @@ try {
   Assert-True ($missingDeclaration.output -match 'Changed declaration is missing') 'Explicit missing declaration failure must be clear.'
 
   $filesystemOutput = Join-Path $fixture 'filesystem'
-  $filesystem = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-LayerRoot', $LayerRoot, '-ChangedPaths', 'scripts/Lizard.SafeFs.psm1,changes/public-1-0-0-baseline.json', '-OutputDir', $filesystemOutput, '-Strict')
+  $filesystem = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-LayerRoot', $LayerRoot, '-ChangedPaths', 'scripts/Lizard.SafeFs.psm1,scripts/Lizard.MountBoundary.psm1,tests/adversarial/mount-boundary-fixtures.tests.ps1,.github/workflows/lizard-agent-layer-ci.yml,changes/unix-mount-boundaries.json', '-OutputDir', $filesystemOutput, '-Strict')
   Assert-Equal 0 $filesystem.exit_code "Filesystem declaration must cover its contract: $($filesystem.output)"
   $filesystemReportPath = Join-Path $filesystemOutput 'contract-check-report.json'
   $filesystemReport = Get-Content -LiteralPath $filesystemReportPath -Raw | ConvertFrom-Json

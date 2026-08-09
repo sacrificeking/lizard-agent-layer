@@ -13,3 +13,4 @@ ADRs record durable contracts that implementations and migrations must preserve.
 - [0009 Provider-neutral staged execution](0009-provider-neutral-staged-routing.md)
 - [0010 Exact plan approval binding](0010-exact-plan-approval-binding.md)
 - [0011 Continuous artifact lifecycle](0011-continuous-artifact-lifecycle.md)
+- [0012 Unix mount boundary enforcement](0012-unix-mount-boundary-enforcement.md)

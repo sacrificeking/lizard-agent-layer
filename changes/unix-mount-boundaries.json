@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "unix-mount-boundaries",
+  "date": "2026-08-09",
+  "summary": "Reject nested Unix bind mounts and cross-device mount transitions below authorized filesystem roots.",
+  "changed_paths": [
+    "scripts/Lizard.MountBoundary.psm1",
+    "scripts/Lizard.SafeFs.psm1",
+    "tests/unit/mount-boundary.tests.ps1",
+    "tests/adversarial/mount-boundary-fixtures.tests.ps1",
+    "tests/run-focused.ps1",
+    "scripts/validate.ps1",
+    ".github/workflows/lizard-agent-layer-ci.yml",
+    "registry/contracts.json",
+    "registry/drift-baseline.json",
+    "docs/adr/0012-unix-mount-boundary-enforcement.md",
+    "docs/adr/README.md",
+    "tests/adversarial/contract-governance.tests.ps1",
+    "tests/integration/documentation-recovery.tests.ps1",
+    "docs/safety-model.md",
+    "docs/compatibility.md",
+    "docs/remediation/remediation-ledger.md",
+    "docs/remediation/claim-ledger.md",
+    "CHANGELOG.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0002-filesystem-and-report-containment.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0012-unix-mount-boundary-enforcement.md"
+  ],
+  "migration": {
+    "disposition": "migration-required",
+    "note": "No stored target data changes; validators and CI must register the new mount-boundary module and tests before adoption."
+  },
+  "compatibility": {
+    "impact": "breaking",
+    "note": "Nested Unix mounts that older versions accepted now fail closed before access or mutation."
+  }
+}

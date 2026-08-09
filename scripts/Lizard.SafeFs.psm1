@@ -1,4 +1,5 @@
 Set-StrictMode -Version 2.0
+Import-Module (Join-Path $PSScriptRoot 'Lizard.MountBoundary.psm1') -Force
 
 function Get-LizardPathComparison {
   if ($PSVersionTable.ContainsKey('Platform') -and $PSVersionTable['Platform'] -eq 'Unix') {
@@ -148,6 +149,7 @@ function Resolve-SafeTargetDestination {
   }
 
   Assert-NoReparsePointEscape -AuthorizedRoot $fullRoot -DestinationPath $fullDestination | Out-Null
+  Assert-LizardMountBoundary -AuthorizedRoot $fullRoot -DestinationPath $fullDestination | Out-Null
   return $fullDestination
 }
 
@@ -163,6 +165,7 @@ function Resolve-SafeRoot {
     throw (New-LizardSafeFsException -Code 'SAFEFS_ROOT_MISSING' -Message ("Authorized root does not exist as a directory: {0}" -f $fullPath) -Path $fullPath -AuthorizedRoot $fullPath)
   }
   Assert-NoReparsePointEscape -AuthorizedRoot $fullPath -DestinationPath $fullPath | Out-Null
+  Assert-LizardMountBoundary -AuthorizedRoot $fullPath -DestinationPath $fullPath | Out-Null
   return $fullPath
 }
 
