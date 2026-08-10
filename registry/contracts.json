@@ -32,6 +32,12 @@
       "paths": ["scripts/Lizard.Plan.psm1", "scripts/install.ps1", "scripts/update-target.ps1", "schemas/operation-plan.schema.json", "tests/unit/plan.tests.ps1", "tests/integration/install-plan-binding.tests.ps1", "tests/integration/update-plan-binding.tests.ps1", "tests/adversarial/install-plan-tamper.tests.ps1"]
     },
     {
+      "id": "json-type-preservation",
+      "adr": "docs/adr/0005-schema-and-manifest-evolution.md",
+      "migration_required": false,
+      "paths": ["scripts/Lizard.Json.psm1", "scripts/Lizard.Plan.psm1", "scripts/Lizard.Transaction.psm1", "scripts/Lizard.LoopRuntime.psm1", "scripts/Lizard.LoopEvidence.psm1", "tests/unit/json.tests.ps1"]
+    },
+    {
       "id": "report-boundaries",
       "adr": "docs/adr/0007-report-boundaries-and-privacy.md",
       "migration_required": false,

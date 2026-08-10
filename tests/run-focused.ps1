@@ -7,6 +7,7 @@ Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Host.psm1') -Force
 
 $tests = @(
+  'tests\unit\json.tests.ps1',
   'tests\unit\safe-fs.tests.ps1',
   'tests\unit\mount-boundary.tests.ps1',
   'tests\unit\host.tests.ps1',

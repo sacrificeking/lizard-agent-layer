@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-08-09T08:43:21.9090891Z",
+    "generated_at":  "2026-08-09T16:33:30.5977703Z",
     "layer_version":  "1.1.0",
     "artifact_count":  118,
-    "total_bytes":  163493,
-    "token_estimate":  40918,
+    "total_bytes":  163849,
+    "token_estimate":  41007,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -720,11 +720,11 @@
                       {
                           "kind":  "registry",
                           "path":  "registry/contracts.json",
-                          "sha256":  "bbe5a643cb200d17b3efb8a44194d8d6e85a74931f8ef6086df83cc300469047",
-                          "bytes":  4338,
-                          "lines":  72,
-                          "words":  182,
-                          "token_estimate":  1085
+                          "sha256":  "5d638f5fb0ed0a3b242b3efd19d29e514167c3f625ad73e83a0478e16f76d3ed",
+                          "bytes":  4694,
+                          "lines":  78,
+                          "words":  197,
+                          "token_estimate":  1174
                       },
                       {
                           "kind":  "registry",

@@ -3,6 +3,7 @@ param([string]$LayerRoot)
 $ErrorActionPreference = 'Stop'
 $RepoRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $LayerRoot).Path }
 Import-Module (Join-Path $RepoRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
 Import-Module (Join-Path $RepoRoot 'scripts\Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Transaction.psm1') -Force
 
@@ -41,7 +42,7 @@ try {
   $schemaTarget = Join-Path $fixtureRoot 'journal-schema'
   New-Item -ItemType Directory -Path $schemaTarget -Force | Out-Null
   $schemaTransaction = Start-LizardTransaction -TargetRoot $schemaTarget -OperationName 'schema-test'
-  $schemaJournal = Get-Content -LiteralPath $schemaTransaction.journal_path -Raw | ConvertFrom-Json
+  $schemaJournal = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $schemaTransaction.journal_path -Raw)
   Assert-Equal 2 ([int]$schemaJournal.schema_version) 'New transactions must use the strict journal schema v2 contract.'
   Assert-JsonSchemaValid -LayerRoot $RepoRoot -SchemaPath 'schemas/transaction-journal.schema.json' -InstancePath $schemaTransaction.journal_path -Message 'A newly persisted transaction journal must satisfy the executable v2 schema.'
   Undo-LizardTransaction | Out-Null
@@ -50,7 +51,7 @@ try {
   $unknownFieldTarget = Join-Path $fixtureRoot 'unknown-journal-field'
   New-Item -ItemType Directory -Path $unknownFieldTarget -Force | Out-Null
   $unknownTransaction = Start-LizardTransaction -TargetRoot $unknownFieldTarget -OperationName 'unknown-field-test'
-  $unknownJournal = Get-Content -LiteralPath $unknownTransaction.journal_path -Raw | ConvertFrom-Json
+  $unknownJournal = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $unknownTransaction.journal_path -Raw)
   $unknownJournal | Add-Member -NotePropertyName attacker_note -NotePropertyValue 'must-fail-closed'
   Set-Content -LiteralPath $unknownTransaction.journal_path -Value ($unknownJournal | ConvertTo-Json -Depth 12)
   $unknownPreview = Invoke-TestPowerShell -ScriptPath $recoverScript -Arguments @('-TargetPath', $unknownFieldTarget, '-OutputDir', (Join-Path $fixtureRoot 'unknown-preview'), '-Json')
@@ -60,7 +61,7 @@ try {
   $identityTarget = Join-Path $fixtureRoot 'identity-mismatch'
   New-Item -ItemType Directory -Path $identityTarget -Force | Out-Null
   $identityTransaction = Start-LizardTransaction -TargetRoot $identityTarget -OperationName 'identity-test'
-  $identityJournal = Get-Content -LiteralPath $identityTransaction.journal_path -Raw | ConvertFrom-Json
+  $identityJournal = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $identityTransaction.journal_path -Raw)
   $identityJournal.operation_name = 'forged-operation'
   Set-Content -LiteralPath $identityTransaction.journal_path -Value ($identityJournal | ConvertTo-Json -Depth 12)
   $identityPreview = Invoke-TestPowerShell -ScriptPath $recoverScript -Arguments @('-TargetPath', $identityTarget, '-OutputDir', (Join-Path $fixtureRoot 'identity-preview'), '-Json')
@@ -72,7 +73,7 @@ try {
   Set-Content -LiteralPath (Join-Path $backupTraversalTarget 'existing.txt') -Value 'original'
   $traversalTransaction = Start-LizardTransaction -TargetRoot $backupTraversalTarget -OperationName 'backup-traversal-test'
   Set-LizardTransactionalContent -Path (Join-Path $backupTraversalTarget 'existing.txt') -Value 'changed'
-  $traversalJournal = Get-Content -LiteralPath $traversalTransaction.journal_path -Raw | ConvertFrom-Json
+  $traversalJournal = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $traversalTransaction.journal_path -Raw)
   $traversalJournal.mutations[0].backup_path = '../../outside-canary.txt'
   Set-Content -LiteralPath $traversalTransaction.journal_path -Value ($traversalJournal | ConvertTo-Json -Depth 12)
   $outsideCanary = Join-Path $fixtureRoot 'outside-canary.txt'
@@ -86,7 +87,7 @@ try {
   New-Item -ItemType Directory -Path $sequenceTarget -Force | Out-Null
   $sequenceTransaction = Start-LizardTransaction -TargetRoot $sequenceTarget -OperationName 'invalid-sequence-test'
   Set-LizardTransactionalContent -Path (Join-Path $sequenceTarget 'created.txt') -Value 'created'
-  $sequenceJournal = Get-Content -LiteralPath $sequenceTransaction.journal_path -Raw | ConvertFrom-Json
+  $sequenceJournal = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $sequenceTransaction.journal_path -Raw)
   $sequenceJournal.mutations[0].sequence = 2
   Set-Content -LiteralPath $sequenceTransaction.journal_path -Value ($sequenceJournal | ConvertTo-Json -Depth 12)
   $sequencePreview = Invoke-TestPowerShell -ScriptPath $recoverScript -Arguments @('-TargetPath', $sequenceTarget, '-OutputDir', (Join-Path $fixtureRoot 'sequence-preview'), '-Json')
@@ -96,7 +97,7 @@ try {
   $coercedTypeTarget = Join-Path $fixtureRoot 'coerced-numeric-type'
   New-Item -ItemType Directory -Path $coercedTypeTarget -Force | Out-Null
   $coercedTypeTransaction = Start-LizardTransaction -TargetRoot $coercedTypeTarget -OperationName 'coerced-type-test'
-  $coercedTypeJournal = Get-Content -LiteralPath $coercedTypeTransaction.journal_path -Raw | ConvertFrom-Json
+  $coercedTypeJournal = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $coercedTypeTransaction.journal_path -Raw)
   $coercedTypeJournal.next_sequence = '1'
   Set-Content -LiteralPath $coercedTypeTransaction.journal_path -Value ($coercedTypeJournal | ConvertTo-Json -Depth 12)
   $coercedTypePreview = Invoke-TestPowerShell -ScriptPath $recoverScript -Arguments @('-TargetPath', $coercedTypeTarget, '-OutputDir', (Join-Path $fixtureRoot 'coerced-type-preview'), '-Json')
@@ -107,8 +108,8 @@ try {
   New-Item -ItemType Directory -Path $legacyTarget -Force | Out-Null
   $legacyTransaction = Start-LizardTransaction -TargetRoot $legacyTarget -OperationName 'legacy-v1-test'
   $legacyLockPath = Join-Path $legacyTarget '.lizard-agent-layer.lock'
-  $legacyLock = Get-Content -LiteralPath $legacyLockPath -Raw | ConvertFrom-Json
-  $legacyJournal = Get-Content -LiteralPath $legacyTransaction.journal_path -Raw | ConvertFrom-Json
+  $legacyLock = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $legacyLockPath -Raw)
+  $legacyJournal = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $legacyTransaction.journal_path -Raw)
   $legacyLock.schema_version = 1
   $legacyJournal.schema_version = 1
   Set-Content -LiteralPath $legacyLockPath -Value ($legacyLock | ConvertTo-Json -Depth 12)
@@ -155,7 +156,7 @@ try {
   $successApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $successTarget, '-Profile', 'minimal')
   $successfulInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $successApproval.arguments
   Assert-Equal 0 $successfulInstall.exit_code "Successful transaction install failed: $($successfulInstall.output)"
-  $manifest = Get-Content -LiteralPath (Join-Path $successTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  $manifest = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $successTarget '.agent\lizard-agent-layer.install.json') -Raw)
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$manifest.transaction_operation_id)) 'Install manifest must bind to its transaction operation ID.'
   Assert-NoTransactionMetadata $successTarget
 
@@ -243,9 +244,9 @@ Set-LizardTransactionalContent -Path (Join-Path `$Target 'same.txt') -Value 'lat
   Assert-False ($firstRepeatRecovery.exit_code -eq 0) 'Injected recovery interruption must fail after persisting one rollback step.'
   Assert-True ($firstRepeatRecovery.output -match 'TRANSACTION_RECOVERY_FAULT_INJECTED') 'Recovery interruption must expose a stable code.'
   Assert-True ((Get-Content -LiteralPath (Join-Path $repeatTarget 'same.txt') -Raw) -match '^middle') 'First recovery pass must restore only the latest mutation.'
-  $repeatLock = Get-Content -LiteralPath (Join-Path $repeatTarget '.lizard-agent-layer.lock') -Raw | ConvertFrom-Json
+  $repeatLock = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $repeatTarget '.lizard-agent-layer.lock') -Raw)
   $repeatJournalPath = Join-Path $repeatTarget ([string]$repeatLock.journal_path).Replace('/', '\')
-  $repeatJournal = Get-Content -LiteralPath $repeatJournalPath -Raw | ConvertFrom-Json
+  $repeatJournal = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $repeatJournalPath -Raw)
   Assert-Equal '1,2' ((@($repeatJournal.mutations | ForEach-Object { [string]$_.sequence })) -join ',') 'Recovery must preserve chronological journal order.'
   Assert-Equal 'applied,rolled-back' ((@($repeatJournal.mutations | ForEach-Object { [string]$_.status })) -join ',') 'Recovery must persist a rolled-back highest-sequence suffix.'
   $recoveryDoctor = Invoke-TestPowerShell -ScriptPath $doctorScript -Arguments @('-TargetPath', $repeatTarget)

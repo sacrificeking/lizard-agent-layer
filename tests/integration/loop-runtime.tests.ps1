@@ -3,6 +3,7 @@ param([string]$LayerRoot)
 $ErrorActionPreference = 'Stop'
 $RepoRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $LayerRoot).Path }
 Import-Module (Join-Path $RepoRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
 Import-Module (Join-Path $RepoRoot 'scripts\Lizard.LoopEvidence.psm1') -Force
 $testRoot = Join-Path $RepoRoot '.tmp\tests'
 $fixture = Join-Path $testRoot ("loop-runtime-{0}" -f ([Guid]::NewGuid().ToString('N')))
@@ -29,7 +30,7 @@ function Initialize-LoopTarget {
 }
 function Get-RuntimePaths {
   param([string]$Target)
-  $manifest = Get-Content -LiteralPath (Join-Path $Target '.agent\loops\lizard-agent-layer.loop-install.json') -Raw | ConvertFrom-Json
+  $manifest = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $Target '.agent\loops\lizard-agent-layer.loop-install.json') -Raw)
   [pscustomobject]@{
     state = Join-Path $Target ([string]$manifest.runtime_state_file).Replace('/', [System.IO.Path]::DirectorySeparatorChar)
     budget = Join-Path $Target ([string]$manifest.runtime_budget_file).Replace('/', [System.IO.Path]::DirectorySeparatorChar)
@@ -60,8 +61,8 @@ try {
   Assert-Equal $before (Get-FileHash -LiteralPath $paths.state -Algorithm SHA256).Hash 'Preview must not mutate runtime state.'
   $start = Invoke-LoopRun $happy @('-Action', 'Start', '-RunId', 'run-1', '-ItemId', 'item-1', '-Owner', 'cheap-agent', '-TokenEstimate', '100', '-TestNowUtc', '2026-07-12T08:00:00Z', '-Apply')
   Assert-Equal 0 $start.exit_code "Valid start failed: $($start.output)"
-  $state = Get-Content -LiteralPath $paths.state -Raw | ConvertFrom-Json
-  $lease = Get-Content -LiteralPath $paths.lease -Raw | ConvertFrom-Json
+  $state = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $paths.state -Raw)
+  $lease = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $paths.lease -Raw)
   Assert-Equal 'running' ([string]$state.status) 'Start must mark runtime running.'
   Assert-Equal 'active' ([string]$lease.status) 'Start must acquire one active lease.'
   Assert-Equal 1 ([int]$state.budget_window.runs_started) 'Start must consume one run.'
@@ -71,8 +72,8 @@ try {
   Assert-True ($held.output -match 'LOOP_LEASE_HELD') "Active lease failure must be explicit. Output: $($held.output)"
   $complete = Invoke-LoopRun $happy @('-Action', 'Complete', '-RunId', 'run-1', '-Owner', 'cheap-agent', '-ActualTokens', '80', '-TestNowUtc', '2026-07-12T08:02:00Z', '-Apply')
   Assert-Equal 0 $complete.exit_code "Completion failed: $($complete.output)"
-  $state = Get-Content -LiteralPath $paths.state -Raw | ConvertFrom-Json
-  $lease = Get-Content -LiteralPath $paths.lease -Raw | ConvertFrom-Json
+  $state = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $paths.state -Raw)
+  $lease = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $paths.lease -Raw)
   Assert-Equal 'idle' ([string]$state.status) 'Completion must return to idle.'
   Assert-Equal 'released' ([string]$lease.status) 'Completion must release lease.'
   Assert-Equal 80 ([int]$state.budget_window.tokens_used) 'Completion must reconcile token usage.'
@@ -101,12 +102,12 @@ try {
   $legacy = Initialize-LoopTarget 'legacy'; $legacyPaths = Get-RuntimePaths $legacy
   Remove-Item -LiteralPath @($legacyPaths.state, $legacyPaths.budget, $legacyPaths.events, $legacyPaths.lease) -Force
   $legacyManifestPath = Join-Path $legacy '.agent\loops\lizard-agent-layer.loop-install.json'
-  $legacyManifest = Get-Content $legacyManifestPath -Raw | ConvertFrom-Json
+  $legacyManifest = ConvertFrom-LizardJson -InputObject (Get-Content $legacyManifestPath -Raw)
   foreach ($name in @('runtime_budget_file', 'runtime_state_file', 'runtime_events_file', 'runtime_lease_file')) { $legacyManifest.PSObject.Properties.Remove($name) }
   $legacyManifest | ConvertTo-Json -Depth 12 | Set-Content $legacyManifestPath -Encoding UTF8
   $sync = Invoke-TestPowerShell $syncScript @('-LayerRoot', $RepoRoot, '-TargetPath', $legacy, '-Apply', '-OutputDir', (Join-Path $fixture 'legacy-sync'))
   Assert-Equal 0 $sync.exit_code "Legacy runtime sync failed: $($sync.output)"
-  $migrated = Get-Content $legacyManifestPath -Raw | ConvertFrom-Json
+  $migrated = ConvertFrom-LizardJson -InputObject (Get-Content $legacyManifestPath -Raw)
   foreach ($name in @('runtime_budget_file', 'runtime_state_file', 'runtime_events_file', 'runtime_lease_file')) {
     Assert-True ($migrated.PSObject.Properties.Name -contains $name) "Sync must add $name."
     Assert-True (Test-Path (Join-Path $legacy ([string]$migrated.$name).Replace('/', [System.IO.Path]::DirectorySeparatorChar))) "Sync must create $name."
@@ -124,7 +125,7 @@ try {
 
   # Run/token budgets.
   $budgetTarget = Initialize-LoopTarget 'budget'; $budgetPaths = Get-RuntimePaths $budgetTarget
-  $budget = Get-Content $budgetPaths.budget -Raw | ConvertFrom-Json; $budget.max_runs_per_day = 1; $budget.daily_token_cap = 50; $budget | ConvertTo-Json | Set-Content $budgetPaths.budget -Encoding UTF8
+  $budget = ConvertFrom-LizardJson -InputObject (Get-Content $budgetPaths.budget -Raw); $budget.max_runs_per_day = 1; $budget.daily_token_cap = 50; $budget | ConvertTo-Json | Set-Content $budgetPaths.budget -Encoding UTF8
   Assert-Equal 0 (Invoke-LoopRun $budgetTarget @('-Action', 'Start', '-RunId', 'budget-1', '-ItemId', 'item', '-Owner', 'agent', '-TokenEstimate', '50', '-TestNowUtc', '2026-07-12T08:00:00Z', '-Apply')).exit_code 'First budgeted start must pass.'
   Assert-Equal 0 (Invoke-LoopRun $budgetTarget @('-Action', 'Complete', '-RunId', 'budget-1', '-Owner', 'agent', '-ActualTokens', '50', '-TestNowUtc', '2026-07-12T08:01:00Z', '-Apply')).exit_code 'Budgeted completion must pass.'
   $exhausted = Invoke-LoopRun $budgetTarget @('-Action', 'Start', '-RunId', 'budget-2', '-ItemId', 'item-2', '-Owner', 'agent', '-TokenEstimate', '1', '-TestNowUtc', '2026-07-12T08:02:00Z', '-Apply')
@@ -149,7 +150,7 @@ try {
 
   # Repeated failure accounting.
   $attempts = Initialize-LoopTarget 'attempts'; $attemptPaths = Get-RuntimePaths $attempts
-  $attemptBudget = Get-Content $attemptPaths.budget -Raw | ConvertFrom-Json; $attemptBudget.max_attempts_per_item = 2; $attemptBudget | ConvertTo-Json | Set-Content $attemptPaths.budget -Encoding UTF8
+  $attemptBudget = ConvertFrom-LizardJson -InputObject (Get-Content $attemptPaths.budget -Raw); $attemptBudget.max_attempts_per_item = 2; $attemptBudget | ConvertTo-Json | Set-Content $attemptPaths.budget -Encoding UTF8
   foreach ($n in 1..2) {
     Assert-Equal 0 (Invoke-LoopRun $attempts @('-Action', 'Start', '-RunId', "attempt-$n", '-ItemId', 'unstable', '-Owner', 'agent', '-TokenEstimate', '10', '-TestNowUtc', "2026-07-12T08:0${n}:00Z", '-Apply')).exit_code "Attempt $n start must pass."
     Assert-Equal 0 (Invoke-LoopRun $attempts @('-Action', 'Fail', '-RunId', "attempt-$n", '-Owner', 'agent', '-ActualTokens', '10', '-TestNowUtc', "2026-07-12T08:1${n}:00Z", '-Apply')).exit_code "Attempt $n failure must record."
@@ -171,13 +172,13 @@ try {
   $passPath = Join-Path $fixture 'verifier-pass.json'; Write-VerifierEvidence $passPath $l2 'worktree-op-1' 'PASS'
   $verified = Invoke-LoopRun $l2 @('-Action', 'Complete', '-RunId', 'l2-run', '-Owner', 'implementation-agent', '-ActualTokens', '90', '-VerifierEvidencePath', $passPath, '-TestNowUtc', '2026-07-12T08:07:00Z', '-Apply')
   Assert-Equal 0 $verified.exit_code "Valid verifier must complete L2: $($verified.output)"
-  $l2State = Get-Content -LiteralPath (Get-RuntimePaths $l2).state -Raw | ConvertFrom-Json
+  $l2State = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Get-RuntimePaths $l2).state -Raw)
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$l2State.runs[0].verifier_evidence_hash)) 'L2 state must retain verifier evidence hash.'
 
   # Append-only event integrity.
   $tamper = Initialize-LoopTarget 'tamper'; $tamperPaths = Get-RuntimePaths $tamper
   Assert-Equal 0 (Invoke-LoopRun $tamper @('-Action', 'Start', '-RunId', 'tamper-1', '-ItemId', 'item', '-Owner', 'agent', '-TokenEstimate', '10', '-TestNowUtc', '2026-07-12T08:00:00Z', '-Apply')).exit_code 'Tamper fixture start must pass.'
-  $event = Get-Content $tamperPaths.events -Raw | ConvertFrom-Json; $event.tokens = 999; $event | ConvertTo-Json -Compress | Set-Content $tamperPaths.events -Encoding UTF8
+  $event = ConvertFrom-LizardJson -InputObject (Get-Content $tamperPaths.events -Raw); $event.tokens = 999; $event | ConvertTo-Json -Compress | Set-Content $tamperPaths.events -Encoding UTF8
   $tampered = Invoke-LoopRun $tamper @('-Action', 'Status')
   Assert-False ($tampered.exit_code -eq 0) 'Tampered event chain must fail closed.'
   Assert-True ($tampered.output -match 'LOOP_EVENT_HASH_MISMATCH') 'Tamper failure must identify hash mismatch.'

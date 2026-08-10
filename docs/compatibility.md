@@ -5,16 +5,16 @@
 | Host | Contract |
 | --- | --- |
 | Windows PowerShell 5.1 | Compatibility host; complete local gates supported |
-| PowerShell 7 on Windows | Primary portable host |
-| PowerShell 7 on Ubuntu | Primary portable host; symbolic-link and dedicated privileged mount fixtures |
-| PowerShell 7 on macOS | Primary portable host; symbolic-link and mount-identity policy fixtures |
+| PowerShell 7.5+ on Windows | Primary portable host |
+| PowerShell 7.5+ on Ubuntu | Primary portable host; symbolic-link and dedicated privileged mount fixtures |
+| PowerShell 7.5+ on macOS | Primary portable host; symbolic-link and mount-identity policy fixtures |
 | Node.js 22+ | Required for executable Draft 2020-12 validation |
 
 The GitHub workflow runs the complete gate set on the four PowerShell host identities. A local Windows pass is not evidence that remote Unix jobs have run.
 
 ## Filesystem assurance status
 
-| Capability | Windows PowerShell 5.1 | Windows PowerShell 7 | Ubuntu PowerShell 7 | macOS PowerShell 7 |
+| Capability | Windows PowerShell 5.1 | Windows PowerShell 7.5+ | Ubuntu PowerShell 7.5+ | macOS PowerShell 7.5+ |
 | --- | --- | --- | --- | --- |
 | Lexical authorized-root containment | Local executable evidence | CI evidence required after change | CI evidence required after change | CI evidence required after change |
 | Linked ancestor and terminal-object rejection for protected reads | Local unit and adversarial evidence | CI evidence required after change | CI symbolic-link evidence required after change | CI symbolic-link evidence required after change |
@@ -22,6 +22,12 @@ The GitHub workflow runs the complete gate set on the four PowerShell host ident
 | Handle-bound/no-follow mutation | Not implemented | Not implemented | Not implemented | Not implemented |
 
 Mount enforcement observes the current process mount namespace and rejects unavailable identity data. It does not establish handle-bound mutation or close the synchronized path-swap risk tracked by WP-01C.
+
+## JSON runtime compatibility
+
+Security-sensitive JSON readers preserve ISO-8601 timestamps as JSON strings so canonical plans, transaction journals, and loop evidence keep their schema-declared types. Windows PowerShell 5.1 already preserves these values as strings. PowerShell Core must be 7.5 or newer because the shared reader requires `ConvertFrom-Json -DateKind String`; older PowerShell Core versions fail closed with `LIZARD_JSON_DATE_POLICY_UNSUPPORTED` instead of silently producing `System.DateTime` values.
+
+The CI job timeout is 120 minutes for both runtime families. This is an execution ceiling, not an expected duration or a substitute for per-gate timing evidence.
 
 ## Manifest compatibility
 

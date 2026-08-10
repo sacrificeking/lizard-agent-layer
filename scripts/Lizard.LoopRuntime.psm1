@@ -1,6 +1,7 @@
 Set-StrictMode -Version 2.0
 
 Import-Module (Join-Path $PSScriptRoot 'Lizard.SafeFs.psm1')
+Import-Module (Join-Path $PSScriptRoot 'Lizard.Json.psm1')
 Import-Module (Join-Path $PSScriptRoot 'Lizard.LoopEvidence.psm1')
 Import-Module (Join-Path $PSScriptRoot 'Lizard.Transaction.psm1')
 
@@ -38,7 +39,7 @@ function Read-LizardLoopJson {
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
     throw (New-LizardLoopRuntimeException -Code $Code -Message "File is missing: $Path")
   }
-  try { return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json }
+  try { return ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $Path -Raw) }
   catch { throw (New-LizardLoopRuntimeException -Code $Code -Message $_.Exception.Message) }
 }
 
@@ -105,7 +106,7 @@ function Get-LizardLoopEvents {
   foreach ($line in @(Get-Content -LiteralPath $Context.events_path)) {
     $lineNumber++
     if ([string]::IsNullOrWhiteSpace([string]$line)) { continue }
-    try { $events.Add(($line | ConvertFrom-Json)) | Out-Null }
+    try { $events.Add((ConvertFrom-LizardJson -InputObject $line)) | Out-Null }
     catch { throw (New-LizardLoopRuntimeException -Code 'LOOP_EVENT_JSON_INVALID' -Message "Line $lineNumber is invalid JSON.") }
   }
   return @($events.ToArray())

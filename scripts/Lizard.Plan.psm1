@@ -1,6 +1,7 @@
 Set-StrictMode -Version 2.0
 
 Import-Module (Join-Path $PSScriptRoot 'Lizard.SafeFs.psm1')
+Import-Module (Join-Path $PSScriptRoot 'Lizard.Json.psm1')
 
 function New-LizardPlanException {
   param([Parameter(Mandatory = $true)][string]$Code, [Parameter(Mandatory = $true)][string]$Message)
@@ -248,7 +249,7 @@ function New-LizardOperationPlan {
   $target = Resolve-SafeRoot -Path $TargetRoot -RequireExisting
   $layer = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
   if ($null -eq $Options -or ($Options -isnot [System.Management.Automation.PSCustomObject] -and $Options -isnot [System.Collections.IDictionary])) { throw (New-LizardPlanException -Code 'PLAN_BINDING_OPTIONS_INVALID' -Message 'Options must be a JSON object.') }
-  $optionsCopy = (ConvertTo-LizardCanonicalJson $Options | ConvertFrom-Json)
+  $optionsCopy = ConvertFrom-LizardJson -InputObject (ConvertTo-LizardCanonicalJson $Options)
   $normalizedInputs = New-Object System.Collections.Generic.List[object]
   $inputIds = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::Ordinal)
   foreach ($inputRecord in @($Inputs)) { $normalized = ConvertTo-LizardPlanInput $inputRecord; $inputKey = "{0}:{1}" -f $normalized.scope, $normalized.path; if (-not $inputIds.Add($inputKey)) { throw (New-LizardPlanException -Code 'PLAN_BINDING_INPUT_INVALID' -Message "Duplicate input '$inputKey'.") }; $normalizedInputs.Add($normalized) | Out-Null }
@@ -361,7 +362,7 @@ function Read-LizardApprovedPlan {
   catch { throw (New-LizardPlanException -Code 'PLAN_BINDING_UTF8_INVALID' -Message $_.Exception.Message) }
   $computed = Get-LizardPlanSha256 -CanonicalJson $raw
   if ($computed -ne $Sha256) { throw (New-LizardPlanException -Code 'PLAN_BINDING_DIGEST_MISMATCH' -Message 'Approved plan bytes do not match the supplied SHA-256.') }
-  try { $plan = $raw | ConvertFrom-Json }
+  try { $plan = ConvertFrom-LizardJson -InputObject $raw }
   catch { throw (New-LizardPlanException -Code 'PLAN_BINDING_JSON_INVALID' -Message $_.Exception.Message) }
   $shape = Assert-LizardOperationPlanDocument $plan
   $canonical = ConvertTo-LizardCanonicalJson $plan

@@ -3,6 +3,7 @@ param([string]$LayerRoot)
 $ErrorActionPreference = 'Stop'
 $RepoRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $LayerRoot).Path }
 Import-Module (Join-Path $RepoRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
 Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Plan.psm1') -Force
 
 $fixtureRoot = Join-Path $RepoRoot '.tmp\tests\install-plan-tamper'
@@ -21,7 +22,7 @@ function Invoke-TamperedInstallPlan {
   param([string]$Target, [scriptblock]$Mutate, [string]$CaseName)
   New-Item -ItemType Directory -Path $Target -Force | Out-Null
   $approval = New-TestInstallApprovalArguments -LayerRoot $RepoRoot -BaseArguments @('-TargetPath', $Target, '-Profile', 'minimal')
-  $plan = Get-Content -LiteralPath $approval.plan_path -Raw | ConvertFrom-Json
+  $plan = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $approval.plan_path -Raw)
   & $Mutate $plan
   $tamperedPath = Join-Path $fixtureRoot ("{0}.json" -f $CaseName)
   $tamperedSha256 = Write-TamperedPlan -Plan $plan -Path $tamperedPath
@@ -47,7 +48,7 @@ try {
   $boundTarget = Join-Path $fixtureRoot 'bound-target'
   New-Item -ItemType Directory -Path $boundTarget -Force | Out-Null
   $approval = New-TestInstallApprovalArguments -LayerRoot $RepoRoot -BaseArguments @('-TargetPath', $boundTarget, '-Profile', 'minimal')
-  $approvedPlan = Get-Content -LiteralPath $approval.plan_path -Raw | ConvertFrom-Json
+  $approvedPlan = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $approval.plan_path -Raw)
   $headOutput = @(& git -C $RepoRoot rev-parse --verify HEAD 2>$null)
   $headExit = $LASTEXITCODE
   Assert-Equal 0 $headExit 'Test repository HEAD must be readable.'

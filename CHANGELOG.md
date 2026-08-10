@@ -8,6 +8,11 @@ All notable public changes to lizard-agent-layer are documented here.
 
 - Manifest schema v4 retains `active`, `retired-present`, `retired-missing`, and future `removed` lifecycle records across profile, pack, skill, and harness contraction. Retired content is plan-bound and preserved by default.
 
+### Fixed
+
+- Security-sensitive JSON readers preserve schema-declared ISO-8601 strings across Windows PowerShell 5.1 and PowerShell 7.5+, preventing canonical plans, transaction journals, and loop evidence from being silently converted to `System.DateTime`.
+- GitHub Actions jobs allow 120 minutes so the complete Windows PowerShell 5.1 gate set can finish and report its actual result.
+
 ### Security
 
 - Unix SafeFs validation now rejects nested same-device bind mounts and cross-device mount transitions, fails closed when mount identity is unavailable, and includes a dedicated privileged Ubuntu fixture.
@@ -18,6 +23,7 @@ All notable public changes to lizard-agent-layer are documented here.
 - Direct `install.ps1 -Apply` and `update-target.ps1 -Apply` calls without `-ApprovedPlanPath`, `-ApprovedPlanSha256`, and `-HumanApproved` now fail closed. Existing targets require no data rewrite; regenerate legacy Markdown plans as canonical JSON.
 - Schema-v4 install manifests require lifecycle-aware readers. Current tools migrate v3 records conservatively during the next approved apply.
 - Unix target layouts containing nested mounts now fail closed instead of being treated as ordinary contained directories.
+- PowerShell Core 7.4 and older now fail closed for security-sensitive JSON reads; PowerShell Core 7.5+ is required for explicit string-preserving date handling.
 
 ## 1.1.0 - 2026-07-19
 

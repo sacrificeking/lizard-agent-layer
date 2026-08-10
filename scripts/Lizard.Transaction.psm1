@@ -3,6 +3,7 @@ Set-StrictMode -Version 2.0
 $script:TransactionContext = $null
 
 Import-Module (Join-Path $PSScriptRoot 'Lizard.SafeFs.psm1')
+Import-Module (Join-Path $PSScriptRoot 'Lizard.Json.psm1')
 
 function New-LizardTransactionException {
   param([string]$Code, [string]$Message)
@@ -181,7 +182,7 @@ function Read-LizardTransactionJournal {
     $transactionDir = Split-Path -Parent $JournalPath
     $metadata = Get-SafeFileMetadata -AuthorizedRoot $transactionDir -Path $JournalPath
     if ([int64]$metadata.length -gt 4194304) { throw (New-LizardTransactionException -Code 'TRANSACTION_JOURNAL_TOO_LARGE' -Message 'Journal exceeds the 4 MiB parsing limit.') }
-    $journal = Get-SafeContent -AuthorizedRoot $transactionDir -Path $JournalPath -Raw | ConvertFrom-Json
+    $journal = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $transactionDir -Path $JournalPath -Raw)
     Assert-LizardTransactionJournalDocument -Journal $journal -ExpectedTargetRoot $ExpectedTargetRoot -ExpectedOperationId $ExpectedOperationId
     return $journal
   }
@@ -555,7 +556,7 @@ function Get-LizardTransactionLock {
   try {
     $metadata = Get-SafeFileMetadata -AuthorizedRoot $root -Path $lockPath
     if ([int64]$metadata.length -gt 65536) { throw (New-LizardTransactionException -Code 'TRANSACTION_LOCK_TOO_LARGE' -Message 'Lock exceeds the 64 KiB parsing limit.') }
-    $lock = Get-SafeContent -AuthorizedRoot $root -Path $lockPath -Raw | ConvertFrom-Json
+    $lock = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $root -Path $lockPath -Raw)
     Assert-LizardTransactionLockDocument -Lock $lock -ExpectedTargetRoot $root
     return $lock
   } catch {

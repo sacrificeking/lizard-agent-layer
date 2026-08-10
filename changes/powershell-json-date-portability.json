@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "powershell-json-date-portability",
+  "date": "2026-08-09",
+  "summary": "Preserve schema-declared JSON timestamp strings across supported PowerShell runtimes and allow complete CI gates to finish.",
+  "changed_paths": [
+    "scripts/Lizard.Json.psm1",
+    "scripts/Lizard.Plan.psm1",
+    "scripts/Lizard.Transaction.psm1",
+    "scripts/Lizard.LoopRuntime.psm1",
+    "scripts/Lizard.LoopEvidence.psm1",
+    "tests/unit/json.tests.ps1",
+    "tests/adversarial/install-plan-tamper.tests.ps1",
+    "tests/integration/transaction.tests.ps1",
+    "tests/integration/loop-runtime.tests.ps1",
+    "tests/adversarial/loop-evidence.tests.ps1",
+    "tests/run-focused.ps1",
+    "scripts/validate.ps1",
+    ".github/workflows/lizard-agent-layer-ci.yml",
+    "registry/contracts.json",
+    "registry/drift-baseline.json",
+    "docs/compatibility.md",
+    "docs/remediation/remediation-ledger.md",
+    "docs/remediation/claim-ledger.md",
+    "CHANGELOG.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0006-transaction-and-recovery-semantics.md",
+    "docs/adr/0008-loop-lifecycle-and-no-auto-merge.md",
+    "docs/adr/0010-exact-plan-approval-binding.md"
+  ],
+  "migration": {
+    "disposition": "migration-required",
+    "note": "Stored JSON needs no rewrite; PowerShell Core hosts must move to version 7.5 or newer before using the affected readers."
+  },
+  "compatibility": {
+    "impact": "breaking",
+    "note": "PowerShell Core 7.4 and older fail closed instead of silently converting schema-declared timestamp strings to DateTime values."
+  }
+}

@@ -8,6 +8,7 @@ $ErrorActionPreference = 'Stop'
 $effectiveRepositoryRoot = if (-not [string]::IsNullOrWhiteSpace($RepositoryRoot)) { $RepositoryRoot } elseif (-not [string]::IsNullOrWhiteSpace($LayerRoot)) { $LayerRoot } else { $null }
 $RepoRoot = if ([string]::IsNullOrWhiteSpace($effectiveRepositoryRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $effectiveRepositoryRoot).Path }
 Import-Module (Join-Path $RepoRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
 Import-Module (Join-Path $RepoRoot 'scripts\Lizard.LoopEvidence.psm1') -Force
 
 $fixtureRoot = if ([string]::IsNullOrWhiteSpace($FixtureRoot)) { Join-Path $RepoRoot '.tmp\tests\loop-evidence' } else { [System.IO.Path]::GetFullPath($FixtureRoot) }
@@ -65,7 +66,7 @@ try {
   $passOutput = Join-Path $fixtureRoot 'verify-pass'
   $pass = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'Evidence checks passed.', '-VerificationCommand', 'git rev-parse HEAD', '-EvidenceFile', 'README.md', '-OutputDir', $passOutput, '-Apply')
   Assert-Equal 0 $pass.exit_code "Evidence-bound PASS failed: $($pass.output)"
-  $passReport = Get-Content -LiteralPath (Join-Path $passOutput 'loop-verify-report.json') -Raw | ConvertFrom-Json
+  $passReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $passOutput 'loop-verify-report.json') -Raw)
   Assert-Equal 'PASS' $passReport.status 'Verifier effective status must be PASS.'
   Assert-Equal $lifecycle.payload.operation_id $passReport.operation_id 'Verifier must bind lifecycle operation ID.'
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$passReport.head_sha)) 'Verifier must bind HEAD SHA.'
@@ -93,7 +94,7 @@ try {
     Remove-DirectoryLink -Path $linkedEvidence
   }
   Assert-False ($linkedEvidenceResult.exit_code -eq 0) 'Evidence reached through a linked worktree ancestor must be rejected.'
-  $linkedReport = Get-Content -LiteralPath (Join-Path $linkedOutput 'loop-verify-report.json') -Raw | ConvertFrom-Json
+  $linkedReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $linkedOutput 'loop-verify-report.json') -Raw)
   Assert-True ((@($linkedReport.failures) -join ' ') -match 'SAFEFS_REPARSE_POINT') 'Linked evidence rejection must expose a stable safe-filesystem code.'
   Assert-Equal $outsideCanaryHash (Get-FileHash -LiteralPath $outsideCanary -Algorithm SHA256).Hash 'Rejected linked evidence must not modify the outside canary.'
   Assert-Equal $sealedHashBeforeFailures (Get-FileHash -LiteralPath $targetEvidence -Algorithm SHA256).Hash 'Rejected linked evidence must not replace sealed target evidence.'
@@ -124,17 +125,17 @@ try {
   Copy-Item -LiteralPath $markdownBackup -Destination $targetVerifierMarkdown -Force
 
   $tamperedLifecyclePath = Join-Path $fixtureRoot 'tampered-lifecycle.json'
-  $tampered = Get-Content -LiteralPath $lifecyclePath -Raw | ConvertFrom-Json
+  $tampered = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $lifecyclePath -Raw)
   $tampered.payload.branch = 'lizard/l2/tampered'
   Set-Content -LiteralPath $tamperedLifecyclePath -Value ($tampered | ConvertTo-Json -Depth 12)
   $tamperedVerify = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $tamperedLifecyclePath, '-Verifier', 'independent-reviewer', '-OutputDir', (Join-Path $fixtureRoot 'verify-tampered'))
   Assert-False ($tamperedVerify.exit_code -eq 0) 'Tampered lifecycle must be rejected.'
-  $tamperedReport = Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-tampered\loop-verify-report.json') -Raw | ConvertFrom-Json
+  $tamperedReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-tampered\loop-verify-report.json') -Raw)
   Assert-True ((@($tamperedReport.failures) -join ' ') -match 'EVIDENCE_HASH_MISMATCH') 'Tampered lifecycle must expose hash mismatch.'
 
   $selfVerify = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'same-agent', '-Implementer', 'same-agent', '-Status', 'PASS', '-VerificationCommand', 'git rev-parse HEAD', '-OutputDir', (Join-Path $fixtureRoot 'verify-self'), '-Apply')
   Assert-False ($selfVerify.exit_code -eq 0) 'Self-verification must fail.'
-  $selfReport = Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-self\loop-verify-report.json') -Raw | ConvertFrom-Json
+  $selfReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-self\loop-verify-report.json') -Raw)
   Assert-True ((@($selfReport.failures) -join ' ') -match 'SELF_VERIFICATION_FORBIDDEN') 'Self-verification must expose stable code.'
 
   $failedCommand = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-VerificationCommand', 'exit 7', '-OutputDir', (Join-Path $fixtureRoot 'verify-command-failure'), '-Apply')
@@ -144,7 +145,7 @@ try {
   Assert-GitSuccess @('-C', $worktree, 'checkout', '--detach', '--quiet') 'detach failed'
   $detached = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-OutputDir', (Join-Path $fixtureRoot 'verify-detached'))
   Assert-False ($detached.exit_code -eq 0) 'Detached HEAD must be rejected.'
-  $detachedReport = Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-detached\loop-verify-report.json') -Raw | ConvertFrom-Json
+  $detachedReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-detached\loop-verify-report.json') -Raw)
   Assert-True ((@($detachedReport.failures) -join ' ') -match 'Detached HEAD') 'Detached HEAD rejection must be explicit.'
   Assert-GitSuccess @('-C', $worktree, 'checkout', '--quiet', $branch) 'branch restore failed'
 

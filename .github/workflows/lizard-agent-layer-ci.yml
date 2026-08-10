@@ -15,7 +15,7 @@ jobs:
   powershell-7:
     name: PowerShell 7 (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 35
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -57,7 +57,7 @@ jobs:
   windows-powershell-5:
     name: Windows PowerShell 5.1
     runs-on: windows-latest
-    timeout-minutes: 35
+    timeout-minutes: 120
 
     steps:
       - name: Checkout

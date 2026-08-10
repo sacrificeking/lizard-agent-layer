@@ -18,7 +18,7 @@ This ledger tracks remediation of the findings in the [2026-08-01 Codex/VS Code 
 | --- | --- | --- | --- | --- |
 | Wave 0: baseline and ledgers | All | Implemented | None | HEAD, instructions, worktree and classifications are recorded |
 | WP-01A: safe read/hash foundation | H-03 | Implemented and locally verified | Wave 0 | Contained reads succeed; linked terminal objects and ancestors fail with stable `SAFEFS_*` codes; loop evidence uses the shared primitives |
-| WP-01B: mount/device boundaries | H-03 | Implemented; privileged Unix evidence pending | WP-01A, Unix fixtures | Unix mount and bind-mount escapes fail closed |
+| WP-01B: mount/device boundaries | H-03 | Implemented; Ubuntu privileged and macOS runtime evidence passed; complete host matrix pending CI compatibility rerun | WP-01A, Unix fixtures | Unix mount and bind-mount escapes fail closed |
 | WP-01C: handle-bound mutation | H-03 | Not started | WP-01A, host capability contract | Supported hosts use no-follow/handle-bound mutation; unsupported hosts fail closed or state the reduced guarantee |
 | WP-02: transaction recovery | H-02, M-05 | Implemented and locally verified | WP-01A | Strict v2 runtime/schema validation, identity binding, contained canonical backups, retry-safe reverse replay, terminal cleanup, and decisive doctor classifications pass focused tests |
 | WP-03: canonical plan binding | H-01 | Implemented and locally verified | Canonical serialization | Apply rejects every plan, source, target, option and approval mismatch before mutation |
@@ -103,10 +103,42 @@ Implemented controls:
 | Standalone smoke | Passed in 1,493 seconds, including validation, approved apply, idempotence, upgrade, nested update, transaction, ownership conflict, sidecar preservation, and doctor; scratch `.tmp/smoke-20260809131718` |
 | Standalone profile/harness matrix | Passed in 1,357.2 seconds: 18/18 combinations, 0 failures; report `.tmp/matrix-20260809134216/matrix-report.json` |
 | Complete local CI constituent set | Passed all nine constituent gates on the same implementation state: validation, schema mutations, contract governance, focused safety, packs, strict drift, quality, smoke, and matrix |
-| Actual Ubuntu bind-mount and `tmpfs` fixture | Pending execution in the GitHub Ubuntu matrix; workflow wiring exists but no push or remote workflow run is authorized |
-| macOS runtime mount enumeration | Pending supported-host CI evidence |
+| Actual Ubuntu bind-mount and `tmpfs` fixture | Passed in GitHub Actions run 31319333532 at commit `c7ff2020af82c673670ae8a01a657b726100432a`; non-interactive `sudo`, real bind mount, real `tmpfs`, rejection, canary, and cleanup checks succeeded |
+| macOS runtime mount enumeration | Passed the SafeFs and mount-boundary policy suites on the live macOS runner in GitHub Actions run 31319333532 |
 
-WP-01B is implemented but does not close H-03. Actual privileged Ubuntu evidence and macOS runtime evidence remain pending, and the validation-to-mutation race remains WP-01C scope. No dependency installation, network access, commit, push, merge, publication or release was performed.
+WP-01B is implemented but does not close H-03. GitHub Actions run 31319333532 established the narrow Ubuntu privileged-fixture and macOS runtime claims, then exposed a separate cross-runtime JSON type incompatibility in the PowerShell 7 jobs. The Windows PowerShell 5.1 job reached the former 35-minute ceiling during the final focused suite without a recorded test failure. A complete supported-host rerun remains pending, and the validation-to-mutation race remains WP-01C scope.
+
+## CI compatibility wave 1
+
+Remote baseline:
+
+- Manual workflow run 31319333532 executed the exact pushed commit `c7ff2020af82c673670ae8a01a657b726100432a` on Windows PowerShell 5.1 and PowerShell 7 on Windows, Ubuntu, and macOS.
+- All PowerShell 7 jobs reproduced the same root cause: `ConvertFrom-Json` converted schema-declared ISO-8601 strings to `System.DateTime`, causing canonical-plan, transaction-journal, and loop-evidence validation to fail.
+- The PowerShell 5.1 job passed validation, mutations, governance, and every focused suite through loop runtime, then was cancelled by the workflow's 35-minute job ceiling during loop evidence; no test failure preceded cancellation.
+
+Implemented correction:
+
+- `Lizard.Json.psm1` centralizes security-sensitive JSON parsing and preserves timestamps as strings through `ConvertFrom-Json -DateKind String` on PowerShell 7.5+.
+- Windows PowerShell 5.1 retains its native string behavior. PowerShell Core versions without the explicit date policy fail closed with `LIZARD_JSON_DATE_POLICY_UNSUPPORTED`.
+- Canonical plans, transaction journals and locks, loop runtime JSON/JSONL, and loop evidence use the shared parser. Focused fixtures use the same contract when inspecting those artifacts.
+- A failure-first JSON unit test locks top-level and nested timestamp strings byte-for-byte while retaining integer, Boolean, and null types.
+- The workflow ceiling is 120 minutes for both job families so the complete suite reports its result.
+- Contract governance declares the PowerShell Core 7.5+ operational migration and breaking fail-closed behavior. A complete remote rerun remains required before any supported-host closure claim.
+
+Local verification on Windows PowerShell 5.1 passed the new JSON unit, canonical-plan unit and tamper suites, transaction suite, loop-runtime suite, loop-evidence suite, and 60/60 validation bindings.
+
+| CI compatibility wave gate | Result |
+| --- | --- |
+| Failure-first JSON unit | Failed as expected before `Lizard.Json.psm1` existed; passed after implementation |
+| Schema validation and mutations | Passed: 60/60 bindings and 24/24 mutation cases |
+| Contract governance | Passed: 20 changed paths, 7 impacted contracts, and a breaking PowerShell Core 7.5+ migration declaration |
+| Focused safety | Passed: 21/21 suites in 3,193.674 seconds; report `.tmp/tests/focused-test-report.json` |
+| Packs, drift, and quality | Passed: 7 packs/21 unique skills with no failures or warnings; 118 reviewed artifacts with zero drift; quality average 87.77 and minimum 68 |
+| Smoke | Passed in 2,319.7 seconds; scratch `.tmp/smoke-20260810065907` |
+| Profile/harness matrix | Passed: 18/18 combinations in 1,597.2 seconds; report `.tmp/matrix-20260810073756/matrix-report.json` |
+| Complete local CI constituent set | Passed all nine gates on the same implementation state. The original orchestrator process was interrupted after quality and before smoke; atomic reports prove the first seven gates, and only smoke plus matrix were resumed. No synthetic aggregate CI report is claimed. |
+
+No commit, push, remote rerun, merge, publication, or release was performed for this wave. The next evidence gate is a GitHub Actions rerun on the exact committed and pushed remediation SHA.
 
 ## WP-02 implementation record
 

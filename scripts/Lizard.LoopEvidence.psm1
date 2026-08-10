@@ -1,6 +1,7 @@
 Set-StrictMode -Version 2.0
 
 Import-Module (Join-Path $PSScriptRoot 'Lizard.SafeFs.psm1')
+Import-Module (Join-Path $PSScriptRoot 'Lizard.Json.psm1')
 
 function Get-LizardEvidenceSha256 {
   param([AllowNull()][string]$Value)
@@ -14,7 +15,7 @@ function Get-LizardEvidenceSha256 {
 function Get-LizardEvidencePayloadHash {
   param([Parameter(Mandatory = $true)]$Payload)
   $json = $Payload | ConvertTo-Json -Depth 20 -Compress
-  $normalized = $json | ConvertFrom-Json
+  $normalized = ConvertFrom-LizardJson -InputObject $json
   return Get-LizardEvidenceSha256 -Value ($normalized | ConvertTo-Json -Depth 20 -Compress)
 }
 
@@ -30,7 +31,7 @@ function New-LizardEvidenceEnvelope {
 function Read-LizardEvidenceEnvelope {
   param([Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][int]$SchemaVersion)
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw "EVIDENCE_FILE_MISSING: $Path" }
-  try { $envelope = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json }
+  try { $envelope = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $Path -Raw) }
   catch { throw "EVIDENCE_JSON_INVALID: $($_.Exception.Message)" }
   if ([int]$envelope.schema_version -ne $SchemaVersion) { throw "EVIDENCE_SCHEMA_UNSUPPORTED: Expected $SchemaVersion, got $($envelope.schema_version)." }
   if ($null -eq $envelope.payload -or [string]::IsNullOrWhiteSpace([string]$envelope.payload_hash)) { throw 'EVIDENCE_ENVELOPE_INVALID: payload and payload_hash are required.' }
