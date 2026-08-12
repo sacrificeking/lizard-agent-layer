@@ -12,24 +12,46 @@ permissions:
   contents: read
 
 jobs:
-  powershell-7:
-    name: PowerShell 7 (${{ matrix.os }})
+  powershell-7-windows:
+    name: PowerShell 7 (windows-latest, full)
+    runs-on: windows-latest
+    timeout-minutes: 120
+
+    steps:
+      - &checkout-pwsh
+        name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - &setup-node-pwsh
+        name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+
+      - name: Install schema validator
+        run: npm ci
+
+      - name: Run full CI gates
+        shell: pwsh
+        run: ./scripts/ci.ps1
+
+  powershell-7-unix-base:
+    name: PowerShell 7 (${{ matrix.os }}, base + focused 4/6)
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
         os:
-          - windows-latest
           - ubuntu-latest
           - macos-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-          persist-credentials: false
+      - *checkout-pwsh
 
       - name: Require non-interactive fixture privilege
         if: matrix.os == 'ubuntu-latest'
@@ -41,21 +63,96 @@ jobs:
         shell: pwsh
         run: ./tests/adversarial/mount-boundary-fixtures.tests.ps1 -LayerRoot . -EnablePrivilegedFixtures
 
-      - name: Set up Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 24.18.0
-          package-manager-cache: false
+      - *setup-node-pwsh
 
       - name: Install schema validator
         run: npm ci
 
-      - name: Run CI gates
+      - name: Run base gates and focused shard 4 of 6
         shell: pwsh
-        run: ./scripts/ci.ps1
+        run: ./scripts/ci.ps1 -SkipSmoke -SkipMatrix -FocusedShardIndex 4 -FocusedShardCount 6
+
+  powershell-7-unix-focused:
+    name: PowerShell 7 (${{ matrix.os }}, focused ${{ matrix.shard }}/6)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        shard:
+          - 1
+          - 2
+          - 3
+          - 5
+          - 6
+
+    steps:
+      - *checkout-pwsh
+
+      - *setup-node-pwsh
+
+      - name: Install schema validator
+        run: npm ci
+
+      - name: Run focused safety shard
+        shell: pwsh
+        run: ./tests/run-focused.ps1 -LayerRoot . -ShardIndex ${{ matrix.shard }} -ShardCount 6
+
+  powershell-7-unix-smoke:
+    name: PowerShell 7 (${{ matrix.os }}, smoke)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+
+    steps:
+      - *checkout-pwsh
+
+      - *setup-node-pwsh
+
+      - name: Install schema validator
+        run: npm ci
+
+      - name: Run smoke gate
+        shell: pwsh
+        run: ./tests/smoke.ps1 -LayerRoot .
+
+  powershell-7-unix-matrix:
+    name: PowerShell 7 (${{ matrix.os }}, matrix ${{ matrix.profile }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        profile:
+          - minimal
+          - standard
+          - supabase-react-finance
+
+    steps:
+      - *checkout-pwsh
+
+      - *setup-node-pwsh
+
+      - name: Install schema validator
+        run: npm ci
+
+      - name: Run profile and harness matrix
+        shell: pwsh
+        run: ./scripts/matrix.ps1 -LayerRoot . -Profiles '${{ matrix.profile }}'
 
   windows-powershell-5:
-    name: Windows PowerShell 5.1
+    name: Windows PowerShell 5.1 (full)
     runs-on: windows-latest
     timeout-minutes: 120
 
@@ -76,6 +173,6 @@ jobs:
         shell: powershell
         run: npm.cmd ci
 
-      - name: Run CI gates
+      - name: Run full CI gates
         shell: powershell
         run: .\scripts\ci.ps1

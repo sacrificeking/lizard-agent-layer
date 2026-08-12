@@ -14,6 +14,8 @@ All notable public changes to lizard-agent-layer are documented here.
 - GitHub Actions jobs allow 120 minutes so the complete Windows PowerShell 5.1 gate set can finish and report its actual result.
 - Update-plan binding fixtures use the string-preserving JSON reader on PowerShell 7 hosts.
 - Internal macOS install plan probes canonicalize the standard `/var` temporary alias before unchanged SafeFs validation.
+- The macOS temporary-root unit assertion now expects the same canonical host path returned by SafeFs.
+- Long-running Ubuntu and macOS CI gates are partitioned into deterministic focused-test shards, standalone smoke jobs, and per-profile matrix jobs without reducing test coverage; default local CI remains complete and unsharded.
 
 ### Security
 

@@ -5,10 +5,13 @@
   [switch]$SkipQuality,
   [switch]$SkipPacks,
   [switch]$SkipDrift,
+  [ValidateRange(1, 64)][int]$FocusedShardIndex = 1,
+  [ValidateRange(1, 64)][int]$FocusedShardCount = 1,
   [switch]$StrictGitStatus
 )
 
 $ErrorActionPreference = "Stop"
+if ($FocusedShardIndex -gt $FocusedShardCount) { throw "FOCUSED_SHARD_INVALID: FocusedShardIndex $FocusedShardIndex exceeds FocusedShardCount $FocusedShardCount." }
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
@@ -51,6 +54,7 @@ Write-Host "SkipMatrix: $($SkipMatrix.IsPresent)"
 Write-Host "SkipQuality: $($SkipQuality.IsPresent)"
 Write-Host "SkipPacks: $($SkipPacks.IsPresent)"
 Write-Host "SkipDrift: $($SkipDrift.IsPresent)"
+Write-Host "FocusedShard: $FocusedShardIndex/$FocusedShardCount"
 Write-Host "StrictGitStatus: $($StrictGitStatus.IsPresent)"
 Write-Host ""
 
@@ -63,8 +67,9 @@ Invoke-CiStep 'schema mutations' {
 Invoke-CiStep 'contract governance' {
   & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\contract-check.ps1') -LayerRoot $LayerRoot -Strict
 }
-Invoke-CiStep 'focused safety' {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'tests\run-focused.ps1') -LayerRoot $LayerRoot
+$focusedStepName = if ($FocusedShardCount -eq 1) { 'focused safety' } else { "focused safety shard $FocusedShardIndex of $FocusedShardCount" }
+Invoke-CiStep $focusedStepName {
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'tests\run-focused.ps1') -LayerRoot $LayerRoot -ShardIndex $FocusedShardIndex -ShardCount $FocusedShardCount
 }
 if (-not $SkipPacks) {
   Invoke-CiStep 'packs' {

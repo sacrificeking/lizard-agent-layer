@@ -1,6 +1,13 @@
-param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)))
+[CmdletBinding()]
+param(
+  [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
+  [ValidateRange(1, 64)][int]$ShardIndex = 1,
+  [ValidateRange(1, 64)][int]$ShardCount = 1,
+  [switch]$ListOnly
+)
 
 $ErrorActionPreference = 'Stop'
+if ($ShardIndex -gt $ShardCount) { throw "FOCUSED_SHARD_INVALID: ShardIndex $ShardIndex exceeds ShardCount $ShardCount." }
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
 Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
@@ -12,6 +19,7 @@ $tests = @(
   'tests\unit\mount-boundary.tests.ps1',
   'tests\unit\host.tests.ps1',
   'tests\unit\plan.tests.ps1',
+  'tests\unit\focused-sharding.tests.ps1',
   'tests\adversarial\install-plan-tamper.tests.ps1',
   'tests\adversarial\install-containment.tests.ps1',
   'tests\adversarial\report-privacy.tests.ps1',
@@ -29,6 +37,17 @@ $tests = @(
   'tests\integration\loop-runtime.tests.ps1',
   'tests\adversarial\loop-evidence.tests.ps1'
 )
+$tests = @(
+  for ($index = 0; $index -lt $tests.Count; $index++) {
+    if (($index % $ShardCount) -eq ($ShardIndex - 1)) { $tests[$index] }
+  }
+)
+if ($tests.Count -eq 0) { throw "FOCUSED_SHARD_EMPTY: Shard $ShardIndex of $ShardCount selects no tests." }
+if ($ListOnly) {
+  $tests | ForEach-Object { $_.Replace('\', '/') }
+  exit 0
+}
+
 $results = New-Object System.Collections.Generic.List[object]
 
 foreach ($relative in $tests) {
@@ -48,7 +67,8 @@ foreach ($relative in $tests) {
 }
 
 $reportDir = Initialize-SafeDirectory -Path (Join-Path $LayerRoot '.tmp\tests')
-$reportPath = Join-Path $reportDir 'focused-test-report.json'
+$reportName = if ($ShardCount -eq 1) { 'focused-test-report.json' } else { 'focused-test-report-shard-{0:D2}-of-{1:D2}.json' -f $ShardIndex, $ShardCount }
+$reportPath = Join-Path $reportDir $reportName
 $report = [ordered]@{
   schema_version = 2
   generated_at = (Get-Date).ToUniversalTime().ToString('o')
@@ -65,4 +85,4 @@ Set-SafeContent -AuthorizedRoot $reportDir -Path $reportPath -Value ($report | C
 Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/focused-test-report.schema.json' -InstancePath $reportPath -Message 'Focused test report must satisfy its executable schema.'
 
 if ($report.failed -gt 0) { exit 1 }
-Write-Host "Focused safety tests passed. Report: $reportPath"
+Write-Host "Focused safety tests passed for shard $ShardIndex of $ShardCount. Report: $reportPath"

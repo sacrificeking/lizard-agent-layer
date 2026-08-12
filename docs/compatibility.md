@@ -10,7 +10,7 @@
 | PowerShell 7.5+ on macOS | Primary portable host; symbolic-link and mount-identity policy fixtures |
 | Node.js 22+ | Required for executable Draft 2020-12 validation |
 
-The GitHub workflow runs the complete gate set on the four PowerShell host identities. A local Windows pass is not evidence that remote Unix jobs have run.
+The GitHub workflow runs the complete gate set on the four PowerShell host identities. Windows runs the gates sequentially in one job per runtime. Ubuntu and macOS partition the same set into a base/governance job, six deterministic focused-safety shards, a standalone smoke job, and one matrix job per built-in profile. A local Windows pass is not evidence that remote Unix jobs have run, and no individual Unix shard is evidence for the complete host contract.
 
 ## Filesystem assurance status
 
@@ -29,7 +29,7 @@ Security-sensitive JSON readers preserve ISO-8601 timestamps as JSON strings so 
 
 On macOS, internal install plan probes canonicalize the host-provided `/var/...` temporary root to `/private/var/...` before SafeFs validation. This narrowly handles the operating system's standard `/var` alias and does not weaken linked-ancestor rejection for caller-provided paths.
 
-The CI job timeout is 120 minutes for both runtime families. This is an execution ceiling, not an expected duration or a substitute for per-gate timing evidence.
+Windows full jobs, Unix base/focused jobs, and Unix per-profile matrix jobs have a 120-minute ceiling. Unix standalone smoke jobs have a 240-minute ceiling because their plan-bound lifecycle operations are intentionally sequential. These are execution ceilings, not expected durations or substitutes for per-gate timing evidence. Default local `scripts/ci.ps1` and `tests/run-focused.ps1` invocations remain complete and unsharded.
 
 ## Manifest compatibility
 

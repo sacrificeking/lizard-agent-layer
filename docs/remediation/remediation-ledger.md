@@ -165,6 +165,33 @@ Failure-first evidence consists of run 31396371758 plus the local SafeFs unit fa
 
 The supported-host GitHub Actions rerun remains pending and requires a separately approved commit and push of the exact Wave 2 state.
 
+## CI compatibility wave 3
+
+GitHub Actions run 31579015410 executed Wave 2 commit `35437b63cdfb44f2a001511602915454f791f00c`. PowerShell 7 on Windows passed in 58 minutes and Windows PowerShell 5.1 passed in 76 minutes. Ubuntu again passed the privileged bind/`tmpfs` fixture, then passed validation, schema mutations, contract governance, all 21 focused suites, packs, drift, and quality before the 120-minute job ceiling interrupted smoke. macOS passed JSON parsing, mount policy, plan tests, install-plan tamper, installer containment, and manifest-v3 runtime behavior before the same ceiling interrupted the still-sequential focused suite.
+
+The run isolated two Wave 3 causes:
+
+- The macOS SafeFs unit compared `Resolve-LizardSafeTemporaryRoot` with the raw `/var/...` host path even though the intended implementation correctly returned canonical `/private/var/...`.
+- Complete Unix gates are too long for one sequential job. Increasing the ceiling alone would retain poor failure isolation and make a complete macOS run depend on a multi-hour monolith.
+
+Wave 3 aligns the unit expectation with the shared host canonicalization policy and partitions, but does not reduce, Unix CI. The base job executes validation, schema mutations, contract governance, packs, drift, quality, the privileged Ubuntu fixture, and focused shard 4 of 6. Five additional jobs execute the remaining focused shards. Smoke runs independently, and the 18 profile/harness combinations are split into one six-harness job per profile. Windows retains complete sequential jobs, while default local CI remains complete and unsharded.
+
+Failure-first evidence consists of run 31579015410 plus the new sharding contract test showing that the prior runner had no validated list/shard interface and treated unknown arguments as an unsharded execution.
+
+| CI compatibility wave 3 gate | Result |
+| --- | --- |
+| Focused sharding contract | Passed: six non-empty, deterministic, pairwise-disjoint shards cover the 22-suite catalog exactly; invalid indices fail closed with `FOCUSED_SHARD_INVALID` |
+| macOS temporary-root assertion | Passed locally with the shared host canonicalization policy; the live macOS correction remains pending remote evidence |
+| Validation and schema mutations | Passed: 62/62 bindings and 24/24 mutation cases |
+| Contract and drift governance | Passed: 10 changed paths, 2 impacted contracts, 118 reviewed artifacts, and zero drift; no drift-baseline change was required because workflows, scripts, and tests are outside the reviewed artifact set |
+| Unix base-job simulation | Passed with focused shard 4 of 6, packs, drift, and quality in 393.3 seconds; shard report `.tmp/tests/focused-test-report-shard-04-of-06.json` and CI report `.tmp/ci/ci-report-20260812125416.json` |
+| Full focused safety | Passed unsharded: 22/22 suites in 2,901 seconds; report `.tmp/tests/focused-test-report.json` |
+| Smoke | Passed in 1,957.4 seconds; scratch `.tmp/smoke-20260812142843` |
+| Profile/harness matrix | Passed in 1,982.3 seconds: 18/18 combinations and 0 failures; report `.tmp/matrix-20260812150128/matrix-report.json` |
+| Complete local CI constituent set | Passed on the final implementation state. The first aggregate run stopped after 21 successful suites because Public Readiness encoded the old two-job action count. Pinned setup steps were then centralized through officially supported YAML anchors, Public Readiness passed, and the complete focused, smoke, and matrix gates were repeated atomically. No synthetic aggregate report is claimed. |
+
+A complete sharded supported-host GitHub Actions rerun remains pending and requires separately approved commit and push gates.
+
 ## WP-02 implementation record
 
 Implemented controls:

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "supported-host-ci-sharding",
+  "date": "2026-08-12",
+  "summary": "Partition long-running Unix CI gates without reducing the supported-host test set, and align the macOS temporary-root assertion with the canonical host path.",
+  "changed_paths": [
+    ".github/workflows/lizard-agent-layer-ci.yml",
+    "scripts/ci.ps1",
+    "tests/run-focused.ps1",
+    "tests/unit/focused-sharding.tests.ps1",
+    "tests/unit/safe-fs.tests.ps1",
+    "docs/compatibility.md",
+    "docs/remediation/remediation-ledger.md",
+    "docs/remediation/claim-ledger.md",
+    "CHANGELOG.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0002-filesystem-and-report-containment.md",
+    "docs/adr/0012-unix-mount-boundary-enforcement.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Default local CI and focused-test invocations still execute the complete unsharded gate set. Shard parameters are additive."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Windows retains full sequential jobs; Ubuntu and macOS execute the same gates as independently reportable base, focused, smoke, and profile-matrix jobs."
+  }
+}

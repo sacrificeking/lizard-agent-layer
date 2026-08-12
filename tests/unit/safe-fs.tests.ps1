@@ -25,7 +25,7 @@ try {
   Assert-Equal '/variant/fixture' (ConvertTo-LizardCanonicalTemporaryPath -Path '/variant/fixture' -HostId 'macos-pwsh') 'The macOS alias policy must be boundary-aware.'
   Assert-Equal '/private/var/folders/fixture' (ConvertTo-LizardCanonicalTemporaryPath -Path '/private/var/folders/fixture' -HostId 'macos-pwsh') 'An already canonical macOS temporary path must remain unchanged.'
   Assert-Equal (ConvertTo-LizardFullPath -Path '/var/folders/fixture') (ConvertTo-LizardCanonicalTemporaryPath -Path '/var/folders/fixture' -HostId 'linux-pwsh') 'Linux temporary paths must not receive the macOS alias policy.'
-  Assert-Equal ([System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd([char[]]@([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar))) (Resolve-LizardSafeTemporaryRoot) 'The current host temporary root must resolve through SafeFs.'
+  Assert-Equal (ConvertTo-LizardCanonicalTemporaryPath -Path ([System.IO.Path]::GetTempPath())) (Resolve-LizardSafeTemporaryRoot) 'The current host temporary root must resolve through SafeFs using the same host canonicalization policy.'
 
   $nested = Join-Path $authorized 'missing\nested\file.txt'
   $resolved = Resolve-SafeTargetDestination -AuthorizedRoot $authorized -DestinationPath $nested
