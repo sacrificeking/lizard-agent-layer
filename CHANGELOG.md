@@ -12,6 +12,8 @@ All notable public changes to lizard-agent-layer are documented here.
 
 - Security-sensitive JSON readers preserve schema-declared ISO-8601 strings across Windows PowerShell 5.1 and PowerShell 7.5+, preventing canonical plans, transaction journals, and loop evidence from being silently converted to `System.DateTime`.
 - GitHub Actions jobs allow 120 minutes so the complete Windows PowerShell 5.1 gate set can finish and report its actual result.
+- Update-plan binding fixtures use the string-preserving JSON reader on PowerShell 7 hosts.
+- Internal macOS install plan probes canonicalize the standard `/var` temporary alias before unchanged SafeFs validation.
 
 ### Security
 

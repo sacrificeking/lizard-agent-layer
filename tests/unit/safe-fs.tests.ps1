@@ -20,6 +20,13 @@ New-Item -ItemType Directory -Path $ordinaryDirectory -Force | Out-Null
 Set-Content -LiteralPath $ordinaryFile -Value 'ordinary canary' -Encoding UTF8
 
 try {
+  Assert-Equal '/private/var' (ConvertTo-LizardCanonicalTemporaryPath -Path '/var' -HostId 'macos-pwsh') 'The exact macOS /var temporary alias must canonicalize to /private/var.'
+  Assert-Equal '/private/var/folders/fixture' (ConvertTo-LizardCanonicalTemporaryPath -Path '/var/folders/fixture' -HostId 'macos-pwsh') 'A macOS /var temporary descendant must canonicalize below /private/var.'
+  Assert-Equal '/variant/fixture' (ConvertTo-LizardCanonicalTemporaryPath -Path '/variant/fixture' -HostId 'macos-pwsh') 'The macOS alias policy must be boundary-aware.'
+  Assert-Equal '/private/var/folders/fixture' (ConvertTo-LizardCanonicalTemporaryPath -Path '/private/var/folders/fixture' -HostId 'macos-pwsh') 'An already canonical macOS temporary path must remain unchanged.'
+  Assert-Equal (ConvertTo-LizardFullPath -Path '/var/folders/fixture') (ConvertTo-LizardCanonicalTemporaryPath -Path '/var/folders/fixture' -HostId 'linux-pwsh') 'Linux temporary paths must not receive the macOS alias policy.'
+  Assert-Equal ([System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd([char[]]@([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar))) (Resolve-LizardSafeTemporaryRoot) 'The current host temporary root must resolve through SafeFs.'
+
   $nested = Join-Path $authorized 'missing\nested\file.txt'
   $resolved = Resolve-SafeTargetDestination -AuthorizedRoot $authorized -DestinationPath $nested
   Assert-Equal ([System.IO.Path]::GetFullPath($nested)) $resolved 'Ordinary missing nested destinations must remain valid.'

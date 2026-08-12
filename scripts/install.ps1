@@ -1047,7 +1047,8 @@ function Assert-ApprovedInstallPlanCurrent {
 }
 
 function Get-CurrentInstallProbePlan {
-  $probePath = Join-Path ([System.IO.Path]::GetTempPath()) ("lizard-install-plan-probe-{0}.json" -f ([Guid]::NewGuid().ToString('N')))
+  $probeRoot = Resolve-LizardSafeTemporaryRoot
+  $probePath = Join-Path $probeRoot ("lizard-install-plan-probe-{0}.json" -f ([Guid]::NewGuid().ToString('N')))
   $probeDigestPath = "$probePath.sha256"
   $hostPath = (Get-Process -Id $PID).Path
   if ([string]::IsNullOrWhiteSpace($hostPath)) {

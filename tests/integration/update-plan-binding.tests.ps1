@@ -3,6 +3,7 @@ param([string]$LayerRoot)
 $ErrorActionPreference = 'Stop'
 $RepoRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $LayerRoot).Path }
 Import-Module (Join-Path $RepoRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
 Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Plan.psm1') -Force
 
 $fixtureRoot = Join-Path $RepoRoot '.tmp\tests\update-plan-binding'
@@ -26,12 +27,12 @@ try {
   Assert-Equal 0 $install.exit_code "Plan-bound prerequisite install must succeed: $($install.output)"
 
   $updateApproval = New-TestUpdateApprovalArguments -LayerRoot $RepoRoot -BaseArguments @('-TargetPath', $target, '-OutputDir', $output)
-  $updatePlan = Get-Content -LiteralPath $updateApproval.plan_path -Raw | ConvertFrom-Json
+  $updatePlan = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $updateApproval.plan_path -Raw)
   $boundLayerInputs = @($updatePlan.intent.inputs | Where-Object scope -eq 'layer' | ForEach-Object { [string]$_.path })
   Assert-True ($boundLayerInputs -contains 'scripts/Lizard.Host.psm1') 'Update plan must bind the host module it imports and executes.'
   Assert-True ($boundLayerInputs -contains 'scripts/manifest-diff.ps1') 'Update plan must bind the manifest-diff script it executes.'
 
-  $missingChildPlan = Get-Content -LiteralPath $updateApproval.plan_path -Raw | ConvertFrom-Json
+  $missingChildPlan = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $updateApproval.plan_path -Raw)
   $missingChildPlan.intent.options.install_canonical_plan_path = Join-Path $fixtureRoot 'missing-child.json'
   $missingChildPlan.intent_sha256 = Get-LizardPlanIntentSha256 -Intent $missingChildPlan.intent
   $missingOuterPath = Join-Path $fixtureRoot 'missing-child-outer.json'
@@ -43,7 +44,7 @@ try {
   Assert-False ($missingChild.exit_code -eq 0) 'Missing nested install plan must fail closed.'
   Assert-True ($missingChild.output -match 'SAFEFS_FILE_MISSING|PLAN_BINDING_NESTED_MISMATCH') 'Missing nested plan must expose a stable failure.'
 
-  $wrongChildDigestPlan = Get-Content -LiteralPath $updateApproval.plan_path -Raw | ConvertFrom-Json
+  $wrongChildDigestPlan = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $updateApproval.plan_path -Raw)
   $wrongChildDigestPlan.intent.nested_plan.sha256 = ('0' * 64)
   $wrongChildDigestPlan.intent_sha256 = Get-LizardPlanIntentSha256 -Intent $wrongChildDigestPlan.intent
   $wrongOuterPath = Join-Path $fixtureRoot 'wrong-child-digest-outer.json'
@@ -55,9 +56,9 @@ try {
   Assert-False ($wrongChildDigest.exit_code -eq 0) 'Wrong nested install digest must fail closed.'
   Assert-True ($wrongChildDigest.output -match 'PLAN_BINDING_DIGEST_MISMATCH') 'Wrong nested digest must expose a digest mismatch.'
 
-  $staleOuterPlan = Get-Content -LiteralPath $updateApproval.plan_path -Raw | ConvertFrom-Json
+  $staleOuterPlan = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $updateApproval.plan_path -Raw)
   $approvedChildPath = [string]$staleOuterPlan.intent.options.install_canonical_plan_path
-  $staleChildPlan = Get-Content -LiteralPath $approvedChildPath -Raw | ConvertFrom-Json
+  $staleChildPlan = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $approvedChildPath -Raw)
   $staleChildPlan.intent.source_git_head = ('0' * 40)
   $staleChildPlan.intent_sha256 = Get-LizardPlanIntentSha256 -Intent $staleChildPlan.intent
   $staleChildPath = Join-Path $fixtureRoot 'stale-child.json'
@@ -81,7 +82,7 @@ try {
   $apply = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts\update-target.ps1') -Arguments $updateApproval.arguments
   Assert-Equal 0 $apply.exit_code "Exact approved update plan must apply: $($apply.output)"
   $historyPath = Join-Path $target '.agent\lizard-agent-layer.update-history.jsonl'
-  $history = (Get-Content -LiteralPath $historyPath | Select-Object -Last 1) | ConvertFrom-Json
+  $history = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $historyPath | Select-Object -Last 1)
   Assert-Equal $updateApproval.sha256 ([string]$history.applied_plan_sha256) 'Update history must record the exact approved outer plan digest.'
   Assert-Equal 64 ([string]$history.applied_install_plan_sha256).Length 'Update history must record the nested approved install digest.'
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.lizard-agent-layer.lock')) 'Committed update must remove its transaction lock.'

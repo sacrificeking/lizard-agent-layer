@@ -53,6 +53,49 @@ function ConvertTo-LizardFullPath {
   return $full
 }
 
+function Get-LizardSafeFsHostId {
+  if ($PSVersionTable.ContainsKey('Platform') -and $PSVersionTable['Platform'] -eq 'Unix') {
+    $isMac = Get-Variable -Name IsMacOS -ValueOnly -ErrorAction SilentlyContinue
+    if ($isMac) { return 'macos-pwsh' }
+    return 'linux-pwsh'
+  }
+  if ([string]$PSVersionTable.PSEdition -eq 'Desktop') { return 'windows-powershell-5.1' }
+  return 'windows-pwsh'
+}
+
+function ConvertTo-LizardCanonicalTemporaryPath {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$Path,
+    [ValidateSet('windows-powershell-5.1', 'windows-pwsh', 'linux-pwsh', 'macos-pwsh')]
+    [string]$HostId = (Get-LizardSafeFsHostId)
+  )
+
+  $isRuntimeUnix = $PSVersionTable.ContainsKey('Platform') -and $PSVersionTable['Platform'] -eq 'Unix'
+  $fullPath = if ($HostId -eq 'macos-pwsh' -and -not $isRuntimeUnix -and $Path.StartsWith('/', [System.StringComparison]::Ordinal)) {
+    if ($Path.Length -gt 1) { $Path.TrimEnd('/') } else { $Path }
+  } else {
+    ConvertTo-LizardFullPath -Path $Path
+  }
+
+  if ($HostId -eq 'macos-pwsh' -and ($fullPath -eq '/var' -or $fullPath.StartsWith('/var/', [System.StringComparison]::Ordinal))) {
+    return '/private' + $fullPath
+  }
+  return $fullPath
+}
+
+function Resolve-LizardSafeTemporaryRoot {
+  [CmdletBinding()]
+  param(
+    [string]$Path = [System.IO.Path]::GetTempPath(),
+    [ValidateSet('windows-powershell-5.1', 'windows-pwsh', 'linux-pwsh', 'macos-pwsh')]
+    [string]$HostId = (Get-LizardSafeFsHostId)
+  )
+
+  $canonicalPath = ConvertTo-LizardCanonicalTemporaryPath -Path $Path -HostId $HostId
+  return Resolve-SafeRoot -Path $canonicalPath -RequireExisting
+}
+
 function Test-LizardPathWithinRoot {
   [CmdletBinding()]
   param(
@@ -342,6 +385,7 @@ Export-ModuleMember -Function @(
   'Add-SafeContent',
   'Assert-NoReparsePointEscape',
   'Assert-PathOutsideRoot',
+  'ConvertTo-LizardCanonicalTemporaryPath',
   'ConvertTo-LizardFullPath',
   'Copy-SafeItem',
   'Get-SafeContent',
@@ -352,6 +396,7 @@ Export-ModuleMember -Function @(
   'Initialize-SafeDirectory',
   'New-SafeDirectory',
   'Resolve-SafeRoot',
+  'Resolve-LizardSafeTemporaryRoot',
   'Resolve-SafeTargetDestination',
   'Set-SafeContent',
   'Test-LizardPathWithinRoot'

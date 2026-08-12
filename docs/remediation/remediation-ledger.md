@@ -140,6 +140,31 @@ Local verification on Windows PowerShell 5.1 passed the new JSON unit, canonical
 
 No commit, push, remote rerun, merge, publication, or release was performed for this wave. The next evidence gate is a GitHub Actions rerun on the exact committed and pushed remediation SHA.
 
+## CI compatibility wave 2
+
+GitHub Actions run 31396371758 executed Wave 1 commit `e56df24712b52d140c751f94df850e0e2e9ae66b`. Windows PowerShell 5.1 passed the complete gate set in 1 hour 18 minutes, proving the 120-minute job ceiling. The Ubuntu privileged bind/`tmpfs` fixture passed again.
+
+Two residual portability causes were isolated:
+
+- Windows and Ubuntu PowerShell 7 passed every focused suite except `update-plan-binding.tests.ps1`, whose six direct `ConvertFrom-Json` fixture reads recreated `System.DateTime` values before canonical serialization.
+- macOS passed the SafeFs and mount-policy units but internal install plan probes selected `/var/folders/...`; macOS implements `/var` as a standard alias to `/private/var`, so strict linked-ancestor validation rejected the probe before multiple install-based fixtures could run.
+
+Wave 2 migrates the update-plan fixture to `ConvertFrom-LizardJson`. It also canonicalizes only an internally selected macOS temporary root from `/var` to `/private/var` before applying the unchanged SafeFs linked-ancestor and mount checks. Caller-selected targets, sources, approved plans, reports, and arbitrary paths receive no alias exception.
+
+Failure-first evidence consists of run 31396371758 plus the local SafeFs unit failing before the new temporary-root functions existed.
+
+| CI compatibility wave 2 gate | Result |
+| --- | --- |
+| Targeted regression suites | Passed on Windows PowerShell 5.1: SafeFs unit, plan unit, installer containment adversarial, and update-plan binding integration |
+| Validation and schema mutations | Passed: 61/61 bindings and 24/24 mutation cases |
+| Contract and drift governance | Passed: 10 changed paths, 3 impacted contracts, 118 reviewed artifacts, and zero drift |
+| Focused safety, packs, and quality | Passed: 21/21 focused suites; 7 packs/21 unique skills with no failures or warnings; quality average 87.77 and minimum 68 |
+| Smoke | Passed; scratch `.tmp/smoke-20260810191424` |
+| Profile/harness matrix | Passed in a complete resumed standalone run: 18/18 combinations and 0 failures; report `.tmp/matrix-20260811080359/matrix-report.json` |
+| Complete local CI constituent set | Passed all nine gates on the same implementation state. The consolidated orchestrator was interrupted during matrix after 14 completed combinations and produced no aggregate report; the complete matrix was therefore rerun atomically rather than claiming the interrupted partial result. |
+
+The supported-host GitHub Actions rerun remains pending and requires a separately approved commit and push of the exact Wave 2 state.
+
 ## WP-02 implementation record
 
 Implemented controls:

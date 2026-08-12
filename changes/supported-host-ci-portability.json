@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": "supported-host-ci-portability",
+  "date": "2026-08-10",
+  "summary": "Preserve JSON types in update-plan fixtures and canonicalize only the internal macOS temporary plan-probe root.",
+  "changed_paths": [
+    "scripts/Lizard.SafeFs.psm1",
+    "scripts/install.ps1",
+    "tests/unit/safe-fs.tests.ps1",
+    "tests/integration/update-plan-binding.tests.ps1",
+    "docs/safety-model.md",
+    "docs/compatibility.md",
+    "docs/remediation/remediation-ledger.md",
+    "docs/remediation/claim-ledger.md",
+    "CHANGELOG.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0002-filesystem-and-report-containment.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0010-exact-plan-approval-binding.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0012-unix-mount-boundary-enforcement.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "No stored target data or caller migration is required; internal probes use the canonical host temporary root."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "macOS internal plan probes now work below the canonical /private/var temporary root without allowing linked target paths."
+  }
+}

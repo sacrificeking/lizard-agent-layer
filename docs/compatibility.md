@@ -27,6 +27,8 @@ Mount enforcement observes the current process mount namespace and rejects unava
 
 Security-sensitive JSON readers preserve ISO-8601 timestamps as JSON strings so canonical plans, transaction journals, and loop evidence keep their schema-declared types. Windows PowerShell 5.1 already preserves these values as strings. PowerShell Core must be 7.5 or newer because the shared reader requires `ConvertFrom-Json -DateKind String`; older PowerShell Core versions fail closed with `LIZARD_JSON_DATE_POLICY_UNSUPPORTED` instead of silently producing `System.DateTime` values.
 
+On macOS, internal install plan probes canonicalize the host-provided `/var/...` temporary root to `/private/var/...` before SafeFs validation. This narrowly handles the operating system's standard `/var` alias and does not weaken linked-ancestor rejection for caller-provided paths.
+
 The CI job timeout is 120 minutes for both runtime families. This is an execution ceiling, not an expected duration or a substitute for per-gate timing evidence.
 
 ## Manifest compatibility
