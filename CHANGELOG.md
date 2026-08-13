@@ -17,6 +17,7 @@ All notable public changes to lizard-agent-layer are documented here.
 - The macOS temporary-root unit assertion now expects the same canonical host path returned by SafeFs.
 - Long-running Ubuntu and macOS CI gates are partitioned into deterministic focused-test shards, standalone smoke jobs, and per-profile matrix jobs without reducing test coverage; default local CI remains complete and unsharded.
 - Sharded CI quality evaluation now consumes the exact focused report produced by its job, while long macOS smoke, public-readiness, and high-risk adapter checks run in bounded independently reportable jobs.
+- Public-readiness workflow checks recognize both LF and CRLF line endings while continuing to require lifecycle-script suppression for every locked dependency install.
 
 ### Security
 

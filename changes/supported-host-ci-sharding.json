@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "supported-host-ci-sharding",
   "date": "2026-08-13",
-  "summary": "Bind quality evidence to the current focused shard and partition long-running macOS focused, smoke, and high-risk matrix gates without reducing supported-host coverage.",
+  "summary": "Bind quality evidence to the current focused shard, partition long-running macOS gates, and keep workflow security assertions portable across LF and CRLF checkouts without reducing supported-host coverage.",
   "changed_paths": [
     ".github/workflows/lizard-agent-layer-ci.yml",
     "scripts/ci.ps1",
@@ -26,10 +26,10 @@
   ],
   "migration": {
     "disposition": "backward-compatible",
-    "note": "Default local CI and smoke invocations still execute the complete unsharded gate set. Explicit focused-report and smoke-scenario parameters are additive."
+    "note": "Default local CI and smoke invocations still execute the complete unsharded gate set. Explicit focused-report and smoke-scenario parameters are additive, and the line-ending-portable workflow assertion changes test interpretation only."
   },
   "compatibility": {
     "impact": "additive",
-    "note": "Windows retains full sequential jobs; Ubuntu retains complete sharded coverage; macOS executes equivalent focused, smoke, and profile-matrix coverage in smaller independently reportable jobs."
+    "note": "Windows retains full sequential jobs and LF/CRLF-equivalent workflow assertions; Ubuntu retains complete sharded coverage; macOS executes equivalent focused, smoke, and profile-matrix coverage in smaller independently reportable jobs."
   }
 }

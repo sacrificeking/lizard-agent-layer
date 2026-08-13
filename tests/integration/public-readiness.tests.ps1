@@ -59,7 +59,13 @@ try {
   Assert-Equal 2 ([regex]::Matches($workflow, 'persist-credentials:\s*false')).Count 'Every checkout must disable persisted credentials.'
   Assert-Equal 2 ([regex]::Matches($workflow, 'package-manager-cache:\s*false')).Count 'Every setup-node use must disable package-manager caching.'
   Assert-False ($workflow -match 'uses:\s*[^\r\n]+@v[0-9]') 'Workflow actions must not use mutable major tags.'
-  $npmCiCommands = @([regex]::Matches($workflow, '(?m)^\s*run:\s*npm(?:\.cmd)?\s+ci[^\r\n]*$'))
+  $npmCiPattern = '(?m)^\s*run:\s*npm(?:\.cmd)?\s+ci[^\r\n]*\r?$'
+  foreach ($lineEnding in @("`n", "`r`n")) {
+    $lineEndingName = if ($lineEnding.Length -eq 2) { 'CRLF' } else { 'LF' }
+    $lineEndingFixture = "  run: npm ci --ignore-scripts${lineEnding}"
+    Assert-Equal 1 ([regex]::Matches($lineEndingFixture, $npmCiPattern)).Count "Workflow npm ci detection must support $lineEndingName line endings."
+  }
+  $npmCiCommands = @([regex]::Matches($workflow, $npmCiPattern))
   Assert-True ($npmCiCommands.Count -gt 0) 'Workflow must install locked schema-validator dependencies.'
   foreach ($npmCiCommand in $npmCiCommands) {
     Assert-True ($npmCiCommand.Value -match '(?:^|\s)--ignore-scripts(?:\s|$)') 'Every workflow npm ci command must suppress lifecycle scripts.'
