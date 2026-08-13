@@ -33,7 +33,7 @@ jobs:
           package-manager-cache: false
 
       - name: Install schema validator
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run full CI gates
         shell: pwsh
@@ -66,28 +66,33 @@ jobs:
       - *setup-node-pwsh
 
       - name: Install schema validator
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run base gates and focused shard 4 of 6
         shell: pwsh
         run: ./scripts/ci.ps1 -SkipSmoke -SkipMatrix -FocusedShardIndex 4 -FocusedShardCount 6
 
   powershell-7-unix-focused:
-    name: PowerShell 7 (${{ matrix.os }}, focused ${{ matrix.shard }}/6)
+    name: PowerShell 7 (${{ matrix.os }}, ${{ matrix.label }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-        shard:
-          - 1
-          - 2
-          - 3
-          - 5
-          - 6
+        include:
+          - { os: ubuntu-latest, shard: 1, count: 6, label: 'focused 1/6' }
+          - { os: ubuntu-latest, shard: 2, count: 6, label: 'focused 2/6' }
+          - { os: ubuntu-latest, shard: 3, count: 6, label: 'focused 3/6' }
+          - { os: ubuntu-latest, shard: 5, count: 6, label: 'focused 5/6' }
+          - { os: ubuntu-latest, shard: 6, count: 6, label: 'focused 6/6' }
+          - { os: macos-latest, shard: 2, count: 6, label: 'focused 2/6' }
+          - { os: macos-latest, shard: 3, count: 6, label: 'focused 3/6' }
+          - { os: macos-latest, shard: 5, count: 6, label: 'focused 5/6' }
+          - { os: macos-latest, shard: 6, count: 6, label: 'focused 6/6' }
+          - { os: macos-latest, shard: 1, count: 22, label: 'focused json' }
+          - { os: macos-latest, shard: 7, count: 22, label: 'focused install-plan-tamper' }
+          - { os: macos-latest, shard: 13, count: 22, label: 'focused manifest-lifecycle' }
+          - { os: macos-latest, shard: 19, count: 22, label: 'focused public-readiness' }
 
     steps:
       - *checkout-pwsh
@@ -95,49 +100,26 @@ jobs:
       - *setup-node-pwsh
 
       - name: Install schema validator
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run focused safety shard
         shell: pwsh
-        run: ./tests/run-focused.ps1 -LayerRoot . -ShardIndex ${{ matrix.shard }} -ShardCount 6
+        run: ./tests/run-focused.ps1 -LayerRoot . -ShardIndex ${{ matrix.shard }} -ShardCount ${{ matrix.count }}
 
   powershell-7-unix-smoke:
-    name: PowerShell 7 (${{ matrix.os }}, smoke)
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 240
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-
-    steps:
-      - *checkout-pwsh
-
-      - *setup-node-pwsh
-
-      - name: Install schema validator
-        run: npm ci
-
-      - name: Run smoke gate
-        shell: pwsh
-        run: ./tests/smoke.ps1 -LayerRoot .
-
-  powershell-7-unix-matrix:
-    name: PowerShell 7 (${{ matrix.os }}, matrix ${{ matrix.profile }})
+    name: PowerShell 7 (${{ matrix.os }}, smoke ${{ matrix.scenario }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-        profile:
-          - minimal
-          - standard
-          - supabase-react-finance
+        include:
+          - { os: ubuntu-latest, scenario: all }
+          - { os: macos-latest, scenario: core }
+          - { os: macos-latest, scenario: loops }
+          - { os: macos-latest, scenario: overlay }
+          - { os: macos-latest, scenario: standard }
+          - { os: macos-latest, scenario: sidecar }
 
     steps:
       - *checkout-pwsh
@@ -145,11 +127,39 @@ jobs:
       - *setup-node-pwsh
 
       - name: Install schema validator
-        run: npm ci
+        run: npm ci --ignore-scripts
+
+      - name: Run smoke gate
+        shell: pwsh
+        run: ./tests/smoke.ps1 -LayerRoot . -Scenario '${{ matrix.scenario }}'
+
+  powershell-7-unix-matrix:
+    name: PowerShell 7 (${{ matrix.os }}, matrix ${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, profile: minimal, harnesses: '', label: minimal }
+          - { os: ubuntu-latest, profile: standard, harnesses: '', label: standard }
+          - { os: ubuntu-latest, profile: supabase-react-finance, harnesses: '', label: supabase-react-finance }
+          - { os: macos-latest, profile: minimal, harnesses: '', label: minimal }
+          - { os: macos-latest, profile: standard, harnesses: '', label: standard }
+          - { os: macos-latest, profile: supabase-react-finance, harnesses: 'claude-code,codex,cursor', label: 'supabase-react-finance A' }
+          - { os: macos-latest, profile: supabase-react-finance, harnesses: 'gemini,generic-agents-md,github-copilot', label: 'supabase-react-finance B' }
+
+    steps:
+      - *checkout-pwsh
+
+      - *setup-node-pwsh
+
+      - name: Install schema validator
+        run: npm ci --ignore-scripts
 
       - name: Run profile and harness matrix
         shell: pwsh
-        run: ./scripts/matrix.ps1 -LayerRoot . -Profiles '${{ matrix.profile }}'
+        run: ./scripts/matrix.ps1 -LayerRoot . -Profiles '${{ matrix.profile }}' -Harnesses '${{ matrix.harnesses }}'
 
   windows-powershell-5:
     name: Windows PowerShell 5.1 (full)
@@ -171,7 +181,7 @@ jobs:
 
       - name: Install schema validator
         shell: powershell
-        run: npm.cmd ci
+        run: npm.cmd ci --ignore-scripts
 
       - name: Run full CI gates
         shell: powershell

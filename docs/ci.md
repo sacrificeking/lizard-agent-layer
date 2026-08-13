@@ -2,10 +2,10 @@
 
 `lizard-agent-layer` has one canonical local gate runner and one GitHub Actions workflow.
 
-Install the pinned validator dependencies once after checkout or lockfile changes:
+Install the pinned validator dependencies once after checkout or lockfile changes. Lifecycle scripts are not required and remain disabled:
 
 ```powershell
-npm ci
+npm ci --ignore-scripts
 ```
 
 Node.js 22 or newer is required; Node.js 24 LTS is the release and GitHub Actions baseline. PowerShell 7 is the portable default; Windows PowerShell 5.1 is retained as a compatibility host.
@@ -36,7 +36,7 @@ The runner writes JSON reports under `.tmp/ci/`.
 
 The workflow lives at `.github/workflows/lizard-agent-layer-ci.yml` and runs on pull requests, pushes to `main` or `master`, and manual dispatches.
 
-The workflow executes the canonical local CI runner on Windows, Ubuntu, and macOS with PowerShell 7. A separate Windows job executes the same gates with Windows PowerShell 5.1. All jobs use the committed npm lockfile. Checkout and Node setup actions are pinned to verified full release commit SHAs, checkout credentials are not persisted, package-manager caching is disabled, and the workflow token has read-only repository contents permission.
+The workflow executes the canonical local CI runner on Windows, Ubuntu, and macOS with PowerShell 7. A separate Windows job executes the same gates with Windows PowerShell 5.1. Unix focused suites are sharded; long macOS smoke scenarios and the high-risk adapter matrix are partitioned into bounded jobs. Quality evaluation is explicitly bound to the focused report produced by the current job. All jobs use the committed npm lockfile with lifecycle scripts disabled. Checkout and Node setup actions are pinned to verified full release commit SHAs, checkout credentials are not persisted, package-manager caching is disabled, and the workflow token has read-only repository contents permission.
 
 The runner includes:
 
@@ -87,4 +87,4 @@ The smoke test includes pack install checks, target pack overlay checks, loop-en
 
 ## Focused safety gate
 
-`tests/run-focused.ps1` runs before the broader smoke suite and writes `.tmp/tests/focused-test-report.json`. Its unit, integration, and adversarial fixtures exercise host discovery, path containment, root equality, traversal, linked ancestors, ownership, transactions, version gates, loop evidence, force modes, adapter mirrors, and preview target no-op behavior. Windows uses junction fixtures; PowerShell on Linux and macOS uses symbolic-link fixtures.
+`tests/run-focused.ps1` runs before the broader smoke suite and writes an unsharded or shard-specific report under `.tmp/tests/`. `scripts/ci.ps1` passes that exact report to the strict quality gate so behavioral evidence cannot be evaluated against a stale or unrelated report. Its unit, integration, and adversarial fixtures exercise host discovery, path containment, root equality, traversal, linked ancestors, ownership, transactions, version gates, loop evidence, force modes, adapter mirrors, and preview target no-op behavior. Windows uses junction fixtures; PowerShell on Linux and macOS uses symbolic-link fixtures.

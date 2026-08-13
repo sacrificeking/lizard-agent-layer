@@ -295,3 +295,34 @@ Local Windows PowerShell 5.1 verification covers contract reduction, locally mod
 | Full local CI | Passed all nine gates without skips; report `.tmp/ci/ci-report-20260809093416.json`. All 19 focused suites and all 18 matrix combinations passed; the reported wall duration includes two system suspensions and is not a performance measurement |
 
 H-04 remains `OPEN_CHANGED`, not closed: WP-04 fixes continuous ownership across contract reduction, while the executable plan-bound, transactional, reversible, resumable, and idempotent uninstall required by WP-05 does not yet exist. No network access, dependency installation, commit, push, merge, publication, or release was performed.
+
+## CI compatibility Wave 4 implementation record
+
+Wave 3 GitHub Actions run `31607922394` was revalidated against exact HEAD `d9a3317600bb49cf4afe4f29f13bb9314d9ff594`. Seventeen of twenty-two jobs passed. The two Unix base jobs completed their focused tests but strict quality consumed only the shard-local report and therefore could not see the loop-evidence assertions outside that report. The macOS smoke and high-risk matrix jobs reached their aggregate 240- and 120-minute ceilings, and macOS focused shard 1 ended the existing-Copilot public-readiness install with process code 138 after the preceding three suites passed.
+
+Implemented controls:
+
+- `score-layer.ps1` accepts an explicit focused report, resolves it under the layer root through SafeFs, and records the selected path in its evidence context.
+- `ci.ps1` derives the exact unsharded or shard-specific report written by `run-focused.ps1`, fails closed if it is missing, and passes it to strict quality evaluation.
+- `smoke.ps1` retains complete `all` behavior while exposing `core`, `loops`, `overlay`, `standard`, and `sidecar` scenarios with a complete fail-closed step map.
+- macOS public-readiness, manifest lifecycle, and install-plan tamper tests run independently instead of sharing the former long shard 1 job.
+- macOS smoke runs as five bounded scenarios, and the high-risk profile matrix runs as two three-adapter groups; Ubuntu and Windows retain complete coverage.
+- Every GitHub Actions dependency installation uses `npm ci --ignore-scripts`, with public-readiness assertions covering the workflow invariant.
+- The existing additive CI-sharding change declaration now covers the quality, scenario, workflow, test, and documentation changes.
+
+Local Windows PowerShell 5.1 verification:
+
+| Gate | Result |
+| --- | --- |
+| Parser and smoke scenario map | Passed: all changed PowerShell files parse; 25/25 smoke steps have exactly one scenario |
+| Schema validation and mutations | Passed: 62/62 bindings and 24/24 mutation cases |
+| Behavioral quality regression | Passed explicit shard selection and out-of-root report rejection |
+| Contract governance | Passed for the `behavioral-quality` and `contract-governance` contracts |
+| Public readiness | Passed, including existing Copilot sidecar preservation and all new workflow assertions |
+| Formerly failing base + focused 4/6 path | Passed all four focused suites, packs, drift, and strict quality in 641.9 seconds |
+| Isolated standard smoke | Passed preview, apply, strict doctor, and idempotent reapply in 254.4 seconds |
+| High-risk matrix group A | Passed 3/3: Claude Code, Codex, and Cursor in 407.3 seconds |
+| High-risk matrix group B | Passed 3/3: Gemini, generic AGENTS.md, and GitHub Copilot in 503.4 seconds |
+| Full local CI | Passed all gates without skips in 6,430.7 seconds: 62/62 schema bindings, 24/24 schema mutations, contract governance, 22/22 focused suites, packs, zero drift, strict quality, complete `all` smoke, and 18/18 profile/harness combinations; report `.tmp/ci/ci-report-20260813154831.json` |
+
+Supported-host closure remains pending a new remote Wave 4 run. The old macOS code-138 event is not classified as a product defect until the isolated public-readiness job provides reproducible evidence. No commit, push, merge, publication, or release was performed in this implementation phase.

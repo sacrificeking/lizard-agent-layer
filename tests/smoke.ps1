@@ -1,5 +1,7 @@
 param(
-  [string]$LayerRoot = (Split-Path -Parent $PSScriptRoot)
+  [string]$LayerRoot = (Split-Path -Parent $PSScriptRoot),
+  [ValidateSet('all', 'core', 'loops', 'overlay', 'standard', 'sidecar')]
+  [string]$Scenario = 'all'
 )
 
 $ErrorActionPreference = "Stop"
@@ -109,8 +111,38 @@ $overlayPack = @{
 }
 $overlayPack | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $overlayTarget '.lizard-agent-layer\packs\project-overlay.json') -Encoding UTF8
 
+$stepScenarios = @{
+  'validate layer' = 'core'
+  'analyze target recommendation' = 'core'
+  'install apply pack merge' = 'core'
+  'manifest diff pack target strict' = 'core'
+  'install apply loop engineering pack' = 'loops'
+  'loop init preview plan' = 'loops'
+  'loop init apply and gates' = 'loops'
+  'L2 assisted loop init' = 'loops'
+  'L2 worktree and verifier gates' = 'loops'
+  'install apply target pack overlay' = 'overlay'
+  'manifest diff overlay target strict' = 'overlay'
+  'upgrade preserves requested packs' = 'overlay'
+  'update target preview plan' = 'overlay'
+  'update target apply preserves packs' = 'overlay'
+  'install preview standard multi-harness' = 'standard'
+  'install apply standard multi-harness' = 'standard'
+  'doctor standard strict' = 'standard'
+  'install apply standard idempotent' = 'standard'
+  'install apply cursor override' = 'sidecar'
+  'doctor cursor strict' = 'sidecar'
+  'install plan sidecar target' = 'sidecar'
+  'generate merge suggestions sidecar target' = 'sidecar'
+  'install apply sidecar target' = 'sidecar'
+  'update force managed preserves unowned instruction' = 'sidecar'
+  'doctor sidecar non-strict' = 'sidecar'
+}
+
 function Run-Step {
   param([string]$Name, [scriptblock]$Block)
+  if (-not $stepScenarios.ContainsKey($Name)) { throw "SMOKE_SCENARIO_UNMAPPED: $Name" }
+  if ($Scenario -ne 'all' -and $stepScenarios[$Name] -ne $Scenario) { return }
   Write-Host "== $Name =="
   & $Block
 }
@@ -406,4 +438,4 @@ Run-Step 'doctor sidecar non-strict' {
   & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\doctor.ps1') -TargetPath $sidecarTarget | Out-String | Write-Host
 }
 
-Write-Host "Smoke passed. Scratch output: $tmpRoot"
+Write-Host "Smoke scenario '$Scenario' passed. Scratch output: $tmpRoot"

@@ -1,14 +1,19 @@
 {
   "schema_version": 1,
   "id": "supported-host-ci-sharding",
-  "date": "2026-08-12",
-  "summary": "Partition long-running Unix CI gates without reducing the supported-host test set, and align the macOS temporary-root assertion with the canonical host path.",
+  "date": "2026-08-13",
+  "summary": "Bind quality evidence to the current focused shard and partition long-running macOS focused, smoke, and high-risk matrix gates without reducing supported-host coverage.",
   "changed_paths": [
     ".github/workflows/lizard-agent-layer-ci.yml",
     "scripts/ci.ps1",
+    "scripts/score-layer.ps1",
     "tests/run-focused.ps1",
+    "tests/adversarial/quality-evidence.tests.ps1",
+    "tests/integration/public-readiness.tests.ps1",
+    "tests/smoke.ps1",
     "tests/unit/focused-sharding.tests.ps1",
     "tests/unit/safe-fs.tests.ps1",
+    "docs/ci.md",
     "docs/compatibility.md",
     "docs/remediation/remediation-ledger.md",
     "docs/remediation/claim-ledger.md",
@@ -21,10 +26,10 @@
   ],
   "migration": {
     "disposition": "backward-compatible",
-    "note": "Default local CI and focused-test invocations still execute the complete unsharded gate set. Shard parameters are additive."
+    "note": "Default local CI and smoke invocations still execute the complete unsharded gate set. Explicit focused-report and smoke-scenario parameters are additive."
   },
   "compatibility": {
     "impact": "additive",
-    "note": "Windows retains full sequential jobs; Ubuntu and macOS execute the same gates as independently reportable base, focused, smoke, and profile-matrix jobs."
+    "note": "Windows retains full sequential jobs; Ubuntu retains complete sharded coverage; macOS executes equivalent focused, smoke, and profile-matrix coverage in smaller independently reportable jobs."
   }
 }

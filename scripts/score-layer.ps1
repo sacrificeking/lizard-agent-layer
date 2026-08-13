@@ -1,6 +1,7 @@
 param(
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [string]$OutputDir,
+  [string]$FocusedReportPath,
   [int]$MinScore = 0,
   [switch]$Strict
 )
@@ -273,8 +274,17 @@ $rubric = Read-JsonFile (Join-Path $LayerRoot 'registry\quality-rubric.json')
 $riskSignals = Read-JsonFile (Join-Path $LayerRoot 'registry\risk-signals.json')
 $maturityLevels = Read-JsonFile (Join-Path $LayerRoot 'registry\maturity-levels.json')
 $behavioralPolicy = Read-JsonFile (Join-Path $LayerRoot 'registry\behavioral-readiness.json')
-$focusedReportPath = Join-Path $LayerRoot '.tmp\tests\focused-test-report.json'
-$focusedReport = if (Test-Path -LiteralPath $focusedReportPath -PathType Leaf) { Read-JsonFile $focusedReportPath } else { $null }
+if ([string]::IsNullOrWhiteSpace($FocusedReportPath)) {
+  $focusedReportPath = Join-Path $LayerRoot '.tmp\tests\focused-test-report.json'
+} else {
+  $focusedReportCandidate = if ([System.IO.Path]::IsPathRooted($FocusedReportPath)) { $FocusedReportPath } else { Join-Path $LayerRoot $FocusedReportPath }
+  $focusedReportPath = Resolve-SafeTargetDestination -AuthorizedRoot $LayerRoot -DestinationPath $focusedReportCandidate
+}
+$focusedReport = if (Test-Path -LiteralPath $focusedReportPath -PathType Leaf) {
+  (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $focusedReportPath -Raw | ConvertFrom-Json)
+} else {
+  $null
+}
 $currentHostId = Get-LizardHostId
 if ($MinScore -le 0) { $MinScore = [int]$rubric.minimumScore }
 

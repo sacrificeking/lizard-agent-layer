@@ -59,6 +59,17 @@ try {
   Assert-Equal 2 ([regex]::Matches($workflow, 'persist-credentials:\s*false')).Count 'Every checkout must disable persisted credentials.'
   Assert-Equal 2 ([regex]::Matches($workflow, 'package-manager-cache:\s*false')).Count 'Every setup-node use must disable package-manager caching.'
   Assert-False ($workflow -match 'uses:\s*[^\r\n]+@v[0-9]') 'Workflow actions must not use mutable major tags.'
+  $npmCiCommands = @([regex]::Matches($workflow, '(?m)^\s*run:\s*npm(?:\.cmd)?\s+ci[^\r\n]*$'))
+  Assert-True ($npmCiCommands.Count -gt 0) 'Workflow must install locked schema-validator dependencies.'
+  foreach ($npmCiCommand in $npmCiCommands) {
+    Assert-True ($npmCiCommand.Value -match '(?:^|\s)--ignore-scripts(?:\s|$)') 'Every workflow npm ci command must suppress lifecycle scripts.'
+  }
+  foreach ($scenario in @('core', 'loops', 'overlay', 'standard', 'sidecar')) {
+    Assert-True ($workflow -match ("scenario:\s*{0}" -f [regex]::Escape($scenario))) "Workflow must run the isolated macOS smoke scenario '$scenario'."
+  }
+  Assert-True ($workflow -match "harnesses:\s*'claude-code,codex,cursor'") 'Workflow must split the high-risk macOS matrix into bounded adapter groups.'
+  Assert-True ($workflow -match "harnesses:\s*'gemini,generic-agents-md,github-copilot'") 'Workflow must retain complete high-risk macOS adapter coverage.'
+  Assert-True ($workflow -match "label:\s*'focused public-readiness'") 'Workflow must isolate macOS public-readiness from other long-running focused suites.'
 
   $networkPatterns = 'Invoke-WebRequest|Invoke-RestMethod|System\.Net\.Http\.HttpClient|System\.Net\.WebClient|Start-BitsTransfer|\bcurl(?:\.exe)?\b|\bwget(?:\.exe)?\b'
   $networkHits = @(Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'scripts') -File -Recurse | Select-String -Pattern $networkPatterns)

@@ -103,6 +103,25 @@ try {
   Assert-False ($strict.exit_code -eq 0) 'Strict quality must reject failed behavioral evidence.'
   Assert-True ($strict.output -match 'behavioral evidence failed') 'Strict quality rejection must explain behavioral evidence failure.'
 
+  $shardFocused = $focused | ConvertTo-Json -Depth 8 | ConvertFrom-Json
+  @($shardFocused.tests | Where-Object { $_.test -eq $brokenTestRel })[0].status = 'pass'
+  @($shardFocused.tests | Where-Object { $_.test -eq $brokenTestRel })[0].exit_code = 0
+  $shardFocused.passed = 2
+  $shardFocused.failed = 0
+  $shardReportPath = Join-Path $miniRoot '.tmp\tests\focused-test-report-shard-04-of-06.json'
+  Set-Content -LiteralPath $shardReportPath -Value ($shardFocused | ConvertTo-Json -Depth 8) -Encoding UTF8
+  $shardOutput = Join-Path $miniRoot '.tmp\quality-shard'
+  $shardScore = Invoke-TestPowerShell -ScriptPath $scoreScript -Arguments @('-LayerRoot', $miniRoot, '-OutputDir', $shardOutput, '-FocusedReportPath', $shardReportPath, '-Strict')
+  Assert-Equal 0 $shardScore.exit_code "Strict quality must accept an explicitly selected passing shard report: $($shardScore.output)"
+  $shardReport = Get-Content -LiteralPath (Join-Path $shardOutput 'layer-quality-report.json') -Raw | ConvertFrom-Json
+  Assert-Equal $shardReportPath ([string]$shardReport.behavioral_evidence_context.focused_report_path) 'Quality output must identify the explicitly selected shard report.'
+
+  $outsideReport = Join-Path $fixture 'outside-focused-report.json'
+  Set-Content -LiteralPath $outsideReport -Value ($shardFocused | ConvertTo-Json -Depth 8) -Encoding UTF8
+  $outside = Invoke-TestPowerShell -ScriptPath $scoreScript -Arguments @('-LayerRoot', $miniRoot, '-OutputDir', (Join-Path $miniRoot '.tmp\quality-outside'), '-FocusedReportPath', $outsideReport, '-Strict')
+  Assert-False ($outside.exit_code -eq 0) 'Quality must reject an explicitly selected focused report outside the layer root.'
+  Assert-True ($outside.output -match 'SAFEFS_OUTSIDE_ROOT') 'An out-of-root focused report must expose the safe-filesystem rejection.'
+
   Write-Host 'PASS tests\adversarial\quality-evidence.tests.ps1'
 } finally {
   if (Test-Path -LiteralPath $fixture) { Clear-TestDirectory -Path $fixture -AllowedRoot $testRoot }

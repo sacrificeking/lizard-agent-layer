@@ -71,6 +71,9 @@ $focusedStepName = if ($FocusedShardCount -eq 1) { 'focused safety' } else { "fo
 Invoke-CiStep $focusedStepName {
   & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'tests\run-focused.ps1') -LayerRoot $LayerRoot -ShardIndex $FocusedShardIndex -ShardCount $FocusedShardCount
 }
+$focusedReportName = if ($FocusedShardCount -eq 1) { 'focused-test-report.json' } else { 'focused-test-report-shard-{0:D2}-of-{1:D2}.json' -f $FocusedShardIndex, $FocusedShardCount }
+$focusedReportPath = Join-Path $LayerRoot ".tmp\tests\$focusedReportName"
+if (-not (Test-Path -LiteralPath $focusedReportPath -PathType Leaf)) { throw "FOCUSED_REPORT_MISSING: $focusedReportPath" }
 if (-not $SkipPacks) {
   Invoke-CiStep 'packs' {
     & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\pack-report.ps1') -LayerRoot $LayerRoot -Strict
@@ -85,7 +88,7 @@ if (-not $SkipDrift) {
 
 if (-not $SkipQuality) {
   Invoke-CiStep 'quality' {
-    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\score-layer.ps1') -LayerRoot $LayerRoot -Strict
+    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\score-layer.ps1') -LayerRoot $LayerRoot -FocusedReportPath $focusedReportPath -Strict
   }
 }
 

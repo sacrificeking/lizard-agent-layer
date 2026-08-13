@@ -16,10 +16,12 @@ All notable public changes to lizard-agent-layer are documented here.
 - Internal macOS install plan probes canonicalize the standard `/var` temporary alias before unchanged SafeFs validation.
 - The macOS temporary-root unit assertion now expects the same canonical host path returned by SafeFs.
 - Long-running Ubuntu and macOS CI gates are partitioned into deterministic focused-test shards, standalone smoke jobs, and per-profile matrix jobs without reducing test coverage; default local CI remains complete and unsharded.
+- Sharded CI quality evaluation now consumes the exact focused report produced by its job, while long macOS smoke, public-readiness, and high-risk adapter checks run in bounded independently reportable jobs.
 
 ### Security
 
 - Unix SafeFs validation now rejects nested same-device bind mounts and cross-device mount transitions, fails closed when mount identity is unavailable, and includes a dedicated privileged Ubuntu fixture.
+- GitHub Actions installs locked validator dependencies with npm lifecycle scripts disabled.
 - Install and update mutations now require immutable canonical operation plans, an independently supplied SHA-256, explicit human approval, pre-lock validation, and post-lock/pre-mutation revalidation. Applied plan identities are recorded in manifests and update history.
 
 ### Breaking
