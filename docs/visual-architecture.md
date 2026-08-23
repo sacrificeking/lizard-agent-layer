@@ -216,7 +216,6 @@ lizard-agent-layer/
 ├── changes/                   # Versioned change records linking ADRs to path impacts
 ├── docs/
 │   ├── adr/                   # 23 Architecture Decision Records (ADR-0001 to ADR-0023)
-│   ├── audits/                # Static security audits & remediation ledgers
 │   ├── getting-started.md     # Comprehensive 6-section operations guide
 │   └── visual-architecture.md # This visual architecture blueprint
 ├── packs/                     # Reusable feature packs (frontend, supabase, security, loops)
