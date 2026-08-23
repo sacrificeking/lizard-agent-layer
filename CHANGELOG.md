@@ -18,6 +18,9 @@ All notable public changes to lizard-agent-layer are documented here.
 - A root-specific SafeFs capability contract plus checked-in Windows, Linux, and macOS native backends cover descriptor-relative protected reads, atomic create/replace, copy, nested-directory creation, and relative deletion without a name-based SafeFs fallback.
 - A preview-first transactional uninstaller supports conservative `managed-only`, separately confirmed `complete`, and hash-verified `export-then-complete` scopes, preserves non-layer-owned content, retains residual ownership evidence after partial removal, and writes a machine-readable deletion receipt outside the target.
 - Effective `curated`, `private-episodic`, and `off` memory modes now span install, update, upgrade, manifest, adapters, doctor, manifest diff, uninstall plans, and receipts. Exact-plan-bound transitions remove only unchanged layer-owned artifacts and fail closed on modified, unknown, linked, or replaced content.
+- Records retention lifecycle, active cryptographic legal holds, export archives, and transactional purge with verifiable deletion receipts (`ADR-0023` and `scripts/records-lifecycle.ps1`).
+- Visual Developer Quickstart Guide (`QUICKSTART.md`) with copy-paste prompts for GitHub Copilot, Cursor Composer, and Claude Code, plus one-line remote GitHub installation commands.
+- Expanded focused safety test catalog to 43 comprehensive automated suites covering all integration, unit, and adversarial vectors.
 
 ### Fixed
 
@@ -33,6 +36,12 @@ All notable public changes to lizard-agent-layer are documented here.
 - Sharded CI quality evaluation now consumes the exact focused report produced by its job, while long macOS smoke, public-readiness, and high-risk adapter checks run in bounded independently reportable jobs.
 - Public-readiness workflow checks recognize both LF and CRLF line endings while continuing to require lifecycle-script suppression for every locked dependency install.
 - Update history and update reports now identify their post-apply manifest as schema v4 instead of retaining stale schema-v3 literals.
+- Fixed single-element array unrolling in PowerShell report serialization (`Lizard.SafeReport.psm1`).
+- Fixed `trust_binding_sha256` dictionary serialization in `record-execution.ps1` to ensure correct receipt hashing and signature validation.
+- Corrected fail-closed execution order in `Lizard.LoopRuntime.psm1` ensuring non-PASS verifier verdicts immediately abort before trust stores are requested.
+- Added console failure output in `loop-worktree.ps1` and `loop-worktree-cleanup.ps1` for transparent error reporting to non-JSON consumers.
+- Fixed AJV strict object type validation in `schemas/safe-fs-capability.schema.json`.
+- Updated `install.ps1` `Should-ReplacePath` to ensure layer-owned index and manifest files are deterministically refreshed during profile and pack reconfigurations.
 
 ### Security
 
