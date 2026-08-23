@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-08-09T16:33:30.5977703Z",
-    "layer_version":  "1.1.0",
-    "artifact_count":  118,
-    "total_bytes":  163849,
-    "token_estimate":  41007,
+    "generated_at":  "2026-08-23T12:43:35.2430309Z",
+    "layer_version":  "1.2.0",
+    "artifact_count":  163,
+    "total_bytes":  255119,
+    "token_estimate":  63844,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -18,11 +18,11 @@
                       {
                           "kind":  "adapter",
                           "path":  "adapters/claude-code/CLAUDE.lizard.md",
-                          "sha256":  "726041405338097ede0a582595c098f319db820ca813404e910ed6360c2cb283",
-                          "bytes":  1722,
-                          "lines":  29,
-                          "words":  219,
-                          "token_estimate":  431
+                          "sha256":  "41e0ca0ca18333d29003cef02bd43af602241f8319c12044515e3af396e7c694",
+                          "bytes":  1672,
+                          "lines":  25,
+                          "words":  221,
+                          "token_estimate":  418
                       },
                       {
                           "kind":  "adapter",
@@ -36,11 +36,11 @@
                       {
                           "kind":  "adapter",
                           "path":  "adapters/codex/AGENTS.lizard.md",
-                          "sha256":  "477316276d6080e773d3a1c25bdc4f4c74b29e0b2a81670b4551ed6c794feac9",
-                          "bytes":  1902,
-                          "lines":  34,
-                          "words":  258,
-                          "token_estimate":  476
+                          "sha256":  "d38b6eda1758be1d42e5e0c0899ca6fc6c9befea59dc80ede9a123cfcec104e4",
+                          "bytes":  1818,
+                          "lines":  26,
+                          "words":  257,
+                          "token_estimate":  455
                       },
                       {
                           "kind":  "adapter",
@@ -54,11 +54,11 @@
                       {
                           "kind":  "adapter",
                           "path":  "adapters/cursor/lizard-agent-layer.mdc",
-                          "sha256":  "e16f65c8ef121e5a29a8144b3c3f16c317407fe051836adce4cb76ae0e73a7b4",
-                          "bytes":  936,
+                          "sha256":  "27fd037eec5fead90c5f2ac903414ea4243200b7188ffcbf26979088cdd61ee0",
+                          "bytes":  1299,
                           "lines":  14,
-                          "words":  114,
-                          "token_estimate":  234
+                          "words":  168,
+                          "token_estimate":  325
                       },
                       {
                           "kind":  "adapter",
@@ -72,11 +72,11 @@
                       {
                           "kind":  "adapter",
                           "path":  "adapters/gemini/GEMINI.lizard.md",
-                          "sha256":  "3d15a6044c60850de5e6a4f5b5a044401bf7e8fa5a950ecc43459c1547ae06d1",
-                          "bytes":  1515,
-                          "lines":  25,
-                          "words":  189,
-                          "token_estimate":  379
+                          "sha256":  "79bd3fc88726d03db8c1b4e25984c1f65234c59b2c0a14e2878b353abd888f14",
+                          "bytes":  1584,
+                          "lines":  22,
+                          "words":  213,
+                          "token_estimate":  396
                       },
                       {
                           "kind":  "adapter",
@@ -90,11 +90,11 @@
                       {
                           "kind":  "adapter",
                           "path":  "adapters/generic-agents-md/AGENTS.generic.lizard.md",
-                          "sha256":  "d1b18bd65097cba8210f8797107bb54c4818e4b80299090276393036c4f042b2",
-                          "bytes":  1028,
-                          "lines":  24,
-                          "words":  113,
-                          "token_estimate":  257
+                          "sha256":  "bfbde702c1fc38438511e20399f58847a69bcf91d6a8e3d1106723170aed5012",
+                          "bytes":  1280,
+                          "lines":  18,
+                          "words":  167,
+                          "token_estimate":  320
                       },
                       {
                           "kind":  "adapter",
@@ -108,11 +108,20 @@
                       {
                           "kind":  "adapter",
                           "path":  "adapters/github-copilot/copilot-instructions.lizard.md",
-                          "sha256":  "6f7e288119fdc5533dcc34e8d518b9d2ec441749e969e56940ec2b5a9c0ccade",
-                          "bytes":  1680,
-                          "lines":  25,
-                          "words":  221,
-                          "token_estimate":  420
+                          "sha256":  "d2897c690f99aff4ac6d2f7c8868f2a1356053d4df8c5cfde5ee786ab32647e5",
+                          "bytes":  1786,
+                          "lines":  22,
+                          "words":  240,
+                          "token_estimate":  447
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/agent-runtime/skill.json",
+                          "sha256":  "7c2fb55f103429b7e4400620d43b20da5be512f5b2c28f16ae3cb6cab9da6c6d",
+                          "bytes":  1235,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  309
                       },
                       {
                           "kind":  "skill",
@@ -125,12 +134,30 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/ci-triage/skill.json",
+                          "sha256":  "30fe916d101db06cb999ace426e44297e52ec8717d78cc7e389b72e1f5c39b98",
+                          "bytes":  1227,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  307
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/ci-triage/SKILL.md",
                           "sha256":  "cf19ea0f29c0d3a676649d1181b5a2fe1f00ff07c7b051d01259a9c19c8b674a",
                           "bytes":  999,
                           "lines":  41,
                           "words":  148,
                           "token_estimate":  250
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/data-quality/skill.json",
+                          "sha256":  "a20bff8999e58ae153b8b84a430ff35a855fba05b96b92d4e353ea69d23f65bf",
+                          "bytes":  1233,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  309
                       },
                       {
                           "kind":  "skill",
@@ -143,12 +170,30 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/dependency-upgrade/skill.json",
+                          "sha256":  "f272da03737c9d97b7d590ba277df5933c5c7a884f11554ff1673b9e14229331",
+                          "bytes":  1245,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  312
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/dependency-upgrade/SKILL.md",
-                          "sha256":  "23f2407a4a02daf88068710d11e2d270c6879d073079b067b8d6ae7227a43331",
-                          "bytes":  555,
+                          "sha256":  "8582bfcd956848d3a809230387f869ad3462dd97532538600a10d5b09740cd42",
+                          "bytes":  620,
                           "lines":  15,
-                          "words":  71,
-                          "token_estimate":  139
+                          "words":  79,
+                          "token_estimate":  155
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/design-system/skill.json",
+                          "sha256":  "735be5a8fbb9e9a247d03c01c3b5136f119465696296a532ab7cc1bd7fab9ab5",
+                          "bytes":  1235,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  309
                       },
                       {
                           "kind":  "skill",
@@ -161,12 +206,30 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/edge-functions/skill.json",
+                          "sha256":  "19bb5aac240d37514d124db1731ea447d602ad6993f0687b6087b938054d85f5",
+                          "bytes":  1330,
+                          "lines":  62,
+                          "words":  96,
+                          "token_estimate":  333
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/edge-functions/SKILL.md",
                           "sha256":  "b94178a7516ad6cb8405bbe71eb0642f7110edda16b854bd10ec7272bf163e7a",
                           "bytes":  580,
                           "lines":  16,
                           "words":  86,
                           "token_estimate":  145
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/frontend-react/skill.json",
+                          "sha256":  "22ec60815938047621ff2cb4fe2d46b3cab8e73eddb06abe57de422c599cee47",
+                          "bytes":  1237,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  310
                       },
                       {
                           "kind":  "skill",
@@ -179,12 +242,30 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/git-safety/skill.json",
+                          "sha256":  "5bbec1d9d7e08ba68e8059893787eb13f8034f161424d1f9e9797aa6ae24bfa7",
+                          "bytes":  1229,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  308
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/git-safety/SKILL.md",
                           "sha256":  "ca1bc0a3bf77bfd43dafe4e487e35e1c736b3716b267ea244cd2e79c79612625",
                           "bytes":  724,
                           "lines":  22,
                           "words":  112,
                           "token_estimate":  181
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/loop-budget/skill.json",
+                          "sha256":  "eb2c154b0d12b7b23c8c0a31908ba7cb34fb356c42f258cf946626930a798f41",
+                          "bytes":  1231,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  308
                       },
                       {
                           "kind":  "skill",
@@ -197,6 +278,15 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/loop-constraints/skill.json",
+                          "sha256":  "a7d4f952df477ef0e079e77c12701fa08f412f2c8ec85b8ab12bd2143491e8a9",
+                          "bytes":  1241,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  311
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/loop-constraints/SKILL.md",
                           "sha256":  "85376c60d358f899ad1060f40f0c0784db830036a6af8af44926b90f433a2422",
                           "bytes":  2600,
@@ -206,12 +296,30 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/loop-state-sync/skill.json",
+                          "sha256":  "dcbef50d265cfb17b563f41f4ea70c33ad6c247e84969be97efc661ad2dbc7f9",
+                          "bytes":  1239,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  310
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/loop-state-sync/SKILL.md",
                           "sha256":  "05097c8dd61ed22ade12fb770f2caa8ca4ac9c91dc09c3079c1a82941500cf51",
                           "bytes":  2118,
                           "lines":  57,
                           "words":  352,
                           "token_estimate":  530
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/loop-triage/skill.json",
+                          "sha256":  "d97c71a5c465d7076463ad5e2d1df15201d0f21e3bdc6dbb58ea22780acc1e89",
+                          "bytes":  1231,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  308
                       },
                       {
                           "kind":  "skill",
@@ -233,30 +341,66 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/loop-verifier/skill.json",
+                          "sha256":  "91ef5e5d0df3b530b7e51f475f7fcc081076b1843426b286049b028afac85ad1",
+                          "bytes":  1338,
+                          "lines":  62,
+                          "words":  96,
+                          "token_estimate":  335
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/loop-verifier/SKILL.md",
-                          "sha256":  "99ce184c1d9141320be1232eecbbeeb6306b3cb840bae43dfc635d815304dc20",
-                          "bytes":  2279,
+                          "sha256":  "01d8cd629ea7bf02a02d791aa5f67d6dc758aff5f92d6b1dba972f812cb5219d",
+                          "bytes":  2546,
                           "lines":  50,
-                          "words":  317,
-                          "token_estimate":  570
+                          "words":  349,
+                          "token_estimate":  637
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/minimal-fix/skill.json",
+                          "sha256":  "ef75275781f3633fe2f3ba66b5dd44c9ddb6cf983d8e06adeb5bb0c788ffc4e0",
+                          "bytes":  1430,
+                          "lines":  67,
+                          "words":  104,
+                          "token_estimate":  358
                       },
                       {
                           "kind":  "skill",
                           "path":  "skills/minimal-fix/SKILL.md",
-                          "sha256":  "056241732ba12590467f4580d9fe9343497f0adf1f26ebdd88b8b7a8463a560f",
-                          "bytes":  2802,
+                          "sha256":  "020eff3602fb8624e96542e08e75d63e30b30e962692b341740c30130610224c",
+                          "bytes":  2844,
                           "lines":  66,
-                          "words":  437,
-                          "token_estimate":  701
+                          "words":  444,
+                          "token_estimate":  711
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/release/skill.json",
+                          "sha256":  "d16008a11cdb918c74b262d52e8fddf2765e8753a47b09aed878c7065339cb61",
+                          "bytes":  1223,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  306
                       },
                       {
                           "kind":  "skill",
                           "path":  "skills/release/SKILL.md",
-                          "sha256":  "2aea0d87bddb8f6d9792cb73523940a5a8a907fabb2e88ff72cca4d30a848b92",
-                          "bytes":  718,
+                          "sha256":  "be62879d4609b83e1d626a3e127f47b46cb13be2ee61493a2ddaca5e376484c5",
+                          "bytes":  783,
                           "lines":  22,
-                          "words":  105,
-                          "token_estimate":  180
+                          "words":  113,
+                          "token_estimate":  196
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/release-readiness/skill.json",
+                          "sha256":  "fa95072110d715ee7b8220b1496bf1fc6b6e6c40d79a2e1ed4d45807023fc4b0",
+                          "bytes":  1243,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  311
                       },
                       {
                           "kind":  "skill",
@@ -278,6 +422,15 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/research-audit/skill.json",
+                          "sha256":  "fd7426372343fcbdcbc94bf514b6114d230bd4545f12550972ab294f09083551",
+                          "bytes":  1237,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  310
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/research-audit/SKILL.md",
                           "sha256":  "ef814ea828c3f47748db95561e748a95091cf86b5c811c6f1c5afda8a29a53fd",
                           "bytes":  1286,
@@ -296,6 +449,15 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/security-hardening/skill.json",
+                          "sha256":  "a5ce552521b43340313e0206b46ffdc0f24c765378c0312a9a09bfd09cdefaee",
+                          "bytes":  1245,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  312
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/security-hardening/SKILL.md",
                           "sha256":  "2d48f6b62d75cca7862e4f1d8e81d50bfac9f479240fedd8db9070836079be56",
                           "bytes":  1203,
@@ -305,12 +467,30 @@
                       },
                       {
                           "kind":  "skill",
+                          "path":  "skills/staged-execution/skill.json",
+                          "sha256":  "3a70302720df486e4663a204657af2a9a060012a1f63cffb63c1f6c7a0ad6f82",
+                          "bytes":  1241,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  311
+                      },
+                      {
+                          "kind":  "skill",
                           "path":  "skills/staged-execution/SKILL.md",
-                          "sha256":  "12765ceeaa234f9a3abcb8904242d168c6ef4748d0bb800dbb9dc8527b74ecb3",
-                          "bytes":  2775,
-                          "lines":  42,
-                          "words":  374,
-                          "token_estimate":  694
+                          "sha256":  "1460bec3c34f4a9a94c976c1da216a2453b6629bc3b295478ece7aa6117e0de1",
+                          "bytes":  3131,
+                          "lines":  44,
+                          "words":  422,
+                          "token_estimate":  783
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/supabase/skill.json",
+                          "sha256":  "656b7e87bc4bfe3ede3d2282fd26e179fc5e98f6950f44f71ec2cc65978f4a8b",
+                          "bytes":  1225,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  307
                       },
                       {
                           "kind":  "skill",
@@ -324,38 +504,47 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/worktree-isolation/evidence.json",
-                          "sha256":  "36cf94c12dc8ba64c472ebb6ea9725223c551ac282e6a2df91ee9e955b6d3e05",
-                          "bytes":  1019,
-                          "lines":  30,
-                          "words":  77,
-                          "token_estimate":  255
+                          "sha256":  "5e471de8d89906716ed2f25e297d845ad5cfa105a8bff4641c56e4cadd287441",
+                          "bytes":  1457,
+                          "lines":  37,
+                          "words":  114,
+                          "token_estimate":  365
+                      },
+                      {
+                          "kind":  "skill",
+                          "path":  "skills/worktree-isolation/skill.json",
+                          "sha256":  "70db3faa0b19530ab63badf76b6d548202e740a3bf4c65c563b6c00d3ec27a7a",
+                          "bytes":  1245,
+                          "lines":  56,
+                          "words":  87,
+                          "token_estimate":  312
                       },
                       {
                           "kind":  "skill",
                           "path":  "skills/worktree-isolation/SKILL.md",
-                          "sha256":  "429e1b8632a3d8ed3d5d637a3250b2f03ec12886835017301a7b8d75051d28eb",
-                          "bytes":  2328,
-                          "lines":  61,
-                          "words":  355,
-                          "token_estimate":  582
+                          "sha256":  "3c8d7d2e011c870f26d10f40805bb0bfc259b9b743bb8addb3b6ccf12d9b14c1",
+                          "bytes":  2525,
+                          "lines":  62,
+                          "words":  380,
+                          "token_estimate":  632
                       },
                       {
                           "kind":  "protocol",
                           "path":  "protocols/context-hygiene.md",
-                          "sha256":  "8e8b8ba36bafd58d7aeec6eb6223a7abbf650e0f1863c4e97508452822236fa6",
-                          "bytes":  642,
+                          "sha256":  "e94c074afad4b7011dd68ea86e3df3857682414cda139750ac61c7e86f718e20",
+                          "bytes":  652,
                           "lines":  10,
                           "words":  96,
-                          "token_estimate":  161
+                          "token_estimate":  163
                       },
                       {
                           "kind":  "protocol",
                           "path":  "protocols/handoff.md",
-                          "sha256":  "0cfd583e6fff9ee8033e9e31e9bb7cb79be789b3e11106175cd1c61ba2fd9b32",
-                          "bytes":  775,
+                          "sha256":  "e029b33e4085459fdc42a1c34284336cdccee6c6372696d6b50855c32c48ed74",
+                          "bytes":  979,
                           "lines":  27,
-                          "words":  116,
-                          "token_estimate":  194
+                          "words":  144,
+                          "token_estimate":  245
                       },
                       {
                           "kind":  "protocol",
@@ -368,30 +557,48 @@
                       },
                       {
                           "kind":  "protocol",
+                          "path":  "protocols/memory-policy-private-episodic.md",
+                          "sha256":  "abeec6b77d795be5db4d141c24f144104fcaa3d5a375d5b4c26214b52602853c",
+                          "bytes":  553,
+                          "lines":  9,
+                          "words":  75,
+                          "token_estimate":  139
+                      },
+                      {
+                          "kind":  "protocol",
                           "path":  "protocols/permissions.md",
-                          "sha256":  "584ec09fb8ac69885ba8bdf82a2b0000069cd07ecc73aa7b062b67ea4d53debe",
-                          "bytes":  925,
-                          "lines":  30,
-                          "words":  136,
-                          "token_estimate":  232
+                          "sha256":  "d987e08bdb464e6c0f5772ab3a2593ad9891b3ccf75bca5ee7913701687e9705",
+                          "bytes":  1316,
+                          "lines":  31,
+                          "words":  186,
+                          "token_estimate":  329
+                      },
+                      {
+                          "kind":  "protocol",
+                          "path":  "protocols/prompt-trust.md",
+                          "sha256":  "88cd987598c64f742f7e2a2dbc72be3ea3ec0a6ce32cb8e8e8e8182ceb3c36ec",
+                          "bytes":  1940,
+                          "lines":  26,
+                          "words":  278,
+                          "token_estimate":  485
                       },
                       {
                           "kind":  "protocol",
                           "path":  "protocols/release-gates.md",
-                          "sha256":  "a6fc421335c6ef6c563f7ee8f93ab2c0df9912b07253943542b18621eca2adf2",
-                          "bytes":  1029,
+                          "sha256":  "f72c7c90b1e2e5d4d30fa70062fb2b9cabebca8838957b79ae88c0dc316cfeff",
+                          "bytes":  1155,
                           "lines":  23,
-                          "words":  126,
-                          "token_estimate":  258
+                          "words":  146,
+                          "token_estimate":  289
                       },
                       {
                           "kind":  "protocol",
                           "path":  "protocols/secret-handling.md",
-                          "sha256":  "3691ce1040cca8d69e3171a0c041d0a5474d5f075aacb38855400a32d9bf41c3",
-                          "bytes":  549,
+                          "sha256":  "a8c8240a149e74ebd7f427ca86e24edba4a7c78840d55192786809e108241d6f",
+                          "bytes":  577,
                           "lines":  9,
-                          "words":  82,
-                          "token_estimate":  138
+                          "words":  85,
+                          "token_estimate":  145
                       },
                       {
                           "kind":  "protocol",
@@ -468,11 +675,11 @@
                       {
                           "kind":  "routing-policy",
                           "path":  "routing-policies/staged-balanced.json",
-                          "sha256":  "eff9ee1c20b76bb06b55336fd964ed32127eeff2b10466374c69de2b5ce96e4e",
-                          "bytes":  4562,
-                          "lines":  124,
-                          "words":  295,
-                          "token_estimate":  1141
+                          "sha256":  "6836e4669d5f36dc8dafc5c1f3cdd5bff29dabdec63896566ce179eeaf74b0a5",
+                          "bytes":  4757,
+                          "lines":  130,
+                          "words":  306,
+                          "token_estimate":  1190
                       },
                       {
                           "kind":  "pack",
@@ -593,6 +800,15 @@
                       },
                       {
                           "kind":  "template",
+                          "path":  "templates/agent-gitignore-off",
+                          "sha256":  "11ae9fed208e8bbca2f7bec2f344e7a8bb2e83b410369bf3347026610dbf5f5b",
+                          "bytes":  261,
+                          "lines":  16,
+                          "words":  19,
+                          "token_estimate":  66
+                      },
+                      {
+                          "kind":  "template",
                           "path":  "templates/loops/assisted-fix-plan.md",
                           "sha256":  "cb00059de366d1c02444e3e82e8b34cf129221e920b86027ffa00c4946a5aa66",
                           "bytes":  630,
@@ -674,6 +890,15 @@
                       },
                       {
                           "kind":  "template",
+                          "path":  "templates/memory/episodic/EPISODES.md",
+                          "sha256":  "a6be61bbe2f1fd6dd588199dde60a9cc35a873fb2b861248611b8c76972bf0f3",
+                          "bytes":  287,
+                          "lines":  6,
+                          "words":  41,
+                          "token_estimate":  72
+                      },
+                      {
+                          "kind":  "template",
                           "path":  "templates/memory/personal/PREFERENCES.md",
                           "sha256":  "d451a18dd524a657e48829ab5343be20a24125edd17a3de1f2686b3abd9db35d",
                           "bytes":  141,
@@ -709,6 +934,33 @@
                           "token_estimate":  72
                       },
                       {
+                          "kind":  "template",
+                          "path":  "templates/project-context/curated.md",
+                          "sha256":  "0b4918144486fbd7a5564da8486f2ed1a04543e168d28236874f146080a1e4db",
+                          "bytes":  452,
+                          "lines":  9,
+                          "words":  50,
+                          "token_estimate":  113
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/project-context/off.md",
+                          "sha256":  "c18eaca8bc5199320c7c68d6b31a1753535bc58e85993234c1c27da3eca78da1",
+                          "bytes":  385,
+                          "lines":  8,
+                          "words":  54,
+                          "token_estimate":  97
+                      },
+                      {
+                          "kind":  "template",
+                          "path":  "templates/project-context/private-episodic.md",
+                          "sha256":  "e1cb0fd7022a90b94c0d2c5b51a9c1144b0c1e19db2057ca80727d0d4a214d99",
+                          "bytes":  709,
+                          "lines":  11,
+                          "words":  89,
+                          "token_estimate":  178
+                      },
+                      {
                           "kind":  "registry",
                           "path":  "registry/behavioral-readiness.json",
                           "sha256":  "fdf1253dac290587b88705c7c0d3dd370760a324b9ba23d190ae22c31f23c5b1",
@@ -720,11 +972,11 @@
                       {
                           "kind":  "registry",
                           "path":  "registry/contracts.json",
-                          "sha256":  "5d638f5fb0ed0a3b242b3efd19d29e514167c3f625ad73e83a0478e16f76d3ed",
-                          "bytes":  4694,
-                          "lines":  78,
-                          "words":  197,
-                          "token_estimate":  1174
+                          "sha256":  "bc26bf26a7edc3bceb4f4683f9fcdfd08df6c61c453d9804a7592573fcf3c358",
+                          "bytes":  11274,
+                          "lines":  155,
+                          "words":  426,
+                          "token_estimate":  2819
                       },
                       {
                           "kind":  "registry",
@@ -819,11 +1071,20 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/execution-receipt.schema.json",
-                          "sha256":  "8eeb9a47167bcbcdc2de943191561e0445ea2a06a2346fe91ae56bdd257ffc88",
-                          "bytes":  1737,
-                          "lines":  29,
-                          "words":  157,
-                          "token_estimate":  435
+                          "sha256":  "f11df58ff7f2b8866af320a7c96b6305b42b10adabc2b7c4df6815e813df610b",
+                          "bytes":  1703,
+                          "lines":  24,
+                          "words":  160,
+                          "token_estimate":  426
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/execution-receipt-payload.schema.json",
+                          "sha256":  "b3c4719b02f552936f54fa9ed696add407f7d06fde7405fbbffcf10fe9c7dddc",
+                          "bytes":  3833,
+                          "lines":  71,
+                          "words":  332,
+                          "token_estimate":  959
                       },
                       {
                           "kind":  "schema",
@@ -837,11 +1098,11 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/install-manifest.schema.json",
-                          "sha256":  "2f77d718762d6f4800d964b84b0dc4c93c0c369c73cc934958f630dde8fb3a0f",
-                          "bytes":  5717,
-                          "lines":  125,
-                          "words":  553,
-                          "token_estimate":  1430
+                          "sha256":  "37002e5f8304aeb5d3495dce4f701c0cbc687b9108cc7288749bb4e98654157c",
+                          "bytes":  6235,
+                          "lines":  135,
+                          "words":  609,
+                          "token_estimate":  1559
                       },
                       {
                           "kind":  "schema",
@@ -945,11 +1206,20 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/model-evaluation.schema.json",
-                          "sha256":  "a49bf25755890fcd7bac97071d8af20a104a177ed702d69ca17a6e908fecab06",
-                          "bytes":  1810,
+                          "sha256":  "5ae9a168f68ab8ac920707840c7eedb34d35e394e022e83ea638a64dda4429ce",
+                          "bytes":  1693,
+                          "lines":  24,
+                          "words":  160,
+                          "token_estimate":  424
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/model-evaluation-payload.schema.json",
+                          "sha256":  "159cd8fd1ae3a3c07a137c7e6c29796f6f2a1aec14def827d0f02b44eccd3a42",
+                          "bytes":  1817,
                           "lines":  38,
                           "words":  169,
-                          "token_estimate":  453
+                          "token_estimate":  455
                       },
                       {
                           "kind":  "schema",
@@ -972,11 +1242,11 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/operation-plan.schema.json",
-                          "sha256":  "d9d934deecf975724403c814c1e5224564ac078c69660a029116fa0929d5b485",
-                          "bytes":  4427,
-                          "lines":  99,
-                          "words":  437,
-                          "token_estimate":  1107
+                          "sha256":  "0f0d9fcaa81deacaaee0e1c34b98f4389f11202564208959039773cbdccfe76d",
+                          "bytes":  5241,
+                          "lines":  113,
+                          "words":  511,
+                          "token_estimate":  1311
                       },
                       {
                           "kind":  "schema",
@@ -998,6 +1268,60 @@
                       },
                       {
                           "kind":  "schema",
+                          "path":  "schemas/records-deletion-receipt.schema.json",
+                          "sha256":  "51d7f2a3fe9d31e158c2f0a8af713db0db47be71ff75077d1157fa85f516503d",
+                          "bytes":  3340,
+                          "lines":  58,
+                          "words":  302,
+                          "token_estimate":  835
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/records-export.schema.json",
+                          "sha256":  "4b5d4095aecf96ed37d94148c845c32b01d21f46b448a3e8e1848de4e103b158",
+                          "bytes":  2122,
+                          "lines":  45,
+                          "words":  180,
+                          "token_estimate":  531
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/records-hold.schema.json",
+                          "sha256":  "a6f78526cf0d81a62fa500f4cfde5a3208a37cf00f1d195b4d946bb317f4c6a4",
+                          "bytes":  1732,
+                          "lines":  34,
+                          "words":  160,
+                          "token_estimate":  433
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/records-hold-payload.schema.json",
+                          "sha256":  "93ae0aebfeedaee322b77171707232af40a5ec7d40f01b6d56f5c336afa874a5",
+                          "bytes":  2782,
+                          "lines":  46,
+                          "words":  297,
+                          "token_estimate":  696
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/regulated-data-approval.schema.json",
+                          "sha256":  "f1929709434b251381f878bdd98cfa752de569ea42eb89004a11f56329e6ce78",
+                          "bytes":  2129,
+                          "lines":  31,
+                          "words":  203,
+                          "token_estimate":  533
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/retention-policy.schema.json",
+                          "sha256":  "611fa6f335592cef4206e0fe390060fc05f06fb711154ff5b6fa6f9ad18655be",
+                          "bytes":  1763,
+                          "lines":  40,
+                          "words":  148,
+                          "token_estimate":  441
+                      },
+                      {
+                          "kind":  "schema",
                           "path":  "schemas/risk-signals.schema.json",
                           "sha256":  "9ccce6af8d0050191ed4929e735bbb8f00fac4a927425f8e797143587935a16d",
                           "bytes":  856,
@@ -1007,30 +1331,48 @@
                       },
                       {
                           "kind":  "schema",
+                          "path":  "schemas/route-decision-payload.schema.json",
+                          "sha256":  "eaed7c678508250e1af723d96dca51c2db3ace9cd9cc2b9172cfe30acfe4a04d",
+                          "bytes":  6872,
+                          "lines":  116,
+                          "words":  632,
+                          "token_estimate":  1718
+                      },
+                      {
+                          "kind":  "schema",
                           "path":  "schemas/route-receipt.schema.json",
-                          "sha256":  "10e3ff8835d2b7c77e20927cbeb4aa235fe7691f0d1e10b4e8cf34a06769f8aa",
-                          "bytes":  4274,
-                          "lines":  73,
-                          "words":  408,
-                          "token_estimate":  1069
+                          "sha256":  "95a9b0adc9ae2672e90a9ff5133c79e9029f599067fd15da1bc3d654312c1d31",
+                          "bytes":  1684,
+                          "lines":  24,
+                          "words":  161,
+                          "token_estimate":  421
                       },
                       {
                           "kind":  "schema",
                           "path":  "schemas/routing-policy.schema.json",
-                          "sha256":  "53555d419d7cb97a5e2a9040db506ec274a3293473d3df7dfeec2c14037817b7",
-                          "bytes":  5378,
-                          "lines":  100,
-                          "words":  478,
-                          "token_estimate":  1345
+                          "sha256":  "c1b80025cd003cec2b753c00c5807985f464c875a6a71ebf68ffec9fc7717a35",
+                          "bytes":  5967,
+                          "lines":  111,
+                          "words":  515,
+                          "token_estimate":  1492
                       },
                       {
                           "kind":  "schema",
                           "path":  "schemas/routing-runtime.schema.json",
-                          "sha256":  "947bf1e2b79672c2fca0c69090a0f6b0eaf62ea93b97995b6341d0fa9ccfe06f",
-                          "bytes":  1412,
+                          "sha256":  "8ef56d8de0005bc14f26fcaaae48933fcba555dd13bfa2494ff140ac92bff57c",
+                          "bytes":  1450,
                           "lines":  24,
-                          "words":  128,
-                          "token_estimate":  353
+                          "words":  124,
+                          "token_estimate":  363
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/safe-fs-capability.schema.json",
+                          "sha256":  "7e586207ce541d0cd45060edd0c40271cd192cda497147a5794c0cabb6e66392",
+                          "bytes":  2599,
+                          "lines":  63,
+                          "words":  233,
+                          "token_estimate":  650
                       },
                       {
                           "kind":  "schema",
@@ -1043,6 +1385,33 @@
                       },
                       {
                           "kind":  "schema",
+                          "path":  "schemas/skill-lifecycle-state.schema.json",
+                          "sha256":  "7951da43d5748440926ec3ccb65787501b550a0a9172e2ff65a59cc2efc8c607",
+                          "bytes":  1669,
+                          "lines":  39,
+                          "words":  162,
+                          "token_estimate":  418
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/skill-package.schema.json",
+                          "sha256":  "dda75367959ba3494f9bc3567e2346d044bfb8f3fc147cd1f54e74f0fdfe45c3",
+                          "bytes":  4117,
+                          "lines":  102,
+                          "words":  357,
+                          "token_estimate":  1030
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/target-analysis.schema.json",
+                          "sha256":  "c8aee302074d50f380609377f697b763f1a4612759837e98c50c84deda92688d",
+                          "bytes":  4046,
+                          "lines":  77,
+                          "words":  377,
+                          "token_estimate":  1012
+                      },
+                      {
+                          "kind":  "schema",
                           "path":  "schemas/transaction-journal.schema.json",
                           "sha256":  "5a241206a968ec49ba3c2c5e83f29f3ba751addfe869206a997a6ec494464a65",
                           "bytes":  3067,
@@ -1052,21 +1421,57 @@
                       },
                       {
                           "kind":  "schema",
+                          "path":  "schemas/trust-challenge.schema.json",
+                          "sha256":  "d5913834a874f3abbbd6e2acc2bdc64b70c9213994740b79543f6f38da6e077d",
+                          "bytes":  1050,
+                          "lines":  18,
+                          "words":  99,
+                          "token_estimate":  263
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/trust-store.schema.json",
+                          "sha256":  "6910957420760f91630058d29c51724d92fff177dae9288fadc3d2f907b9dc97",
+                          "bytes":  2003,
+                          "lines":  37,
+                          "words":  200,
+                          "token_estimate":  501
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/uninstall-receipt.schema.json",
+                          "sha256":  "2c391296f607e7b42ebe625b44d4df5b8d6f77432eb5cb91fc5c8084dd4ec7a4",
+                          "bytes":  2863,
+                          "lines":  59,
+                          "words":  266,
+                          "token_estimate":  716
+                      },
+                      {
+                          "kind":  "schema",
+                          "path":  "schemas/verification-command-plan.schema.json",
+                          "sha256":  "a078df667e11038b27e1d9880e716af1f48fd542246e9e624d9b4d310a5c6c58",
+                          "bytes":  2551,
+                          "lines":  58,
+                          "words":  225,
+                          "token_estimate":  638
+                      },
+                      {
+                          "kind":  "schema",
                           "path":  "schemas/verifier-evidence.schema.json",
-                          "sha256":  "8dd4fdae6bfb72f66d7f114efea93db60d1a531d66db946e2cea482f05e79cec",
-                          "bytes":  1579,
-                          "lines":  33,
-                          "words":  141,
-                          "token_estimate":  395
+                          "sha256":  "e4c88f866c0380dd9f2c20d0d8d48380b6cf69c4d5b1efe279d7a5a89b984726",
+                          "bytes":  4352,
+                          "lines":  70,
+                          "words":  374,
+                          "token_estimate":  1088
                       },
                       {
                           "kind":  "schema",
                           "path":  "schemas/worktree-lifecycle.schema.json",
-                          "sha256":  "a310098c49f40840e06fe0cd00d337be3ff01d491cd296b8e4c6444959569fb4",
-                          "bytes":  1608,
-                          "lines":  36,
-                          "words":  151,
-                          "token_estimate":  402
+                          "sha256":  "f88a101454322d5338b0d69f73d420aeea99dd675d546cc1c6302e203cc0c092",
+                          "bytes":  3052,
+                          "lines":  53,
+                          "words":  278,
+                          "token_estimate":  763
                       }
                   ]
 }

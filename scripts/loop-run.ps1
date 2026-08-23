@@ -11,6 +11,15 @@ param(
   [int]$ActualTokens = 0,
   [string]$Summary = '',
   [string]$VerifierEvidencePath,
+  [string]$TrustStorePath,
+  [string]$TrustStoreSha256,
+  [string]$TrustChallengePath,
+  [string]$TrustChallengeSha256,
+  [string]$LifecycleTrustStorePath,
+  [string]$LifecycleTrustStoreSha256,
+  [string]$LifecycleChallengePath,
+  [string]$LifecycleChallengeSha256,
+  [string]$ReplayLedgerPath,
   [string]$TestNowUtc,
   [switch]$Apply,
   [switch]$Json,
@@ -50,9 +59,10 @@ if ($Action -eq 'Status') {
 } elseif ($Action -eq 'Start') {
   $result = Invoke-LizardLoopStart -Context $context -RunId $RunId -ItemId $ItemId -Owner $Owner -TokenEstimate $TokenEstimate -OperationId $OperationId -Now $now -FailAfterMutation $TestFailAfterMutation
 } elseif ($Action -eq 'Complete') {
-  $result = Invoke-LizardLoopFinish -Context $context -Outcome completed -RunId $RunId -Actor $Owner -ActualTokens $ActualTokens -Summary $Summary -VerifierEvidencePath $VerifierEvidencePath -Now $now -FailAfterMutation $TestFailAfterMutation
+  foreach ($externalPath in @($TrustStorePath, $TrustChallengePath, $LifecycleTrustStorePath, $LifecycleChallengePath, $ReplayLedgerPath)) { if (-not [string]::IsNullOrWhiteSpace($externalPath)) { Assert-PathOutsideRoot -Path $externalPath -ExcludedRoot $context.target_root -Label 'Trust input' } }
+  $result = Invoke-LizardLoopFinish -Context $context -Outcome completed -RunId $RunId -Actor $Owner -ActualTokens $ActualTokens -Summary $Summary -VerifierEvidencePath $VerifierEvidencePath -TrustStorePath $TrustStorePath -TrustStoreSha256 $TrustStoreSha256 -TrustChallengePath $TrustChallengePath -TrustChallengeSha256 $TrustChallengeSha256 -LifecycleTrustStorePath $LifecycleTrustStorePath -LifecycleTrustStoreSha256 $LifecycleTrustStoreSha256 -LifecycleChallengePath $LifecycleChallengePath -LifecycleChallengeSha256 $LifecycleChallengeSha256 -ReplayLedgerPath $ReplayLedgerPath -Now $now -FailAfterMutation $TestFailAfterMutation
 } else {
-  $result = Invoke-LizardLoopFinish -Context $context -Outcome failed -RunId $RunId -Actor $Owner -ActualTokens $ActualTokens -Summary $Summary -VerifierEvidencePath $VerifierEvidencePath -Now $now -FailAfterMutation $TestFailAfterMutation
+  $result = Invoke-LizardLoopFinish -Context $context -Outcome failed -RunId $RunId -Actor $Owner -ActualTokens $ActualTokens -Summary $Summary -VerifierEvidencePath $VerifierEvidencePath -TrustStorePath $TrustStorePath -TrustStoreSha256 $TrustStoreSha256 -TrustChallengePath $TrustChallengePath -TrustChallengeSha256 $TrustChallengeSha256 -LifecycleTrustStorePath $LifecycleTrustStorePath -LifecycleTrustStoreSha256 $LifecycleTrustStoreSha256 -LifecycleChallengePath $LifecycleChallengePath -LifecycleChallengeSha256 $LifecycleChallengeSha256 -ReplayLedgerPath $ReplayLedgerPath -Now $now -FailAfterMutation $TestFailAfterMutation
 }
 
 $report = [ordered]@{ schema_version = 1; generated_at = $now.ToString('o'); mode = $mode; action = $Action.ToLowerInvariant(); target = $context.target_root; pattern = $context.pattern; readiness_level = $context.readiness_level; result = $result; auto_merge = $false; human_merge_review_required = $true }

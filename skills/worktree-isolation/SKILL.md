@@ -1,6 +1,6 @@
 ---
 name: worktree-isolation
-description: Use when an L2 assisted loop needs to create or verify an isolated git worktree before any approved write happens.
+description: Use when an L2 assisted loop needs to preview or register an externally created isolated git worktree before any approved write happens.
 ---
 # worktree-isolation
 
@@ -28,12 +28,13 @@ Use this skill whenever a loop moves from L1 report-only into L2 assisted fix mo
 - Check that the worktree path does not already exist.
 - Check that the branch does not already exist.
 - Audit main worktree status and report it before any assisted action.
-- Validate that `human_approval_before_worktree_apply` is satisfied before `git worktree add`.
+- Keep Git mutation outside the layer: built-in apply must stop with `SAFEFS_EXTERNAL_MUTATOR_UNBOUND`.
+- After reviewed external creation, register only a clean worktree at the approved base SHA with `-RegisterExisting -Apply -HumanApproved`.
 
 ## Safety
 
 - Auto-merge is forbidden.
-- Do not push, tag, release, deploy, or delete worktrees from this skill.
+- Do not push, tag, release, deploy, create, or delete worktrees from this skill.
 - Preserve unrelated local work and never clean, reset, stash, or checkout user changes.
 - Stop if approval, branch, path, verifier, or rollback information is missing.
 
@@ -51,7 +52,7 @@ Branch exists: yes|no
 Path exists: yes|no
 Human approval recorded: yes|no
 Auto-merge: forbidden
-Allowed next action: preview|create-worktree|pause|human-gate
+Allowed next action: preview|external-create|register-existing|pause|human-gate
 Evidence: <commands or files checked>
 ```
 

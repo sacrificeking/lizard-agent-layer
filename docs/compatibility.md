@@ -12,6 +12,8 @@
 
 The GitHub workflow runs the complete gate set on the four PowerShell host identities. Windows runs the gates sequentially in one job per runtime. Ubuntu and macOS partition the same set into a base/governance job, six deterministic focused-safety shards, a standalone smoke job, and one matrix job per built-in profile. A local Windows pass is not evidence that remote Unix jobs have run, and no individual Unix shard is evidence for the complete host contract.
 
+Generated install and analyzer invocations use `Lizard.Host.psm1`. Windows PowerShell 5.1 renders `powershell.exe` with execution-policy compatibility; Windows PowerShell 7, Ubuntu, and macOS render `pwsh`, and Unix argv never receives `-ExecutionPolicy`. Machine-readable analyzer output exposes executable and argv separately. Git branch/base inputs reject option-like strings and revision expressions before Git inspection; base resolution uses an explicit end-of-options boundary.
+
 ## Filesystem assurance status
 
 | Capability | Windows PowerShell 5.1 | Windows PowerShell 7.5+ | Ubuntu PowerShell 7.5+ | macOS PowerShell 7.5+ |
@@ -19,9 +21,9 @@ The GitHub workflow runs the complete gate set on the four PowerShell host ident
 | Lexical authorized-root containment | Local executable evidence | CI evidence required after change | CI evidence required after change | CI evidence required after change |
 | Linked ancestor and terminal-object rejection for protected reads | Local unit and adversarial evidence | CI evidence required after change | CI symbolic-link evidence required after change | CI symbolic-link evidence required after change |
 | Mount and bind-mount boundary detection | Not applicable to the current Windows claim | Not applicable to the current Windows claim | Implemented through mount ID/device checks; privileged bind/tmpfs CI evidence required | Implemented through mounted-root/device checks; CI policy evidence required |
-| Handle-bound/no-follow mutation | Not implemented | Not implemented | Not implemented | Not implemented |
+| Handle-bound/no-follow SafeFs access | Set/Add/read/hash/metadata/copy/mkdir/delete, plans, and transactions locally verified on NTFS | Backend implemented; CI evidence pending | `openat`/`statx` backend implemented; dynamic CI evidence pending | `openat`/`fstat`/`fstatfs` backend implemented; dynamic CI evidence pending |
 
-Mount enforcement observes the current process mount namespace and rejects unavailable identity data. It does not establish handle-bound mutation or close the synchronized path-swap risk tracked by WP-01C.
+Mount enforcement observes the current process mount namespace and rejects unavailable identity data. Windows uses parent-relative native opens, atomic create-new and replacement, and relative deletion. Linux and macOS use descriptor-relative component walks, no-follow terminal opens, mount/device identity, atomic stage commits, and relative deletion. Unsupported primitives fail closed. Git worktree create/remove apply is disabled because Git cannot consume this boundary; clean externally created worktrees can be registered read-only. WP-01C and H-03 remain open until the executable schema and synchronized behavior pass on all four host identities.
 
 ## JSON runtime compatibility
 

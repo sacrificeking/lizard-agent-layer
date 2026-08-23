@@ -60,7 +60,7 @@ pwsh -NoProfile -File .\scripts\route-task.ps1 `
   -Json
 ```
 
-Preview is the default. `-Apply` writes only a metadata receipt under `.agent/routing/receipts/`. Receipts never include raw prompts, chain of thought, source excerpts, secrets, or private logs.
+Preview is the default. `-Apply` writes only a metadata receipt under `.agent/routing/receipts/`. Signals are enumerated IDs and execution evidence references are opaque IDs, not prose. Receipts carry typed sensitivity, purpose, audience, retention, content-policy, and redaction fields. A shared serializer deterministically removes credential, personal-data, path, command, multiline, Unicode, and oversized canaries before file or console output.
 
 ## Advanced automatic routing
 
@@ -106,9 +106,18 @@ Advanced routing fails closed when the inventory is missing, automatic selection
 ## Safety rules
 
 - Secrets are blocked before routing.
+- Regulated data returns `human-review` before signals, route selection, inventory loading, or model recommendation. This release has no automatic exception: a target-local or merely schema-valid approval is not organization authority.
 - Human-review signals stop execution.
 - Strategy signals return work to the strategy phase.
 - Receipt paths cannot escape `.agent/routing/receipts/`.
 - Different-model and provider-diverse verification are preferences, not hidden requirements.
 - `observed` and `attested` describe how strongly the runtime knows the actual identity; a route decision must never be presented as execution proof.
 - Legacy `modelProfiles` remain readable for compatibility but are deprecated and are not part of the Advanced execution contract.
+
+Route receipts expose stable `reason_codes` for automation and separate prose `reasons` for people. `REGULATED_APPROVAL_REQUIRED` is the authoritative code for the current regulated-data gate. Although ADR 0019 now provides authenticated evidence infrastructure, the regulated provider-approval schema remains structural only: no current command accepts it as a positive routing exception, so regulated data still pauses for human review.
+
+Persisted route decisions now require an external `router` challenge and private key. The stored file is a signed envelope; its payload binds the exact request, policy, runtime source, inventory, target identity, and router principal. `record-execution.ps1` accepts only that verified route and then requires a `runtime` challenge/key to sign the actual model, provider, harness, configuration fingerprint, outcome, route payload hash, and external approval reference. Command-line model/provider values are therefore claims by the authenticated runtime signer, not standalone authority.
+
+Calibration accepts only a signed model-evaluation envelope from an external `evaluator` role distinct from the runtime executor. The challenge binding includes the target identity, model/provider/runtime identities, and canonical case-set hash. Trust material stays outside the target; schema fixtures are never authority.
+
+Allowed signal IDs are `uncertain-ownership`, `unapproved-scope-expansion`, `security-sensitive`, `regulated-data`, `plan-deviation`, `repeated-verification-failure`, and `ambiguous-requirements`. Do not place descriptions, prompts, customer references, paths, commands, or secrets in signal or evidence parameters.

@@ -5,6 +5,16 @@
   "minimum_reader_schema_version": 4,
   "writer_schema_version": 4,
   "profile": "minimal",
+  "memory_mode": "curated",
+  "pack_sources": [
+    {
+      "name": "finance-app",
+      "source": "builtin",
+      "path": "packs/finance-app.json",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "prose_trust": "layer-reviewed"
+    }
+  ],
   "harnesses": ["codex"],
   "artifacts": [
     {

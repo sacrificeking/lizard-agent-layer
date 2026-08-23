@@ -1,0 +1,22 @@
+{
+  "schema_version": 2, "artifact_kind": "signed-evidence", "envelope_id": "11111111111111111111111111111111",
+  "payload_kind": "route-decision", "issuer_id": "example-org", "key_id": "router-key-01", "principal_id": "fixture-router",
+  "issued_at": "2026-08-22T10:00:00Z", "expires_at": "2026-08-22T10:30:00Z", "purpose": "routing", "subject": "fixture-standard-execution",
+  "nonce": "2222222222222222222222222222222222222222222222222222222222222222", "challenge_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+  "binding_sha256": "4444444444444444444444444444444444444444444444444444444444444444", "approval_ref": "approval-route-01",
+  "payload_sha256": "5555555555555555555555555555555555555555555555555555555555555555", "signature_algorithm": "RS256",
+  "payload": {
+    "schema_version": 1, "artifact_kind": "route-decision", "receipt_id": "fixture-standard-execution", "router_id": "fixture-router",
+    "request_sha256": "1111111111111111111111111111111111111111111111111111111111111111", "policy_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+    "runtime_source_sha256": "0000000000000000000000000000000000000000000000000000000000000000", "inventory_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "trust_binding_sha256": "3333333333333333333333333333333333333333333333333333333333333333", "created_at": "2026-07-19T12:00:00Z",
+    "policy": "staged-balanced", "model_mode": "inherit-current", "runtime_executor": null, "runtime_attestation": "unknown", "runtime_configuration_fingerprint": null,
+    "model_switch_required": false, "phase": "execution", "task_class": "implementation", "risk_level": "medium", "data_class": "internal-code", "decision": "route",
+    "sensitivity": "metadata-only", "purpose": "route-decision-audit", "audience": ["operators", "auditors"], "retention_class": "organization-policy-required", "content_policy": "identifiers-only",
+    "route_id": "execution-standard", "requested_roles": ["standardExecutor"], "selected_role": "standardExecutor", "recommended_model": null, "recommended_provider": null,
+    "selection_capability": null, "effort": "medium", "reasoning_setting": null, "cost_tier": null, "verification_mode": "not-applicable", "fallback_used": false, "fallback_reason": null,
+    "required_capabilities": ["implementation"], "signals": [], "reason_codes": ["ROUTE_READY"], "reasons": ["Use the active harness model."], "raw_prompt_stored": false,
+    "redaction": { "status": "not-required", "fields": [] }
+  },
+  "signature": "AQID"
+}

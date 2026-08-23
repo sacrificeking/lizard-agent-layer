@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.dev/schemas/trust-challenge.schema.json",
+  "title": "External lizard evidence challenge",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "challenge_id", "nonce", "purpose", "subject", "payload_kind", "binding_sha256", "approval_ref", "issued_at", "expires_at"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "challenge_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "nonce": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "purpose": { "$ref": "#/$defs/id" }, "subject": { "$ref": "#/$defs/id" }, "payload_kind": { "$ref": "#/$defs/id" },
+    "binding_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "approval_ref": { "$ref": "#/$defs/id" },
+    "issued_at": { "type": "string", "format": "date-time" }, "expires_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": { "id": { "type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:/@+-]{0,127}$" } }
+}

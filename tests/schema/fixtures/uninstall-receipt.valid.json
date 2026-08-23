@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "completed_at": "2026-08-22T12:00:00.0000000+00:00",
+  "target_root_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "scope": "managed-only",
+  "memory_mode": "curated",
+  "plan_id": "0123456789abcdef0123456789abcdef",
+  "plan_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "transaction_operation_id": "fedcba9876543210fedcba9876543210",
+  "removed": [
+    {
+      "path": ".agent/generated.txt",
+      "kind": "file",
+      "precondition_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "precondition_identity_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  ],
+  "preserved": [],
+  "exported": [],
+  "unresolved_residue": [],
+  "final_manifest_present": false
+}

@@ -29,6 +29,21 @@ try {
   Assert-Equal 'pass' ([string]$filesystemReport.status) 'Covered filesystem contract must pass.'
   Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/contract-check-report.schema.json' -InstancePath $filesystemReportPath -Message 'Contract check report must satisfy its schema.'
 
+  $handleBoundOutput = Join-Path $fixture 'handle-bound'
+  $handleBoundPaths = @(
+    'scripts/Lizard.SafeFs.psm1',
+    'scripts/Lizard.WindowsHandleFs.psm1',
+    'scripts/native/Lizard.WindowsHandleFs.cs',
+    'scripts/Lizard.UnixHandleFs.psm1',
+    'scripts/native/Lizard.UnixHandleFs.cs',
+    'schemas/safe-fs-capability.schema.json',
+    'tests/adversarial/handle-bound-mutation.tests.ps1',
+    '.github/workflows/lizard-agent-layer-ci.yml',
+    'changes/handle-bound-filesystem-access.json'
+  ) -join ','
+  $handleBound = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-LayerRoot', $LayerRoot, '-ChangedPaths', $handleBoundPaths, '-OutputDir', $handleBoundOutput, '-Strict')
+  Assert-Equal 0 $handleBound.exit_code "Handle-bound filesystem declaration must cover its contract: $($handleBound.output)"
+
   $manifestOutput = Join-Path $fixture 'manifest'
   $manifest = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-LayerRoot', $LayerRoot, '-ChangedPaths', 'schemas/install-manifest.schema.json,changes/continuous-artifact-lifecycle.json', '-OutputDir', $manifestOutput, '-Strict')
   Assert-Equal 0 $manifest.exit_code "Manifest lifecycle declaration must include current ownership and schema decisions: $($manifest.output)"

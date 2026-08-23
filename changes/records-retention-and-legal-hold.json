@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "records-retention-and-legal-hold",
+  "date": "2026-08-22",
+  "summary": "Introduce deterministic retention policies, cryptographic legal holds, export archives, and transactional deletion lifecycle with deletion receipts.",
+  "changed_paths": [
+    "scripts/records-lifecycle.ps1",
+    "scripts/Lizard.Records.psm1",
+    "retention-policies/*.json",
+    "schemas/retention-policy.schema.json",
+    "schemas/records-hold.schema.json",
+    "schemas/records-hold-payload.schema.json",
+    "schemas/records-export.schema.json",
+    "schemas/records-deletion-receipt.schema.json",
+    "tests/integration/records-lifecycle.tests.ps1",
+    "tests/schema/fixtures/records-*.valid.json",
+    "registry/contracts.json",
+    "docs/adr/0023-records-retention-and-legal-hold.md",
+    "docs/adr/README.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0006-transaction-and-recovery-semantics.md",
+    "docs/adr/0007-report-boundaries-and-privacy.md",
+    "docs/adr/0010-exact-plan-approval-binding.md",
+    "docs/adr/0014-transactional-uninstall.md",
+    "docs/adr/0017-typed-safe-routing-reports.md",
+    "docs/adr/0023-records-retention-and-legal-hold.md"
+  ],
+  "migration": {
+    "disposition": "migration-required",
+    "note": "Existing target repositories manage legacy records through explicit records-lifecycle Inventory, Export, and Purge workflows; unmanaged legacy records remain preserved until policy-evaluated."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Adds retention policy evaluation, signed legal hold envelopes, and transactional purge commands without mutating existing installer or update contracts."
+  }
+}
+

@@ -4,7 +4,7 @@
   "title": "lizard-agent-layer staged execution policy",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "name", "description", "mode", "phase_budget", "model_selection", "routes", "escalation", "verification", "budget"],
+  "required": ["schema_version", "name", "description", "mode", "phase_budget", "model_selection", "regulated_data", "routes", "escalation", "verification", "budget"],
   "properties": {
     "schema_version": { "const": 1 },
     "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
@@ -41,6 +41,17 @@
         "never_interrupt_for_model_switch": { "const": true }
       }
     },
+    "regulated_data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_decision", "organization_approval_required", "require_inventory_identity", "approval_must_be_outside_target"],
+      "properties": {
+        "default_decision": { "const": "human-review" },
+        "organization_approval_required": { "const": true },
+        "require_inventory_identity": { "const": true },
+        "approval_must_be_outside_target": { "const": true }
+      }
+    },
     "routes": {
       "type": "array",
       "minItems": 3,
@@ -69,8 +80,8 @@
       "additionalProperties": false,
       "required": ["human_review_signals", "strategist_signals", "max_attempts"],
       "properties": {
-        "human_review_signals": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" }, "uniqueItems": true },
-        "strategist_signals": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" }, "uniqueItems": true },
+        "human_review_signals": { "type": "array", "items": { "enum": ["uncertain-ownership", "unapproved-scope-expansion", "security-sensitive", "regulated-data"] }, "uniqueItems": true },
+        "strategist_signals": { "type": "array", "items": { "enum": ["plan-deviation", "repeated-verification-failure", "ambiguous-requirements"] }, "uniqueItems": true },
         "max_attempts": { "type": "integer", "minimum": 1, "maximum": 10 }
       }
     },

@@ -2,18 +2,22 @@
 
 Portable, preview-first agent infrastructure for repositories that use Codex, Claude Code, Gemini, Cursor, GitHub Copilot, or generic `AGENTS.md`-compatible tools.
 
-`lizard-agent-layer` keeps reusable agent logic in one source repository and installs a tailored local layer into each target project. The installed layer combines project profile, curated memory, permissions, skills, harness instructions, update metadata, and optional bounded loops without making a single model or IDE the source of truth.
+`lizard-agent-layer` keeps reusable agent logic in one source repository and installs a tailored local layer into each target project. The installed layer combines project profile, an explicit `curated`, `private-episodic`, or `off` persistence contract, permissions, skills, harness instructions, update metadata, and optional bounded loops without making a single model or IDE the source of truth.
 
 ## Highlights
 
 - Multi-harness adapters for Codex, Claude Code, Gemini, Cursor, GitHub Copilot, and generic `AGENTS.md` tools.
+- Effective memory modes: curated team context, ignored private episodic context, or a physically residue-free `off` mode.
 - Provider-neutral 10-80-10 staged execution that keeps the active model by default, with optional calibrated automatic routing.
 - Profiles for small repositories, normal product development, and high-risk React/Supabase/finance systems.
 - Reusable packs for frontend, design systems, Supabase, finance, security, agent runtimes, and loop engineering.
 - Preview-first installation and updates with explicit plans, ownership manifests, content hashes, and manual merge guidance.
 - Conservative handling of existing project instructions through sidecars instead of silent replacement.
-- Canonical path containment, linked-ancestor rejection, transaction journals, rollback, and interrupted-operation recovery.
-- Separate documentation quality and executable behavioral-readiness evidence.
+- Handle-bound filesystem mutation on Windows (`NtCreateFile`/`NtSetInformationFile`) and Unix (`openat`/`renameat`/`unlinkat`) preventing ancestor-swap race conditions.
+- Transaction journals with write-ahead logs, canonical backups, rollback, and interrupted-operation recovery.
+- Zero-trust asymmetric evidence trust with RSA/Ed25519 signatures, challenge nonces, replay protection ledgers, and role separation.
+- Records retention, export integrity, active legal holds, and verifiable deletion receipts (`ADR-0023`).
+- Separate documentation quality and executable behavioral-readiness evidence (43 focused safety suites, 18-combination profile/harness matrix).
 - L1 report-only and L2 assisted loops with leases, budgets, attempts, atomic state, hash-chained events, worktree isolation, verifier evidence, and no auto-merge.
 - Local CI plus GitHub-hosted Windows, Ubuntu, and macOS gates.
 - AI-guided installation and removal through [`INSTALL.md`](INSTALL.md) and [`UNINSTALL.md`](UNINSTALL.md).
@@ -63,9 +67,14 @@ When an instruction destination already exists, the installer creates a dedicate
 
 Target projects do not receive npm dependencies from this repository.
 
-## Recommended Start: Use Your IDE Assistant
+## Quick Start Guide
 
-Open [`INSTALL.md`](INSTALL.md) and ask your IDE assistant:
+- For a visual, developer-friendly guide with copy-paste prompts for Copilot, Cursor, and Claude, see [`QUICKSTART.md`](QUICKSTART.md).
+- For a comprehensive interactive runbook with your AI assistant, see [`INSTALL.md`](INSTALL.md).
+
+### AI-Guided Installation (Interactive Prompt)
+
+Open [`INSTALL.md`](INSTALL.md) or [`QUICKSTART.md`](QUICKSTART.md) and ask your IDE assistant:
 
 > Read `INSTALL.md`, inspect my target repository, ask me the required questions one group at a time, and stop after presenting the installation plan. Do not apply changes until I explicitly approve the plan.
 
@@ -76,7 +85,7 @@ The runbook guides the assistant through target analysis, usage context, profile
 Analyze a target without mutation:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project -Json
+pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project -ApprovedHarnesses codex -Json
 ```
 
 Generate a reviewable plan:
@@ -185,6 +194,7 @@ Dependency and toolchain versions are recorded in [Dependency And Toolchain Snap
 
 ## Documentation
 
+- [Developer Quickstart](QUICKSTART.md)
 - [Getting Started](docs/getting-started.md)
 - [AI-Guided Installation](INSTALL.md)
 - [AI-Guided Uninstall](UNINSTALL.md)

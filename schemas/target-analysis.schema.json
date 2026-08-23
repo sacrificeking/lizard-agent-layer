@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/target-analysis.schema.json",
+  "title": "lizard-agent-layer target analysis",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "target", "recommendedProfile", "riskLevel", "recommendedHarnesses", "harnessApprovalSource", "detectedHarnesses", "recommendedSkills", "recommendedPacks", "signals", "evidence", "negativeSignals", "reasons", "warnings", "calibration", "projectShape", "previewInvocation", "previewCommand"],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "target": { "type": "string", "minLength": 1, "maxLength": 4096 },
+    "recommendedProfile": { "enum": ["minimal", "standard", "supabase-react-finance"] },
+    "riskLevel": { "enum": ["low", "medium", "high"] },
+    "recommendedHarnesses": { "$ref": "#/$defs/harnessArray" },
+    "harnessApprovalSource": { "enum": ["safe-default", "explicit-input"] },
+    "detectedHarnesses": { "$ref": "#/$defs/harnessArray" },
+    "recommendedSkills": { "$ref": "#/$defs/idArray" },
+    "recommendedPacks": { "$ref": "#/$defs/idArray" },
+    "signals": { "$ref": "#/$defs/idArray" },
+    "evidence": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "signal", "kind", "strength"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[A-Za-z0-9@._:/,#-]+$" },
+          "signal": { "$ref": "#/$defs/id" },
+          "kind": { "enum": ["manifest", "marker", "path-group", "instruction-file"] },
+          "strength": { "enum": ["strong", "supporting", "weak"] }
+        }
+      }
+    },
+    "negativeSignals": { "$ref": "#/$defs/idArray" },
+    "reasons": { "$ref": "#/$defs/textArray" },
+    "warnings": { "$ref": "#/$defs/textArray" },
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "score_kind", "evidence_score", "confidence", "false_positive_risk", "false_negative_risk", "scan_complete", "scanned_files", "fixture_matrix"],
+      "properties": {
+        "method": { "const": "deterministic-rule-evidence-v1" },
+        "score_kind": { "const": "bounded-evidence-score-not-probability" },
+        "evidence_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "confidence": { "enum": ["low", "medium", "high"] },
+        "false_positive_risk": { "enum": ["low", "medium", "high"] },
+        "false_negative_risk": { "enum": ["low", "medium", "high"] },
+        "scan_complete": { "type": "boolean" },
+        "scanned_files": { "type": "integer", "minimum": 0, "maximum": 1000000 },
+        "fixture_matrix": { "const": "analyzer-calibration-v1" }
+      }
+    },
+    "projectShape": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["monorepo", "nonNode", "highRisk"],
+      "properties": { "monorepo": { "type": "boolean" }, "nonNode": { "type": "boolean" }, "highRisk": { "type": "boolean" } }
+    },
+    "previewInvocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executable", "argv"],
+      "properties": {
+        "executable": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "argv": { "type": "array", "minItems": 4, "maxItems": 64, "items": { "type": "string", "maxLength": 4096 } }
+      }
+    },
+    "previewCommand": { "type": "string", "minLength": 1, "maxLength": 16384 }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$", "maxLength": 128 },
+    "idArray": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "harnessArray": { "type": "array", "maxItems": 6, "uniqueItems": true, "items": { "enum": ["generic-agents-md", "codex", "claude-code", "gemini", "github-copilot", "cursor"] } },
+    "textArray": { "type": "array", "maxItems": 256, "items": { "type": "string", "maxLength": 1024 } }
+  }
+}

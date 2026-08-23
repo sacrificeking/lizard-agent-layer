@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/uninstall-receipt.schema.json",
+  "title": "lizard-agent-layer uninstall receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "completed_at", "target_root_hash", "scope", "memory_mode", "plan_id", "plan_sha256", "transaction_operation_id", "removed", "preserved", "exported", "unresolved_residue", "final_manifest_present"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "status": { "enum": ["completed", "partial", "no-op"] },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "target_root_hash": { "$ref": "#/$defs/sha256" },
+    "scope": { "enum": ["managed-only", "complete", "export-then-complete"] },
+    "memory_mode": { "type": ["string", "null"], "enum": ["curated", "private-episodic", "off", null] },
+    "plan_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "plan_sha256": { "$ref": "#/$defs/sha256" },
+    "transaction_operation_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "removed": { "type": "array", "items": { "$ref": "#/$defs/removed" } },
+    "preserved": { "type": "array", "items": { "$ref": "#/$defs/preserved" } },
+    "exported": { "type": "array", "items": { "$ref": "#/$defs/exported" } },
+    "unresolved_residue": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "final_manifest_present": { "type": "boolean" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "relativePath": { "type": "string", "minLength": 1, "maxLength": 1000, "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\\\:\\u0000-\\u001f]+$" },
+    "removed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "kind", "precondition_sha256", "precondition_identity_sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath" },
+        "kind": { "enum": ["file", "directory"] },
+        "precondition_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "precondition_identity_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "preserved": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "kind", "precondition_sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath" },
+        "kind": { "enum": ["file", "directory"] },
+        "precondition_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }
+      }
+    },
+    "exported": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

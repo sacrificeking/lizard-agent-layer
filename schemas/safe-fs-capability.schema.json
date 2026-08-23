@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/safe-fs-capability.schema.json",
+  "title": "lizard-agent-layer safe filesystem capability",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "host", "available", "assurance", "backend", "authorized_root", "primitives", "reason_code"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "host": { "enum": ["windows-powershell-5.1", "windows-pwsh", "linux-pwsh", "macos-pwsh"] },
+    "available": { "type": "boolean" },
+    "assurance": { "enum": ["handle-bound-no-follow", "unavailable"] },
+    "backend": { "enum": ["windows-handle-v1", "linux-openat-v1", "macos-openat-v1", "unavailable"] },
+    "authorized_root": { "type": "string", "minLength": 1 },
+    "filesystem": { "type": ["string", "null"] },
+    "primitives": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ancestor_handles", "terminal_no_follow", "descriptor_identity", "mount_identity", "atomic_replace", "atomic_create_new", "relative_delete"],
+      "properties": {
+        "ancestor_handles": { "type": "boolean" },
+        "terminal_no_follow": { "type": "boolean" },
+        "descriptor_identity": { "type": "boolean" },
+        "mount_identity": { "type": "boolean" },
+        "atomic_replace": { "type": "boolean" },
+        "atomic_create_new": { "type": "boolean" },
+        "relative_delete": { "type": "boolean" }
+      }
+    },
+    "reason_code": { "type": ["string", "null"], "pattern": "^SAFEFS_[A-Z0-9_]+$" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "available": { "const": true } }, "required": ["available"] },
+      "then": {
+        "properties": {
+          "assurance": { "const": "handle-bound-no-follow" },
+          "reason_code": { "type": "null" },
+          "primitives": {
+            "type": "object",
+            "properties": {
+              "ancestor_handles": { "const": true },
+              "terminal_no_follow": { "const": true },
+              "descriptor_identity": { "const": true },
+              "mount_identity": { "const": true },
+              "atomic_replace": { "const": true },
+              "atomic_create_new": { "const": true },
+              "relative_delete": { "const": true }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "assurance": { "const": "unavailable" },
+          "backend": { "const": "unavailable" },
+          "reason_code": { "type": "string", "pattern": "^SAFEFS_[A-Z0-9_]+$" }
+        }
+      }
+    }
+  ]
+}

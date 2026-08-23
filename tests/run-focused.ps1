@@ -35,7 +35,28 @@ $tests = @(
   'tests\integration\public-readiness.tests.ps1',
   'tests\integration\model-routing.tests.ps1',
   'tests\integration\loop-runtime.tests.ps1',
-  'tests\adversarial\loop-evidence.tests.ps1'
+  'tests\adversarial\loop-evidence.tests.ps1',
+  'tests\unit\transaction-primitives.tests.ps1',
+  'tests\adversarial\handle-bound-mutation.tests.ps1',
+  'tests\adversarial\worktree-external-mutator.tests.ps1',
+  'tests\unit\manifest-version-consistency.tests.ps1',
+  'tests\integration\uninstall.tests.ps1',
+  'tests\adversarial\uninstall-tamper.tests.ps1',
+  'tests\integration\uninstall-install-roundtrip.tests.ps1'
+  'tests\integration\memory-modes.tests.ps1'
+  'tests\integration\memory-mode-update.tests.ps1'
+  'tests\adversarial\memory-mode-transitions.tests.ps1'
+  'tests\adversarial\regulated-approval.tests.ps1'
+  'tests\adversarial\routing-receipt-privacy.tests.ps1'
+  'tests\adversarial\prompt-trust.tests.ps1'
+  'tests\adversarial\constrained-verifier.tests.ps1'
+  'tests\adversarial\signed-evidence.tests.ps1'
+  'tests\adversarial\signed-loop-completion.tests.ps1'
+  'tests\adversarial\signed-calibration.tests.ps1'
+  'tests\adversarial\analyzer-hardening.tests.ps1',
+  'tests\adversarial\git-ref-validation.tests.ps1',
+  'tests\integration\skill-lifecycle.tests.ps1',
+  'tests\integration\records-lifecycle.tests.ps1'
 )
 $tests = @(
   for ($index = 0; $index -lt $tests.Count; $index++) {

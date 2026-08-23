@@ -4,6 +4,10 @@ param(
   [string]$WorktreePath,
   [string]$Branch,
   [string]$LifecyclePath,
+  [string]$LifecycleTrustStorePath,
+  [string]$LifecycleTrustStoreSha256,
+  [string]$LifecycleChallengePath,
+  [string]$LifecycleChallengeSha256,
   [switch]$AllowLegacyUnbound,
   [switch]$RemoveBranch,
   [switch]$Force,
@@ -18,8 +22,11 @@ $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.LoopEvidence.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Trust.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Git.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
+if (-not [string]::IsNullOrWhiteSpace($Branch)) { $Branch = Assert-LizardGitBranchName -Branch $Branch }
 
 function Resolve-UserPath {
   param([string]$Path, [string]$Fallback)
@@ -61,8 +68,14 @@ $effectiveLifecyclePath = $null
 if (-not [string]::IsNullOrWhiteSpace($LifecyclePath)) {
   $effectiveLifecyclePath = Resolve-UserPath -Path $LifecyclePath -Fallback $LifecyclePath
   try {
-    $lifecycleEnvelope = Read-LizardEvidenceEnvelope -Path $effectiveLifecyclePath -SchemaVersion 1
+    foreach ($required in @(@{ value = $LifecycleTrustStorePath; label = 'LifecycleTrustStorePath' }, @{ value = $LifecycleTrustStoreSha256; label = 'LifecycleTrustStoreSha256' }, @{ value = $LifecycleChallengePath; label = 'LifecycleChallengePath' }, @{ value = $LifecycleChallengeSha256; label = 'LifecycleChallengeSha256' })) { if ([string]::IsNullOrWhiteSpace([string]$required.value)) { throw "LIFECYCLE_TRUST_REQUIRED: $($required.label) is required." } }
+    $lifecycleEnvelope = Read-LizardSignedEvidenceFile -Path $effectiveLifecyclePath
     $lifecyclePayload = $lifecycleEnvelope.payload
+    $lifecycleTime = [DateTimeOffset]$lifecycleEnvelope.issued_at
+    $lifecycleTrust = Read-LizardTrustStore -Path $LifecycleTrustStorePath -ExpectedSha256 $LifecycleTrustStoreSha256
+    $lifecycleChallenge = Read-LizardTrustChallenge -Path $LifecycleChallengePath -ExpectedSha256 $LifecycleChallengeSha256 -Now $lifecycleTime
+    $lifecycleBinding = Get-LizardLifecycleTrustBinding -OperationId ([string]$lifecyclePayload.operation_id) -TargetRoot $TargetRoot -WorktreeRoot ([string]$lifecyclePayload.worktree_root) -Branch ([string]$lifecyclePayload.branch) -BaseSha ([string]$lifecyclePayload.base_sha)
+    Test-LizardSignedEvidenceEnvelope -Envelope $lifecycleEnvelope -TrustStoreRead $lifecycleTrust -ChallengeRead $lifecycleChallenge -ExpectedPayloadKind 'worktree-lifecycle' -ExpectedPurpose 'worktree-registration' -ExpectedSubject ([string]$lifecyclePayload.operation_id) -ExpectedBindingSha256 $lifecycleBinding -RequiredRole 'implementer' -Now $lifecycleTime | Out-Null
     if ([string]$lifecyclePayload.status -ne 'CREATED') { $failures = Add-Item $failures "Lifecycle status must be CREATED, got '$($lifecyclePayload.status)'." }
     if (-not (Same-Path ([string]$lifecyclePayload.target_root) $TargetRoot)) { $failures = Add-Item $failures 'Lifecycle target root does not match TargetPath.' }
     if (-not [string]::IsNullOrWhiteSpace($WorktreePath) -and -not (Same-Path -A $WorktreePath -B ([string]$lifecyclePayload.worktree_root))) { $failures = Add-Item $failures 'WorktreePath does not match lifecycle contract.' }
@@ -79,7 +92,11 @@ if (-not [string]::IsNullOrWhiteSpace($LifecyclePath)) {
 }
 if ([string]::IsNullOrWhiteSpace($WorktreePath)) { $failures = Add-Item $failures 'WorktreePath is required directly or through LifecyclePath.' }
 if ($Apply -and -not $HumanApproved) { $failures = Add-Item $failures 'Apply requires -HumanApproved for L2 worktree cleanup.' }
+if ($Apply) {
+  $failures = Add-Item $failures 'SAFEFS_EXTERNAL_MUTATOR_UNBOUND: Built-in git worktree removal and branch deletion are disabled because Git cannot consume the SafeFs parent-handle boundary. Perform reviewed cleanup externally.'
+}
 
+if (-not [string]::IsNullOrWhiteSpace($Branch)) { $Branch = Assert-LizardGitBranchName -Branch $Branch }
 $EffectiveWorktreePath = if ([string]::IsNullOrWhiteSpace($WorktreePath)) { $null } else { Resolve-UserPath -Path $WorktreePath -Fallback $WorktreePath }
 if ($EffectiveWorktreePath) {
   if (Same-Path $EffectiveWorktreePath $TargetRoot) { $failures = Add-Item $failures 'Refusing to clean up TargetPath as a worktree.' }
@@ -150,23 +167,6 @@ if (-not [string]::IsNullOrWhiteSpace($Branch) -and -not [string]::IsNullOrWhite
 $mode = if ($Apply) { 'APPLY' } else { 'PREVIEW' }
 $removed = $false
 $branchDeleted = $false
-if ($Apply -and $failures.Count -eq 0) {
-  $EffectiveWorktreePath = Resolve-SafeRoot -Path $EffectiveWorktreePath -RequireExisting
-  $args = @('worktree', 'remove')
-  if ($Force) { $args += '--force' }
-  $args += $EffectiveWorktreePath
-  $removeOutput = & git -C $TargetRoot @args 2>&1
-  if ($LASTEXITCODE -ne 0) { $failures = Add-Item $failures "git worktree remove failed: $removeOutput" }
-  else { $removed = $true }
-  if ($removed -and $RemoveBranch -and -not [string]::IsNullOrWhiteSpace($Branch)) {
-    $branchArgs = @('branch')
-    if ($Force) { $branchArgs += '-D' } else { $branchArgs += '-d' }
-    $branchArgs += $Branch
-    $branchOutput = & git -C $TargetRoot @branchArgs 2>&1
-    if ($LASTEXITCODE -ne 0) { $failures = Add-Item $failures "git branch delete failed: $branchOutput" }
-    else { $branchDeleted = $true }
-  }
-}
 
 $status = if ($failures.Count -gt 0) { 'STOP' } elseif ($Apply) { 'REMOVED' } else { 'PREVIEW' }
 $report = [pscustomobject]@{
@@ -237,5 +237,9 @@ if ($Json) {
   Write-Host "Report: $jsonPath"
   Write-Host "Plan: $mdPath"
   if (-not $Apply) { Write-Host 'Preview only. Re-run with -Apply -HumanApproved to remove the isolated worktree.' }
+  if ($failures.Count -gt 0) {
+    Write-Host 'Failures:'
+    foreach ($failure in $failures) { Write-Host "  - $failure" }
+  }
 }
 if ($failures.Count -gt 0) { exit 1 }

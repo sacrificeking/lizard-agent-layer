@@ -1,6 +1,26 @@
-# AI-Guided Uninstall
+# Executable and AI-Guided Uninstall
 
 Use this file with an AI assistant to remove a `lizard-agent-layer` installation from a target repository. This is a review-driven procedure, not blanket permission to delete `.agent`, `.agents`, `.github`, or any other directory.
+
+## Executable uninstall workflow
+
+The executable scopes are `managed-only` (default), `complete`, and `export-then-complete`. Preview is always the default and makes no target changes:
+
+```powershell
+./scripts/uninstall.ps1 -TargetPath <absolute-target-path> -PlanPath <outside-target>/uninstall.md
+```
+
+Review the Markdown plan and canonical JSON, then independently copy the SHA-256 from the `.json.sha256` sidecar. Apply requires all three approval inputs:
+
+```powershell
+./scripts/uninstall.ps1 -TargetPath <absolute-target-path> -Apply `
+  -ApprovedPlanPath <outside-target>/uninstall.json `
+  -ApprovedPlanSha256 <sha256> -HumanApproved
+```
+
+The approved plan binds source inputs, target-root identity, every target kind/hash/physical identity, output paths, and scope. Apply revalidates the plan before locking, all inputs and target preconditions after locking, and each removal immediately before mutation. Files are backed up and removed before empty directories; any mismatch or unexpected non-empty directory rolls the entire operation back. A schema-bound receipt is written outside the target. If anything is preserved, the manifest remains as ownership evidence and the receipt reports `partial`; otherwise a repeated preview after success returns an empty no-op plan.
+
+`complete` is available only with `-ConfirmModifiedLayerOwnedPurge` in both preview and apply; the confirmation is bound into the canonical plan. It can remove modified content only when the manifest still classifies it as `layer-owned`. Adopted, user-owned, unknown, or unsafe content remains protected. `export-then-complete` additionally requires an existing export root outside the target, exact manifest file paths through `-ExportRelativePaths`, and `-ConfirmExportMayContainSensitiveData`. Export uses create-new writes and verifies every copied SHA-256 before deletion. Do not represent any run as complete removal when preserved or unresolved residue remains.
 
 Suggested user prompt:
 
@@ -76,10 +96,13 @@ Identify exact lizard pointer blocks or references. Compare against generated si
 For `export-then-complete`, ask which of these to retain:
 
 - curated preferences, decisions, lessons, and workspace handoff;
+- private episodic content when the installed memory mode permits it;
 - loop state, events, budgets, and verifier evidence;
 - install and update manifests for audit.
 
 Export only to the approved path outside the target. Hash the exported files and verify they can be read before proposing source deletion. Never export secrets or raw customer data.
+
+The uninstall plan and receipt bind the installed `memory_mode`. Historical `removed` tombstones in an `off` manifest are ownership evidence and are not exportable memory content.
 
 ## Step 6: Present The Exact Removal Plan
 
@@ -123,3 +146,12 @@ Report removed paths, preserved paths, manual references removed, unresolved res
 ## Recovery
 
 If a deletion fails or the observed filesystem differs from the approved plan, stop immediately. Restore from the clean commit, backup, or approved worktree. Do not continue with broader deletion patterns and do not remove transaction evidence needed for recovery.
+
+If a process is interrupted before automatic rollback or transaction cleanup finishes, inspect recovery first and apply it only after review:
+
+```powershell
+./scripts/transaction-recover.ps1 -TargetPath <absolute-target-path>
+./scripts/transaction-recover.ps1 -TargetPath <absolute-target-path> -Apply -HumanApproved
+```
+
+After rollback, generate and approve a fresh uninstall plan. This recovery-and-retry workflow is supported; continuing a partially applied delete journal in place is not yet supported.

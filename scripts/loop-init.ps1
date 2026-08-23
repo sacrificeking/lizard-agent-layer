@@ -80,7 +80,7 @@ function Copy-Or-Skip {
   if ($Apply) {
     $parent = Split-Path -Parent $Dest
     if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-LizardTransactionalDirectory -Path $parent | Out-Null }
-    Copy-LizardTransactionalFile -Source $Source -Destination $Dest -Force:$Force
+    Copy-LizardTransactionalFile -SourceAuthorizedRoot $LayerRoot -Source $Source -Destination $Dest -Force:$Force
     Add-Unique $Written $rel
   }
 }

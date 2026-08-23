@@ -10,6 +10,7 @@
     "minimum_reader_schema_version",
     "writer_schema_version",
     "profile",
+    "memory_mode",
     "harnesses",
     "artifacts"
   ],
@@ -27,12 +28,21 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "source", "path"],
+        "required": ["name", "source", "path", "sha256", "prose_trust"],
         "properties": {
           "name": { "type": "string" },
           "source": { "enum": ["builtin", "target-overlay"] },
-          "path": { "type": "string" }
-        }
+          "path": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "prose_trust": { "enum": ["layer-reviewed", "quarantined"] }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "source": { "const": "target-overlay" } }, "required": ["source"] },
+            "then": { "properties": { "prose_trust": { "const": "quarantined" } } },
+            "else": { "properties": { "prose_trust": { "const": "layer-reviewed" } } }
+          }
+        ]
       }
     },
     "packs": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },

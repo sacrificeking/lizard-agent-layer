@@ -9,6 +9,7 @@ $LayerRoot = Split-Path -Parent $ScriptDir
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Manifest.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.SkillPackage.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $Failures = New-Object System.Collections.Generic.List[string]
@@ -95,6 +96,13 @@ if (Test-Path -LiteralPath $manifestPath) {
 if ($null -ne $manifest -and $manifest.harnesses) { $harnesses = @($manifest.harnesses) }
 elseif ($null -ne $profile -and $profile.harnesses) { $harnesses = @($profile.harnesses) }
 
+$profileMemoryMode = if ($null -ne $profile -and $profile.PSObject.Properties.Name -contains 'memoryMode') { [string]$profile.memoryMode } else { $null }
+$manifestMemoryMode = if ($null -ne $manifest -and $manifest.PSObject.Properties.Name -contains 'memory_mode') { [string]$manifest.memory_mode } else { $null }
+$effectiveMemoryMode = if (-not [string]::IsNullOrWhiteSpace($manifestMemoryMode)) { $manifestMemoryMode } else { $profileMemoryMode }
+if ($effectiveMemoryMode -notin @('curated', 'private-episodic', 'off')) { Add-Fail "MEMORY_MODE_MANIFEST_INVALID: unsupported or missing mode '$effectiveMemoryMode'." }
+elseif (-not [string]::IsNullOrWhiteSpace($profileMemoryMode) -and $profileMemoryMode -ne $effectiveMemoryMode) { Add-Fail "MEMORY_MODE_MISMATCH: profile '$profileMemoryMode' differs from manifest '$effectiveMemoryMode'." }
+else { Add-Ok "memory mode: $effectiveMemoryMode" }
+
 if ($null -ne $manifest -and $manifestSchema -ge 3 -and $manifestSchema -le 4) {
   try { $null = Get-LizardArtifactMap -Manifest $manifest -RequireLifecycle:($manifestSchema -ge 4) }
   catch { Add-Fail $_.Exception.Message }
@@ -135,12 +143,8 @@ if ($null -ne $manifest -and $manifestSchema -ge 3 -and $manifestSchema -le 4) {
 
 foreach ($file in @(
   '.agent\.gitignore',
-  '.agent\memory\personal\PREFERENCES.md',
-  '.agent\memory\semantic\DECISIONS.md',
-  '.agent\memory\semantic\LESSONS.md',
-  '.agent\memory\working\WORKSPACE.md',
   '.agent\protocols\permissions.md',
-  '.agent\protocols\memory-policy.md',
+  '.agent\protocols\project-context.md',
   '.agent\protocols\secret-handling.md',
   '.agent\protocols\release-gates.md',
   '.agent\protocols\handoff.md',
@@ -153,6 +157,80 @@ foreach ($file in @(
   Check-File $file -Required | Out-Null
 }
 
+$skillManifestPath = Join-Path $TargetRoot '.agent\skills\_manifest.jsonl'
+if (Test-Path -LiteralPath $skillManifestPath -PathType Leaf) {
+  try {
+    $skillRecords = @{}
+    $skillLines = @((Get-SafeContent -AuthorizedRoot $TargetRoot -Path $skillManifestPath -Raw -MaximumBytes 4194304) -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    foreach ($line in $skillLines) {
+      $record = $line | ConvertFrom-Json
+      $required = @('schema_version', 'name', 'version', 'status', 'source', 'metadata', 'metadata_sha256', 'dependencies', 'permissions')
+      $names = @($record.PSObject.Properties.Name)
+      foreach ($name in $required) { if ($names -notcontains $name) { throw "skill manifest record is missing '$name'." } }
+      foreach ($name in $names) { if ($required -notcontains $name) { throw "skill manifest record contains unsupported '$name'." } }
+      if ([int64]$record.schema_version -ne 1 -or [string]$record.status -ne 'active' -or $skillRecords.ContainsKey([string]$record.name)) { throw "skill manifest record '$($record.name)' has invalid schema, status, or duplicate name." }
+      $package = Read-LizardSkillPackage -SkillsRoot (Join-Path $TargetRoot '.agent\skills') -Name ([string]$record.name) -LayerVersion ([string]$manifest.layer_version)
+      if ([string]$record.version -ne [string]$package.metadata.version -or [string]$record.source -ne ".agent/skills/$($record.name)/SKILL.md" -or [string]$record.metadata -ne ".agent/skills/$($record.name)/skill.json") { throw "skill manifest record '$($record.name)' does not match its installed package." }
+      $actualMetadataHash = (Get-FileHash -LiteralPath $package.metadata_path -Algorithm SHA256).Hash.ToLowerInvariant()
+      if ([string]$record.metadata_sha256 -ne $actualMetadataHash) { throw "skill manifest metadata hash differs for '$($record.name)'." }
+      $skillRecords[[string]$record.name] = [pscustomobject]@{ record = $record; package = $package }
+    }
+    foreach ($name in @($skillRecords.Keys)) {
+      foreach ($dependency in @($skillRecords[$name].package.metadata.dependencies)) {
+        if (-not $skillRecords.ContainsKey([string]$dependency.name)) {
+          if ($dependency.optional) { continue }
+          throw "installed skill '$name' requires missing skill '$($dependency.name)'."
+        }
+        if (-not (Test-LizardSkillVersionRequirement -Actual ([string]$skillRecords[[string]$dependency.name].package.metadata.version) -Requirement ([string]$dependency.version))) { throw "installed skill '$name' dependency '$($dependency.name)' has an incompatible version." }
+      }
+      foreach ($conflict in @($skillRecords[$name].package.metadata.conflicts)) { if ($skillRecords.ContainsKey([string]$conflict)) { throw "installed skill '$name' conflicts with '$conflict'." } }
+    }
+    Add-Ok "validated versioned skill manifest: $($skillRecords.Count) package(s)"
+  } catch { Add-Fail "SKILL_MANIFEST_INVALID: $($_.Exception.Message)" }
+}
+
+$memoryRoot = Join-Path $TargetRoot '.agent\memory'
+if ($effectiveMemoryMode -eq 'off') {
+  if (Test-Path -LiteralPath $memoryRoot) { Add-Fail 'MEMORY_MODE_OFF_RESIDUE: .agent/memory exists while persistence is off.' }
+  else { Add-Ok 'memory namespace absent for off mode' }
+  if (Test-Path -LiteralPath (Join-Path $TargetRoot '.agent\protocols\memory-policy.md')) { Add-Fail 'MEMORY_MODE_OFF_RESIDUE: memory-policy.md remains installed.' }
+  if ($null -ne $manifest) {
+    foreach ($artifact in @($manifest.artifacts)) {
+      $artifactPath = [string]$artifact.path
+      if (($artifactPath -eq '.agent/memory' -or $artifactPath.StartsWith('.agent/memory/')) -and [string]$artifact.lifecycle -ne 'removed') {
+        Add-Fail "MEMORY_MODE_OFF_RESIDUE: non-removed manifest artifact remains: $artifactPath"
+      }
+    }
+  }
+  $instructionPaths = New-Object 'System.Collections.Generic.HashSet[string]' (Get-LizardPathComparer)
+  foreach ($relative in @('.agent/protocols/permissions.md', '.agent/protocols/project-context.md', '.agent/protocols/handoff.md', '.agent/protocols/context-hygiene.md')) { $null = $instructionPaths.Add($relative) }
+  if ($null -ne $manifest) {
+    foreach ($artifact in @($manifest.artifacts)) {
+      $relative = ConvertTo-LizardArtifactPath ([string]$artifact.path)
+      if ([string]$artifact.kind -eq 'file' -and [string]$artifact.lifecycle -eq 'active' -and ($artifact.adapter_id -or $relative.StartsWith('.agent/protocols/', [System.StringComparison]::OrdinalIgnoreCase))) { $null = $instructionPaths.Add($relative) }
+    }
+  }
+  foreach ($relative in @($instructionPaths | Sort-Object)) {
+    $path = Join-Path $TargetRoot $relative.Replace('/', '\')
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+    $content = Get-SafeContent -AuthorizedRoot $TargetRoot -Path $path -Raw
+    if ($content -match '(?i)\.agent[/\\]memory|memory[/\\](?:personal|semantic|working|episodic)|working-memory') { Add-Fail "MEMORY_MODE_OFF_REFERENCE: $relative contains an operational memory path." }
+  }
+} elseif ($effectiveMemoryMode -in @('curated', 'private-episodic')) {
+  foreach ($relative in @('personal\PREFERENCES.md', 'semantic\DECISIONS.md', 'semantic\LESSONS.md', 'working\WORKSPACE.md')) {
+    Check-File ('.agent\memory\' + $relative) -Required | Out-Null
+  }
+  Check-File '.agent\protocols\memory-policy.md' -Required | Out-Null
+  if ($effectiveMemoryMode -eq 'private-episodic') {
+    Check-File '.agent\memory\episodic\EPISODES.md' -Required | Out-Null
+    $ignorePath = Join-Path $TargetRoot '.agent\.gitignore'
+    if ((Test-Path -LiteralPath $ignorePath -PathType Leaf) -and (Get-Content -LiteralPath $ignorePath -Raw) -notmatch '(?m)^memory/episodic/\*\*$') { Add-Fail 'MEMORY_MODE_PRIVATE_IGNORE_MISSING: episodic content is not ignored recursively.' }
+  } elseif (Test-Path -LiteralPath (Join-Path $memoryRoot 'episodic')) {
+    Add-Fail 'MEMORY_MODE_CURATED_RESIDUE: episodic content exists in curated mode.'
+  }
+}
+
+$routingPolicy = $null
 if ($null -ne $profile) {
   if ([string]::IsNullOrWhiteSpace([string]$profile.routingPolicy)) { Add-Fail 'project profile has no routingPolicy.' }
   else {
@@ -162,6 +240,18 @@ if ($null -ne $profile) {
         $routingPolicy = Get-Content -LiteralPath $routingPolicyPath -Raw | ConvertFrom-Json
         if ([string]$routingPolicy.name -ne [string]$profile.routingPolicy) { Add-Fail "routing policy '$($routingPolicy.name)' does not match profile '$($profile.routingPolicy)'." }
         else { Add-Ok "routing policy loaded: $($routingPolicy.name)" }
+        $regulatedPolicy = if ($routingPolicy.PSObject.Properties.Name -contains 'regulated_data') { $routingPolicy.regulated_data } else { $null }
+        if (
+          $null -eq $regulatedPolicy -or
+          [string]$regulatedPolicy.default_decision -ne 'human-review' -or
+          $regulatedPolicy.organization_approval_required -ne $true -or
+          $regulatedPolicy.require_inventory_identity -ne $true -or
+          $regulatedPolicy.approval_must_be_outside_target -ne $true
+        ) {
+          Add-Fail 'REGULATED_POLICY_INVALID: regulated data must default to human review and require external organization approval plus inventory identity.'
+        } else {
+          Add-Ok 'regulated-data policy defaults to human review with external organization approval required.'
+        }
       } catch { Add-Fail "routing policy is invalid JSON: $($_.Exception.Message)" }
     }
   }

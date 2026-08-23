@@ -89,10 +89,30 @@ jobs:
           - { os: macos-latest, shard: 3, count: 6, label: 'focused 3/6' }
           - { os: macos-latest, shard: 5, count: 6, label: 'focused 5/6' }
           - { os: macos-latest, shard: 6, count: 6, label: 'focused 6/6' }
-          - { os: macos-latest, shard: 1, count: 22, label: 'focused json' }
-          - { os: macos-latest, shard: 7, count: 22, label: 'focused install-plan-tamper' }
-          - { os: macos-latest, shard: 13, count: 22, label: 'focused manifest-lifecycle' }
-          - { os: macos-latest, shard: 19, count: 22, label: 'focused public-readiness' }
+          - { os: macos-latest, shard: 1, count: 42, label: 'focused json' }
+          - { os: macos-latest, shard: 7, count: 42, label: 'focused install-plan-tamper' }
+          - { os: macos-latest, shard: 13, count: 42, label: 'focused manifest-lifecycle' }
+          - { os: macos-latest, shard: 19, count: 42, label: 'focused public-readiness' }
+          - { os: macos-latest, shard: 23, count: 42, label: 'focused transaction-primitives' }
+          - { os: macos-latest, shard: 24, count: 42, label: 'focused handle-bound-mutation' }
+          - { os: macos-latest, shard: 25, count: 42, label: 'focused external-mutator-failclosed' }
+          - { os: macos-latest, shard: 26, count: 42, label: 'focused manifest-version-consistency' }
+          - { os: macos-latest, shard: 27, count: 42, label: 'focused uninstall-roundtrip' }
+          - { os: macos-latest, shard: 28, count: 42, label: 'focused uninstall-tamper' }
+          - { os: macos-latest, shard: 29, count: 42, label: 'focused install-uninstall-roundtrip' }
+          - { os: macos-latest, shard: 30, count: 42, label: 'focused memory-modes' }
+          - { os: macos-latest, shard: 31, count: 42, label: 'focused memory-mode-update' }
+          - { os: macos-latest, shard: 32, count: 42, label: 'focused memory-mode-transitions' }
+          - { os: macos-latest, shard: 33, count: 42, label: 'focused regulated-approval' }
+          - { os: macos-latest, shard: 34, count: 42, label: 'focused routing-receipt-privacy' }
+          - { os: macos-latest, shard: 35, count: 42, label: 'focused prompt-trust' }
+          - { os: macos-latest, shard: 36, count: 42, label: 'focused constrained-verifier' }
+          - { os: macos-latest, shard: 37, count: 42, label: 'focused signed-evidence' }
+          - { os: macos-latest, shard: 38, count: 42, label: 'focused signed-loop-completion' }
+          - { os: macos-latest, shard: 39, count: 42, label: 'focused signed-calibration' }
+          - { os: macos-latest, shard: 40, count: 42, label: 'focused analyzer-hardening' }
+          - { os: macos-latest, shard: 41, count: 42, label: 'focused git-ref-validation' }
+          - { os: macos-latest, shard: 42, count: 42, label: 'focused skill-lifecycle' }
 
     steps:
       - *checkout-pwsh

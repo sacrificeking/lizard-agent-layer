@@ -36,12 +36,26 @@ function Test-LizardPlanInteger {
   return ($Value -is [byte] -or $Value -is [sbyte] -or $Value -is [int16] -or $Value -is [uint16] -or $Value -is [int32] -or $Value -is [uint32] -or $Value -is [int64] -or $Value -is [uint64])
 }
 
+function ConvertTo-LizardCanonicalJsonNumber {
+  param($Value)
+  if ($Value -is [decimal]) { return ([decimal]$Value).ToString('0.#############################', [Globalization.CultureInfo]::InvariantCulture) }
+  if ($Value -is [single] -or $Value -is [double]) {
+    $number = [double]$Value
+    if ([double]::IsNaN($number) -or [double]::IsInfinity($number)) { throw (New-LizardPlanException -Code 'PLAN_CANONICAL_NUMBER_INVALID' -Message 'Canonical JSON numbers must be finite.') }
+    try { $decimal = [decimal]$number } catch { throw (New-LizardPlanException -Code 'PLAN_CANONICAL_NUMBER_INVALID' -Message 'Canonical JSON floating-point number is outside the supported decimal range.') }
+    if ([double]$decimal -ne $number) { throw (New-LizardPlanException -Code 'PLAN_CANONICAL_NUMBER_INEXACT' -Message 'Canonical JSON floating-point number cannot be represented exactly as a decimal value.') }
+    return $decimal.ToString('0.#############################', [Globalization.CultureInfo]::InvariantCulture)
+  }
+  return $null
+}
+
 function ConvertTo-LizardCanonicalJsonValue {
   param($Value)
   if ($null -eq $Value) { return 'null' }
   if ($Value -is [bool]) { if ($Value) { return 'true' } else { return 'false' } }
   if ($Value -is [string] -or $Value -is [char]) { return ConvertTo-LizardCanonicalJsonString -Value ([string]$Value) }
   if (Test-LizardPlanInteger $Value) { return ([System.Convert]::ToString($Value, [System.Globalization.CultureInfo]::InvariantCulture)) }
+  if ($Value -is [decimal] -or $Value -is [single] -or $Value -is [double]) { return ConvertTo-LizardCanonicalJsonNumber $Value }
   if ($Value -is [System.Collections.IDictionary]) {
     $map = @{}
     $keys = New-Object System.Collections.Generic.List[string]
@@ -70,7 +84,7 @@ function ConvertTo-LizardCanonicalJsonValue {
     }
     return ConvertTo-LizardCanonicalJsonValue $map
   }
-  throw (New-LizardPlanException -Code 'PLAN_CANONICAL_TYPE_UNSUPPORTED' -Message ("Unsupported canonical JSON value type: {0}. Only objects, arrays, strings, integers, booleans, and null are allowed." -f $Value.GetType().FullName))
+  throw (New-LizardPlanException -Code 'PLAN_CANONICAL_TYPE_UNSUPPORTED' -Message ("Unsupported canonical JSON value type: {0}. Only objects, arrays, strings, finite exact decimal numbers, booleans, and null are allowed." -f $Value.GetType().FullName))
 }
 
 function ConvertTo-LizardCanonicalJson {
@@ -116,9 +130,28 @@ function Get-LizardSourceGitHead {
 
 function Get-LizardPlanRootHash {
   param([Parameter(Mandatory = $true)][string]$TargetRoot)
-  $root = ConvertTo-LizardFullPath -Path $TargetRoot
+  $identity = Get-LizardSafeRootIdentity -AuthorizedRoot $TargetRoot
+  $root = [string]$identity.authorized_root
   if ((Get-LizardPathComparison) -eq [System.StringComparison]::OrdinalIgnoreCase) { $root = $root.ToLowerInvariant() }
-  return Get-LizardPlanSha256 -CanonicalJson ("target-root-v1|{0}" -f $root.Replace('\', '/'))
+  return Get-LizardPlanSha256 -CanonicalJson ("target-root-v2|{0}|{1}|{2}|{3}" -f $identity.backend, $root.Replace('\', '/'), $identity.volume_id, $identity.file_id)
+}
+
+function Get-LizardPlanTargetIdentitySha256 {
+  [CmdletBinding(DefaultParameterSetName = 'Path')]
+  param(
+    [Parameter(Mandatory = $true, ParameterSetName = 'Path')][string]$TargetRoot,
+    [Parameter(Mandatory = $true, ParameterSetName = 'Path')][string]$Path,
+    [Parameter(Mandatory = $true, ParameterSetName = 'Path')][ValidateSet('file', 'directory')][string]$Kind,
+    [Parameter(Mandatory = $true, ParameterSetName = 'Metadata')]$Metadata
+  )
+  $metadata = if ($PSCmdlet.ParameterSetName -eq 'Metadata') { $Metadata } else {
+    $metadataKind = if ($Kind -eq 'file') { 'File' } else { 'Directory' }
+    Get-SafeItemMetadata -AuthorizedRoot $TargetRoot -Path $Path -Kind $metadataKind
+  }
+  foreach ($name in @('backend', 'kind', 'volume_id', 'mount_id', 'file_id')) {
+    if ($null -eq $metadata -or $metadata.PSObject.Properties.Name -notcontains $name -or [string]::IsNullOrWhiteSpace([string]$metadata.$name)) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_IDENTITY_INVALID' -Message "Target metadata lacks '$name'.") }
+  }
+  return Get-LizardPlanSha256 -CanonicalJson ("target-item-v1|{0}|{1}|{2}|{3}|{4}" -f $metadata.backend, $metadata.kind, $metadata.volume_id, $metadata.mount_id, $metadata.file_id)
 }
 
 function Assert-LizardPlanProperties {
@@ -162,17 +195,33 @@ function ConvertTo-LizardPlanTargetEntry {
   param($Entry)
   if ($Entry -is [System.Collections.IDictionary]) { $Entry = [pscustomobject]$Entry }
   $required = @('path', 'kind', 'action', 'precondition_kind', 'precondition_sha256', 'ownership', 'intended_sha256')
-  Assert-LizardPlanProperties -Document $Entry -Required $required -Allowed $required -Label 'Plan target entry'
+  $allowed = @($required + 'precondition_identity_sha256')
+  Assert-LizardPlanProperties -Document $Entry -Required $required -Allowed $allowed -Label 'Plan target entry'
   if (-not (Test-LizardPlanRelativePath $Entry.path)) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_INVALID' -Message 'Target entry path is invalid.') }
   if ($Entry.kind -isnot [string] -or [string]$Entry.kind -notin @('file', 'directory')) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_INVALID' -Message "Target '$($Entry.path)' kind is invalid.") }
-  if ($Entry.action -isnot [string] -or [string]$Entry.action -notin @('create', 'replace', 'preserve')) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_INVALID' -Message "Target '$($Entry.path)' action is invalid.") }
+  if ($Entry.action -isnot [string] -or [string]$Entry.action -notin @('create', 'replace', 'preserve', 'remove')) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_INVALID' -Message "Target '$($Entry.path)' action is invalid.") }
   if ($Entry.precondition_kind -isnot [string] -or [string]$Entry.precondition_kind -notin @('absent', 'file', 'directory', 'other')) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_INVALID' -Message "Target '$($Entry.path)' precondition kind is invalid.") }
   if ($Entry.ownership -isnot [string] -or [string]$Entry.ownership -notin @('unmanaged', 'layer-owned', 'user-owned', 'adopted')) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_INVALID' -Message "Target '$($Entry.path)' ownership is invalid.") }
   foreach ($hashName in @('precondition_sha256', 'intended_sha256')) { $hash = $Entry.$hashName; if ($null -ne $hash -and ($hash -isnot [string] -or [string]$hash -notmatch '^[a-f0-9]{64}$')) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_INVALID' -Message "Target '$($Entry.path)' $hashName is invalid.") } }
   if ([string]$Entry.precondition_kind -eq 'file' -and $null -eq $Entry.precondition_sha256) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_INVALID' -Message "Existing file target '$($Entry.path)' requires a precondition hash.") }
   if ([string]$Entry.precondition_kind -ne 'file' -and $null -ne $Entry.precondition_sha256) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_INVALID' -Message "Non-file target '$($Entry.path)' must not declare a precondition hash.") }
   if ([string]$Entry.kind -eq 'directory' -and $null -ne $Entry.intended_sha256) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_INVALID' -Message "Directory target '$($Entry.path)' must not declare a file hash.") }
-  return [pscustomobject][ordered]@{ path = [string]$Entry.path; kind = [string]$Entry.kind; action = [string]$Entry.action; precondition_kind = [string]$Entry.precondition_kind; precondition_sha256 = $Entry.precondition_sha256; ownership = [string]$Entry.ownership; intended_sha256 = $Entry.intended_sha256 }
+  $hasIdentity = $Entry.PSObject.Properties.Name -contains 'precondition_identity_sha256'
+  $identityHash = if ($hasIdentity) { $Entry.precondition_identity_sha256 } else { $null }
+  if ($null -ne $identityHash -and ($identityHash -isnot [string] -or [string]$identityHash -notmatch '^[a-f0-9]{64}$')) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_INVALID' -Message "Target '$($Entry.path)' physical identity hash is invalid.") }
+  if ([string]$Entry.action -eq 'remove') {
+    if (-not $hasIdentity -or $null -eq $identityHash) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_IDENTITY_REQUIRED' -Message "Removal target '$($Entry.path)' requires a physical identity hash.") }
+    if ([string]$Entry.precondition_kind -notin @('file', 'directory') -or [string]$Entry.kind -ne [string]$Entry.precondition_kind) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_INVALID' -Message "Removal target '$($Entry.path)' kind must match an existing file or directory.") }
+    if ([string]$Entry.ownership -ne 'layer-owned') { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_OWNERSHIP_INVALID' -Message "Removal target '$($Entry.path)' must be layer-owned.") }
+    if ($null -ne $Entry.intended_sha256) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_INVALID' -Message "Removal target '$($Entry.path)' must not declare intended content.") }
+  } elseif ($hasIdentity -and $null -ne $identityHash) {
+    throw (New-LizardPlanException -Code 'PLAN_BINDING_TARGET_INVALID' -Message "Non-removal target '$($Entry.path)' must not declare a physical identity hash.")
+  }
+  $normalized = [pscustomobject][ordered]@{ path = [string]$Entry.path; kind = [string]$Entry.kind; action = [string]$Entry.action; precondition_kind = [string]$Entry.precondition_kind; precondition_sha256 = $Entry.precondition_sha256 }
+  if ($hasIdentity) { $normalized | Add-Member -NotePropertyName precondition_identity_sha256 -NotePropertyValue $identityHash }
+  $normalized | Add-Member -NotePropertyName ownership -NotePropertyValue ([string]$Entry.ownership)
+  $normalized | Add-Member -NotePropertyName intended_sha256 -NotePropertyValue $Entry.intended_sha256
+  return $normalized
 }
 
 function ConvertTo-LizardNestedPlanReference {
@@ -186,7 +235,7 @@ function ConvertTo-LizardNestedPlanReference {
   }
   $required = @('plan_id', 'operation_kind', 'sha256', 'intent_sha256')
   Assert-LizardPlanProperties -Document $NestedPlan -Required $required -Allowed $required -Label 'Nested plan reference'
-  if ([string]$NestedPlan.plan_id -notmatch '^[a-f0-9]{32}$' -or [string]$NestedPlan.operation_kind -notin @('install', 'update') -or [string]$NestedPlan.sha256 -notmatch '^[a-f0-9]{64}$' -or [string]$NestedPlan.intent_sha256 -notmatch '^[a-f0-9]{64}$') { throw (New-LizardPlanException -Code 'PLAN_BINDING_NESTED_INVALID' -Message 'Nested plan reference is invalid.') }
+  if ([string]$NestedPlan.plan_id -notmatch '^[a-f0-9]{32}$' -or [string]$NestedPlan.operation_kind -notin @('install', 'update', 'uninstall', 'skill-lifecycle', 'records-lifecycle') -or [string]$NestedPlan.sha256 -notmatch '^[a-f0-9]{64}$' -or [string]$NestedPlan.intent_sha256 -notmatch '^[a-f0-9]{64}$') { throw (New-LizardPlanException -Code 'PLAN_BINDING_NESTED_INVALID' -Message 'Nested plan reference is invalid.') }
   return [pscustomobject][ordered]@{ plan_id = [string]$NestedPlan.plan_id; operation_kind = [string]$NestedPlan.operation_kind; sha256 = [string]$NestedPlan.sha256; intent_sha256 = [string]$NestedPlan.intent_sha256 }
 }
 
@@ -209,7 +258,7 @@ function Assert-LizardOperationPlanDocument {
   Assert-LizardPlanProperties -Document $Plan -Required $planRequired -Allowed $planRequired -Label 'Operation plan'
   if (-not (Test-LizardPlanInteger $Plan.schema_version) -or [int64]$Plan.schema_version -ne 1) { throw (New-LizardPlanException -Code 'PLAN_BINDING_SCHEMA_UNSUPPORTED' -Message 'Operation plan schema_version must be integer 1.') }
   if ($Plan.plan_id -isnot [string] -or [string]$Plan.plan_id -notmatch '^[a-f0-9]{32}$') { throw (New-LizardPlanException -Code 'PLAN_BINDING_SHAPE_INVALID' -Message 'Plan ID is invalid.') }
-  if ($Plan.operation_kind -isnot [string] -or [string]$Plan.operation_kind -notin @('install', 'update')) { throw (New-LizardPlanException -Code 'PLAN_BINDING_OPERATION_INVALID' -Message 'Plan operation kind is invalid.') }
+  if ($Plan.operation_kind -isnot [string] -or [string]$Plan.operation_kind -notin @('install', 'update', 'uninstall', 'skill-lifecycle', 'records-lifecycle')) { throw (New-LizardPlanException -Code 'PLAN_BINDING_OPERATION_INVALID' -Message 'Plan operation kind is invalid.') }
   $created = [DateTimeOffset]::MinValue; $expires = [DateTimeOffset]::MinValue
   if (-not (Test-LizardPlanTimestamp $Plan.created_at ([ref]$created)) -or -not (Test-LizardPlanTimestamp $Plan.expires_at ([ref]$expires)) -or $expires -le $created) { throw (New-LizardPlanException -Code 'PLAN_BINDING_EXPIRY_INVALID' -Message 'Plan timestamps are invalid or non-increasing.') }
   if ($Plan.intent_sha256 -isnot [string] -or [string]$Plan.intent_sha256 -notmatch '^[a-f0-9]{64}$') { throw (New-LizardPlanException -Code 'PLAN_BINDING_INTENT_INVALID' -Message 'Plan intent hash is invalid.') }
@@ -235,12 +284,12 @@ function Assert-LizardOperationPlanDocument {
 function New-LizardOperationPlan {
   [CmdletBinding()]
   param(
-    [Parameter(Mandatory = $true)][ValidateSet('install', 'update')][string]$OperationKind,
+    [Parameter(Mandatory = $true)][ValidateSet('install', 'update', 'uninstall', 'skill-lifecycle', 'records-lifecycle')][string]$OperationKind,
     [Parameter(Mandatory = $true)][string]$TargetRoot,
     [Parameter(Mandatory = $true)][string]$LayerRoot,
     [Parameter(Mandatory = $true)]$Options,
-    [Parameter(Mandatory = $true)][object[]]$Inputs,
-    [Parameter(Mandatory = $true)][object[]]$TargetEntries,
+    [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]]$Inputs,
+    [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]]$TargetEntries,
     [AllowNull()]$NestedPlan = $null,
     [ValidateRange(1, 1440)][int]$TtlMinutes = 30,
     [AllowNull()][string]$LayerVersion,
@@ -313,21 +362,16 @@ function Write-LizardOperationPlan {
   $canonical = ConvertTo-LizardCanonicalJson $Plan
   $digest = Get-LizardPlanSha256 -CanonicalJson $canonical
   $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($canonical)
-  $stream = $null
   try {
-    $stream = New-Object System.IO.FileStream($destination, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
-    $stream.Write($bytes, 0, $bytes.Length)
-    $stream.Flush($true)
+    Set-SafeBytes -AuthorizedRoot $root -Path $destination -Bytes $bytes -CreateNew
   } catch { throw (New-LizardPlanException -Code 'PLAN_BINDING_WRITE_FAILED' -Message $_.Exception.Message) }
-  finally { if ($null -ne $stream) { $stream.Dispose() } }
-  $digestStream = $null
   try {
     $digestBytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($digest + "`n")
-    $digestStream = New-Object System.IO.FileStream($digestPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
-    $digestStream.Write($digestBytes, 0, $digestBytes.Length)
-    $digestStream.Flush($true)
-  } catch { throw (New-LizardPlanException -Code 'PLAN_BINDING_WRITE_FAILED' -Message $_.Exception.Message) }
-  finally { if ($null -ne $digestStream) { $digestStream.Dispose() } }
+    Set-SafeBytes -AuthorizedRoot $root -Path $digestPath -Bytes $digestBytes -CreateNew
+  } catch {
+    try { if (Test-Path -LiteralPath $destination -PathType Leaf) { Remove-SafeItem -AuthorizedRoot $root -Path $destination -Kind File } } catch { }
+    throw (New-LizardPlanException -Code 'PLAN_BINDING_WRITE_FAILED' -Message $_.Exception.Message)
+  }
   return [pscustomobject]@{ path = $destination; sha256 = $digest; sha256_path = $digestPath }
 }
 
@@ -337,7 +381,7 @@ function Read-LizardApprovedPlan {
     [Alias('ParentRoot')][string]$AuthorizedRoot,
     [Parameter(Mandatory = $true)][Alias('PlanPath')][string]$Path,
     [Parameter(Mandatory = $true)][Alias('PlanSha256', 'ExpectedSha256')][string]$Sha256,
-    [Parameter(Mandatory = $true)][Alias('ExpectedOperationKind')][ValidateSet('install', 'update')][string]$OperationKind,
+    [Parameter(Mandatory = $true)][Alias('ExpectedOperationKind')][ValidateSet('install', 'update', 'uninstall', 'skill-lifecycle', 'records-lifecycle')][string]$OperationKind,
     [DateTimeOffset]$Now = [DateTimeOffset]::UtcNow,
     [ValidateRange(1024, 16777216)][int]$MaximumBytes = 8388608
   )
@@ -352,11 +396,11 @@ function Read-LizardApprovedPlan {
   } else {
     Join-Path $root $Path
   }
-  $metadataBefore = Get-SafeFileMetadata -AuthorizedRoot $root -Path $candidate
-  if ([int64]$metadataBefore.length -gt $MaximumBytes) { throw (New-LizardPlanException -Code 'PLAN_BINDING_TOO_LARGE' -Message "Approved plan exceeds $MaximumBytes bytes.") }
-  $bytes = [System.IO.File]::ReadAllBytes([string]$metadataBefore.path)
-  $metadataAfter = Get-SafeFileMetadata -AuthorizedRoot $root -Path ([string]$metadataBefore.path)
-  if ([int64]$metadataBefore.length -ne [int64]$metadataAfter.length -or [string]$metadataBefore.last_write_utc -ne [string]$metadataAfter.last_write_utc) { throw (New-LizardPlanException -Code 'PLAN_BINDING_CHANGED_DURING_READ' -Message 'Approved plan changed while being read.') }
+  try { $bytes = Get-SafeBytes -AuthorizedRoot $root -Path $candidate -MaximumBytes $MaximumBytes }
+  catch {
+    if ($_.Exception.Message -match 'SAFEFS_FILE_TOO_LARGE') { throw (New-LizardPlanException -Code 'PLAN_BINDING_TOO_LARGE' -Message "Approved plan exceeds $MaximumBytes bytes.") }
+    throw
+  }
   if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) { throw (New-LizardPlanException -Code 'PLAN_BINDING_NONCANONICAL' -Message 'Approved plan must be UTF-8 without BOM.') }
   try { $raw = (New-Object System.Text.UTF8Encoding($false, $true)).GetString($bytes) }
   catch { throw (New-LizardPlanException -Code 'PLAN_BINDING_UTF8_INVALID' -Message $_.Exception.Message) }
@@ -390,7 +434,9 @@ Export-ModuleMember -Function @(
   'Assert-LizardPlanIntentMatch',
   'ConvertTo-LizardCanonicalJson',
   'Get-LizardPlanIntentSha256',
+  'Get-LizardPlanRootHash',
   'Get-LizardPlanSha256',
+  'Get-LizardPlanTargetIdentitySha256',
   'Get-LizardSourceGitHead',
   'New-LizardOperationPlan',
   'Read-LizardApprovedPlan',

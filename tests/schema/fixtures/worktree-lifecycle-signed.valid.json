@@ -1,0 +1,17 @@
+{
+  "schema_version": 2, "artifact_kind": "signed-evidence", "envelope_id": "11111111111111111111111111111111",
+  "payload_kind": "worktree-lifecycle", "issuer_id": "example-org", "key_id": "implementer-key-01", "principal_id": "implementer-01",
+  "issued_at": "2026-08-22T10:00:00Z", "expires_at": "2026-08-22T10:30:00Z", "purpose": "worktree-registration", "subject": "22222222222222222222222222222222",
+  "nonce": "3333333333333333333333333333333333333333333333333333333333333333", "challenge_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+  "binding_sha256": "5555555555555555555555555555555555555555555555555555555555555555", "approval_ref": "approval-worktree-01",
+  "payload_sha256": "6666666666666666666666666666666666666666666666666666666666666666", "signature_algorithm": "RS256",
+  "payload": {
+    "operation_id": "22222222222222222222222222222222", "status": "CREATED", "created_at": "2026-08-22T09:59:00Z",
+    "target_root": "C:/fixture/target", "target_git_root": "C:/fixture/target", "git_common_dir": "C:/fixture/target/.git",
+    "item_id": "fixture", "branch": "lizard/fixture", "observed_branch": "lizard/fixture", "base_ref": "HEAD",
+    "base_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "observed_head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "worktree_root": "C:/fixture/worktree", "worktree_common_dir": "C:/fixture/target/.git", "mutation_origin": "external-registered",
+    "human_approved": true, "auto_merge": false
+  },
+  "signature": "AQID"
+}

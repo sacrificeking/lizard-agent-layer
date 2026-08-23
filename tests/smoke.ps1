@@ -5,8 +5,12 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Host.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts\Lizard.LoopEvidence.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Trust.psm1') -Force
 Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests\TestTrustHelpers.psm1') -Force
 $PowerShellHost = Get-LizardPowerShellHostPath
 $PowerShellFilePrefix = Get-LizardPowerShellFilePrefix
 
@@ -152,7 +156,7 @@ Run-Step 'validate layer' {
 }
 
 Run-Step 'analyze target recommendation' {
-  $json = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\analyze-target.ps1') -TargetPath $analysisTarget -Json | Out-String
+  $json = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\analyze-target.ps1') -TargetPath $analysisTarget -ApprovedHarnesses codex,claude-code,gemini,github-copilot -Json | Out-String
   $analysis = $json | ConvertFrom-Json
   if ($analysis.recommendedProfile -ne 'supabase-react-finance') { throw "Expected supabase-react-finance recommendation, got $($analysis.recommendedProfile)." }
   if (@($analysis.recommendedHarnesses) -notcontains 'codex') { throw 'Expected codex harness recommendation.' }
@@ -245,22 +249,37 @@ Run-Step 'L2 worktree and verifier gates' {
 
   & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-worktree.ps1') -TargetPath $l2Target -ItemId smoke-fix -Branch $branch -WorktreePath $l2WorktreePath -OutputDir $l2WorktreeOutputDir | Out-String | Write-Host
   if (Test-Path -LiteralPath $l2WorktreePath) { throw 'L2 worktree preview created a worktree.' }
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-worktree.ps1') -TargetPath $l2Target -ItemId smoke-fix -Branch $branch -WorktreePath $l2WorktreePath -OutputDir $l2WorktreeOutputDir -Apply -HumanApproved | Out-String | Write-Host
-  if (-not (Test-Path -LiteralPath $l2WorktreePath)) { throw 'Expected L2 assisted worktree to exist after approved apply.' }
+  $blockedCreate = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-worktree.ps1') -TargetPath $l2Target -ItemId smoke-fix -Branch $branch -WorktreePath $l2WorktreePath -OutputDir $l2WorktreeOutputDir -Apply -HumanApproved 2>&1
+  $blockedCreateExit = $LASTEXITCODE
+  $blockedCreate | Out-String | Write-Host
+  $blockedCreateReport = Get-Content -LiteralPath (Join-Path $l2WorktreeOutputDir 'loop-worktree-report.json') -Raw | ConvertFrom-Json
+  if ($blockedCreateExit -eq 0 -or (@($blockedCreateReport.failures) -join ' ') -notmatch 'SAFEFS_EXTERNAL_MUTATOR_UNBOUND') { throw 'Expected approved built-in worktree creation to fail closed at the external Git mutator boundary.' }
+  if (Test-Path -LiteralPath $l2WorktreePath) { throw 'Fail-closed built-in worktree creation mutated the requested path.' }
+
+  & git -C $l2Target worktree add --quiet -b $branch $l2WorktreePath HEAD
+  if ($LASTEXITCODE -ne 0) { throw 'Smoke fixture could not create its external worktree.' }
+  $operationId = [Guid]::NewGuid().ToString('N')
+  $baseSha = [string](& git -C $l2WorktreePath rev-parse HEAD | Select-Object -First 1)
+  $lifecycleBinding = Get-LizardLifecycleTrustBinding -OperationId $operationId -TargetRoot $l2Target -WorktreeRoot $l2WorktreePath -Branch $branch -BaseSha $baseSha
+  $lifecycleTrust = New-LizardTestTrustMaterial -Root (Join-Path $tmpRoot 'l2-lifecycle-trust') -BindingSha256 $lifecycleBinding -Subject $operationId -Now ([DateTimeOffset]::UtcNow) -PrincipalId 'smoke-implementer' -Roles @('implementer') -Purpose 'worktree-registration' -PayloadKind 'worktree-lifecycle'
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-worktree.ps1') -TargetPath $l2Target -ItemId smoke-fix -OperationId $operationId -Branch $branch -WorktreePath $l2WorktreePath -OutputDir $l2WorktreeOutputDir -RegisterExisting -Apply -HumanApproved -TrustChallengePath $lifecycleTrust.challenge_path -TrustChallengeSha256 $lifecycleTrust.challenge_sha256 -ImplementerPrivateKeyPath $lifecycleTrust.private_key_path -ImplementerPrivateKeySha256 $lifecycleTrust.private_key_sha256 | Out-String | Write-Host
+  if ($LASTEXITCODE -ne 0) { throw 'Smoke fixture external worktree registration failed.' }
   $worktreeReport = Get-Content -LiteralPath (Join-Path $l2WorktreeOutputDir 'loop-worktree-report.json') -Raw | ConvertFrom-Json
   if ($worktreeReport.auto_merge -ne $false) { throw 'L2 worktree report must keep auto_merge false.' }
+  if ($worktreeReport.registered -ne $true) { throw 'L2 worktree report must disclose successful external registration.' }
   $lifecyclePath = Join-Path $l2WorktreeOutputDir 'loop-worktree-lifecycle.json'
   if (-not (Test-Path -LiteralPath $lifecyclePath)) { throw 'Expected worktree lifecycle contract.' }
   if ([string]::IsNullOrWhiteSpace([string]$worktreeReport.operation_id)) { throw 'Expected worktree operation ID.' }
 
-  $missingVerifierOutput = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch $branch -OutputDir $l2VerifyMissingOutputDir 2>&1
+  $lifecycleTrustArgs = @('-LifecycleTrustStorePath', $lifecycleTrust.trust_store_path, '-LifecycleTrustStoreSha256', $lifecycleTrust.trust_store_sha256, '-LifecycleChallengePath', $lifecycleTrust.challenge_path, '-LifecycleChallengeSha256', $lifecycleTrust.challenge_sha256)
+  $missingVerifierOutput = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch $branch -OutputDir $l2VerifyMissingOutputDir @lifecycleTrustArgs 2>&1
   $missingVerifierExit = $LASTEXITCODE
   $missingVerifierOutput | Out-String | Write-Host
   if ($missingVerifierExit -eq 0) { throw 'Expected L2 verifier without Verifier to fail.' }
   $missingVerifierReport = Get-Content -LiteralPath (Join-Path $l2VerifyMissingOutputDir 'loop-verify-report.json') -Raw | ConvertFrom-Json
   if (@($missingVerifierReport.failures) -notcontains 'Verifier is required.') { throw 'Expected missing verifier failure in report.' }
 
-  $mismatchOutput = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch 'lizard/l2/wrong-branch' -Verifier smoke-verifier -OutputDir $l2VerifyMismatchOutputDir 2>&1
+  $mismatchOutput = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch 'lizard/l2/wrong-branch' -Verifier smoke-verifier -OutputDir $l2VerifyMismatchOutputDir @lifecycleTrustArgs 2>&1
   $mismatchExit = $LASTEXITCODE
   $mismatchOutput | Out-String | Write-Host
   if ($mismatchExit -eq 0) { throw 'Expected L2 verifier branch mismatch to fail.' }
@@ -268,7 +287,7 @@ Run-Step 'L2 worktree and verifier gates' {
   if ($mismatchReport.branch_matches -ne $false) { throw 'Expected verifier branch_matches false for mismatch.' }
   if ($mismatchReport.same_git_common_dir -ne $true) { throw 'Expected mismatch verifier to still identify same repository.' }
 
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch $branch -Verifier smoke-verifier -Status NEEDS_REVIEW -Summary 'Smoke verifier packet generated.' -OutputDir $l2VerifyOutputDir -Apply | Out-String | Write-Host
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch $branch -Verifier smoke-verifier -Status NEEDS_REVIEW -Summary 'Smoke verifier packet generated.' -OutputDir $l2VerifyOutputDir -Apply @lifecycleTrustArgs | Out-String | Write-Host
   $verifyReport = Get-Content -LiteralPath (Join-Path $l2VerifyOutputDir 'loop-verify-report.json') -Raw | ConvertFrom-Json
   if ($verifyReport.branch_matches -ne $true) { throw 'Expected verifier branch binding to pass.' }
   if ($verifyReport.same_git_common_dir -ne $true) { throw 'Expected verifier repository binding to pass.' }
@@ -281,14 +300,21 @@ Run-Step 'L2 worktree and verifier gates' {
     if ($verifierText -notmatch [regex]::Escape($expected)) { throw "Expected verifier report to contain: $expected" }
   }
 
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-worktree-cleanup.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch $branch -RemoveBranch -OutputDir $l2CleanupPreviewOutputDir | Out-String | Write-Host
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-worktree-cleanup.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch $branch -RemoveBranch -OutputDir $l2CleanupPreviewOutputDir @lifecycleTrustArgs | Out-String | Write-Host
   if (-not (Test-Path -LiteralPath $l2WorktreePath)) { throw 'L2 cleanup preview removed the worktree.' }
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-worktree-cleanup.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch $branch -RemoveBranch -Force -OutputDir $l2CleanupOutputDir -Apply -HumanApproved | Out-String | Write-Host
-  if (Test-Path -LiteralPath $l2WorktreePath) { throw 'Expected L2 cleanup apply to remove the worktree.' }
+  $blockedCleanup = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\loop-worktree-cleanup.ps1') -TargetPath $l2Target -LifecyclePath $lifecyclePath -WorktreePath $l2WorktreePath -Branch $branch -RemoveBranch -Force -OutputDir $l2CleanupOutputDir -Apply -HumanApproved @lifecycleTrustArgs 2>&1
+  $blockedCleanupExit = $LASTEXITCODE
+  $blockedCleanup | Out-String | Write-Host
   $cleanupReport = Get-Content -LiteralPath (Join-Path $l2CleanupOutputDir 'loop-worktree-cleanup-report.json') -Raw | ConvertFrom-Json
-  if ($cleanupReport.removed -ne $true) { throw 'Expected cleanup report removed true.' }
-  if ($cleanupReport.branch_deleted -ne $true) { throw 'Expected cleanup report branch_deleted true.' }
+  if ($blockedCleanupExit -eq 0 -or (@($cleanupReport.failures) -join ' ') -notmatch 'SAFEFS_EXTERNAL_MUTATOR_UNBOUND') { throw 'Expected built-in worktree cleanup to fail closed at the external Git mutator boundary.' }
+  if (-not (Test-Path -LiteralPath $l2WorktreePath)) { throw 'Fail-closed built-in cleanup removed the worktree.' }
+  if ($cleanupReport.removed -ne $false) { throw 'Fail-closed cleanup report must keep removed false.' }
+  if ($cleanupReport.branch_deleted -ne $false) { throw 'Fail-closed cleanup report must keep branch_deleted false.' }
   if ($cleanupReport.auto_merge -ne $false) { throw 'Cleanup report must keep auto_merge false.' }
+  & git -C $l2Target worktree remove --force $l2WorktreePath
+  if ($LASTEXITCODE -ne 0) { throw 'Smoke fixture could not remove its external worktree.' }
+  & git -C $l2Target branch -D $branch | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw 'Smoke fixture could not remove its external branch.' }
 }
 
 Run-Step 'install apply target pack overlay' {

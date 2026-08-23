@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/regulated-data-approval.schema.json",
+  "title": "lizard-agent-layer structural regulated-data approval envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artifact_kind", "approval_id", "issuer_kind", "organization_id", "approval_owner", "approver", "decision_reference", "status", "valid_from", "expires_at", "provider", "model", "harness", "purpose", "data_class", "region", "runtime_configuration_fingerprint", "phases", "risk_levels"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "regulated-data-approval" },
+    "approval_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+    "issuer_kind": { "const": "organization" },
+    "organization_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "approval_owner": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "approver": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "decision_reference": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "status": { "enum": ["approved", "revoked"] },
+    "valid_from": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "provider": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "model": { "type": "string", "minLength": 1, "maxLength": 300 },
+    "harness": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "purpose": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,127}$" },
+    "data_class": { "const": "regulated" },
+    "region": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$" },
+    "runtime_configuration_fingerprint": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "phases": { "type": "array", "items": { "enum": ["strategy", "execution", "verification"] }, "minItems": 1, "uniqueItems": true },
+    "risk_levels": { "type": "array", "items": { "enum": ["low", "medium", "high"] }, "minItems": 1, "uniqueItems": true }
+  }
+}

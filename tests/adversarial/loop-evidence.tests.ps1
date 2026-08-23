@@ -10,6 +10,9 @@ $RepoRoot = if ([string]::IsNullOrWhiteSpace($effectiveRepositoryRoot)) { Split-
 Import-Module (Join-Path $RepoRoot 'tests\TestHelpers.psm1') -Force
 Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
 Import-Module (Join-Path $RepoRoot 'scripts\Lizard.LoopEvidence.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts\Lizard.ConstrainedRunner.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'tests\TestTrustHelpers.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Trust.psm1') -Force
 
 $fixtureRoot = if ([string]::IsNullOrWhiteSpace($FixtureRoot)) { Join-Path $RepoRoot '.tmp\tests\loop-evidence' } else { [System.IO.Path]::GetFullPath($FixtureRoot) }
 $fixtureAllowedRoot = Split-Path -Parent $fixtureRoot
@@ -27,6 +30,18 @@ $verifyScript = Join-Path $RepoRoot 'scripts\loop-verify.ps1'
 $auditScript = Join-Path $RepoRoot 'scripts\loop-audit.ps1'
 $cleanupScript = Join-Path $RepoRoot 'scripts\loop-worktree-cleanup.ps1'
 $branch = 'lizard/l2/evidence-test'
+$operationId = ('3' * 32)
+
+function New-TestVerificationPlanArguments {
+  param([string[]]$CommandIds)
+  $planRoot = Join-Path $fixtureRoot 'verification-plans'
+  New-Item -ItemType Directory -Path $planRoot -Force | Out-Null
+  $planPath = Join-Path $planRoot ("verification-{0}.json" -f ([Guid]::NewGuid().ToString('N')))
+  $plan = New-LizardVerificationPlan -WorktreeRoot $worktree -CommandIds $CommandIds
+  Set-Content -LiteralPath $planPath -Value ($plan | ConvertTo-Json -Depth 12)
+  $sha256 = (Get-FileHash -LiteralPath $planPath -Algorithm SHA256).Hash.ToLowerInvariant()
+  @('-VerificationPlanPath', $planPath, '-VerificationPlanSha256', $sha256, '-HumanApprovedVerificationPlan')
+}
 
 function Assert-GitSuccess {
   param([string[]]$Arguments, [string]$Message)
@@ -55,16 +70,36 @@ try {
   Assert-False (Test-Path -LiteralPath $nestedPath) 'Rejected nested worktree path must remain absent.'
 
   $create = Invoke-TestPowerShell -ScriptPath $worktreeScript -Arguments @('-TargetPath', $target, '-ItemId', 'evidence-test', '-Branch', $branch, '-WorktreePath', $worktree, '-OutputDir', $createOutput, '-Apply', '-HumanApproved')
-  Assert-Equal 0 $create.exit_code "Worktree creation failed: $($create.output)"
-  Assert-True (Test-Path -LiteralPath $lifecyclePath) 'Worktree creation must write lifecycle contract.'
+  Assert-False ($create.exit_code -eq 0) 'Built-in Git worktree creation must fail closed without a handle-bound external-mutator capability.'
+  Assert-True ($create.output -match 'SAFEFS_EXTERNAL_MUTATOR_UNBOUND') 'Worktree creation rejection must expose the stable external-mutator code.'
+  Assert-False (Test-Path -LiteralPath $worktree) 'Rejected built-in worktree creation must not create the requested path.'
+
+  # The test harness creates its own isolated Git fixture so verifier and lifecycle
+  # behavior remain covered without granting the product an unsafe mutation bypass.
+  Assert-GitSuccess @('-C', $target, 'worktree', 'add', '--quiet', '-b', $branch, $worktree, 'HEAD') 'test fixture worktree creation failed'
+  $baseSha = [string](& git -C $worktree rev-parse HEAD | Select-Object -First 1)
+  $lifecycleBinding = Get-LizardLifecycleTrustBinding -OperationId $operationId -TargetRoot $target -WorktreeRoot $worktree -Branch $branch -BaseSha $baseSha
+  $lifecycleTrust = New-LizardTestTrustMaterial -Root (Join-Path $fixtureRoot 'lifecycle-trust') -BindingSha256 $lifecycleBinding -Subject $operationId -Now ([DateTimeOffset]::UtcNow) -PrincipalId 'implementation-agent' -Roles @('implementer') -Purpose 'worktree-registration' -PayloadKind 'worktree-lifecycle'
+  $lifecycleTrustArgs = @('-LifecycleTrustStorePath', $lifecycleTrust.trust_store_path, '-LifecycleTrustStoreSha256', $lifecycleTrust.trust_store_sha256, '-LifecycleChallengePath', $lifecycleTrust.challenge_path, '-LifecycleChallengeSha256', $lifecycleTrust.challenge_sha256)
+  $register = Invoke-TestPowerShell -ScriptPath $worktreeScript -Arguments @('-TargetPath', $target, '-ItemId', 'evidence-test', '-OperationId', $operationId, '-Branch', $branch, '-WorktreePath', $worktree, '-OutputDir', $createOutput, '-RegisterExisting', '-Apply', '-HumanApproved', '-TrustChallengePath', $lifecycleTrust.challenge_path, '-TrustChallengeSha256', $lifecycleTrust.challenge_sha256, '-ImplementerPrivateKeyPath', $lifecycleTrust.private_key_path, '-ImplementerPrivateKeySha256', $lifecycleTrust.private_key_sha256)
+  Assert-Equal 0 $register.exit_code "External worktree registration failed: $($register.output)"
+  Assert-True (Test-Path -LiteralPath $lifecyclePath) 'External worktree registration must write lifecycle contract.'
   Assert-JsonSchemaValid -LayerRoot $RepoRoot -SchemaPath 'schemas/worktree-lifecycle.schema.json' -InstancePath $lifecyclePath -Message 'Created lifecycle evidence must satisfy its published schema.'
-  $lifecycle = Read-LizardEvidenceEnvelope -Path $lifecyclePath -SchemaVersion 1
+  $lifecycle = Read-LizardSignedEvidenceFile -Path $lifecyclePath
   Assert-Equal 'CREATED' $lifecycle.payload.status 'Lifecycle status must be CREATED.'
+  Assert-Equal 'external-registered' $lifecycle.payload.mutation_origin 'Lifecycle must disclose that Git mutation happened outside the layer.'
   Assert-Equal $branch $lifecycle.payload.branch 'Lifecycle branch mismatch.'
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$lifecycle.payload.operation_id)) 'Lifecycle operation ID is required.'
 
+  $headPlanArguments = New-TestVerificationPlanArguments -CommandIds @('git-head')
+  $failedPlanArguments = New-TestVerificationPlanArguments -CommandIds @('git-missing-ref-probe')
+  $verifierBinding = Get-LizardVerifierTrustBinding -OperationId $operationId -LifecycleHash $lifecycle.payload_sha256 -VerificationPlanSha256 $headPlanArguments[3] -TargetRoot $target
+  $verifierTrust = New-LizardTestTrustMaterial -Root (Join-Path $fixtureRoot 'verifier-trust') -BindingSha256 $verifierBinding -Subject $operationId -Now ([DateTimeOffset]::UtcNow) -PrincipalId 'independent-reviewer' -Roles @('verifier') -Purpose 'loop-completion' -PayloadKind 'verifier-evidence'
+  $verifierTrustArgs = @('-TrustChallengePath', $verifierTrust.challenge_path, '-TrustChallengeSha256', $verifierTrust.challenge_sha256, '-VerifierPrivateKeyPath', $verifierTrust.private_key_path, '-VerifierPrivateKeySha256', $verifierTrust.private_key_sha256)
+  $auditTrustArgs = @('-TrustStorePath', $verifierTrust.trust_store_path, '-TrustStoreSha256', $verifierTrust.trust_store_sha256, '-TrustChallengePath', $verifierTrust.challenge_path, '-TrustChallengeSha256', $verifierTrust.challenge_sha256) + $lifecycleTrustArgs
+
   $passOutput = Join-Path $fixtureRoot 'verify-pass'
-  $pass = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'Evidence checks passed.', '-VerificationCommand', 'git rev-parse HEAD', '-EvidenceFile', 'README.md', '-OutputDir', $passOutput, '-Apply')
+  $pass = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'Evidence checks passed.', '-EvidenceFile', 'README.md', '-OutputDir', $passOutput, '-Apply') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs)
   Assert-Equal 0 $pass.exit_code "Evidence-bound PASS failed: $($pass.output)"
   $passReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $passOutput 'loop-verify-report.json') -Raw)
   Assert-Equal 'PASS' $passReport.status 'Verifier effective status must be PASS.'
@@ -74,8 +109,8 @@ try {
   Assert-Equal 0 ([int]$passReport.command_results[0].exit_code) 'Verification command must record exit zero.'
   $targetEvidence = Join-Path $target '.agent\loops\loop-verifier-report.evidence.json'
   Assert-JsonSchemaValid -LayerRoot $RepoRoot -SchemaPath 'schemas/verifier-evidence.schema.json' -InstancePath $targetEvidence -Message 'Sealed verifier evidence must satisfy its published schema.'
-  $sealedEvidence = Read-LizardEvidenceEnvelope -Path $targetEvidence -SchemaVersion 1
-  Assert-Equal $passReport.evidence_packet_hash $sealedEvidence.payload_hash 'Target evidence packet hash mismatch.'
+  $sealedEvidence = Read-LizardSignedEvidenceFile -Path $targetEvidence
+  Assert-Equal $passReport.evidence_packet_hash $sealedEvidence.payload_sha256 'Target evidence packet hash mismatch.'
   $sealedHashBeforeFailures = (Get-FileHash -LiteralPath $targetEvidence -Algorithm SHA256).Hash
   $targetVerifierMarkdown = Join-Path $target '.agent\loops\loop-verifier-report.md'
   $sealedMarkdownHashBeforeFailures = (Get-FileHash -LiteralPath $targetVerifierMarkdown -Algorithm SHA256).Hash
@@ -89,7 +124,7 @@ try {
   New-DirectoryLink -Path $linkedEvidence -Target $outsideEvidence
   try {
     $linkedOutput = Join-Path $fixtureRoot 'verify-linked-evidence'
-    $linkedEvidenceResult = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'Linked evidence must fail.', '-VerificationCommand', 'git rev-parse HEAD', '-EvidenceFile', 'linked-evidence/canary.txt', '-OutputDir', $linkedOutput, '-Apply')
+    $linkedEvidenceResult = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'Linked evidence must fail.', '-EvidenceFile', 'linked-evidence/canary.txt', '-OutputDir', $linkedOutput, '-Apply') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs)
   } finally {
     Remove-DirectoryLink -Path $linkedEvidence
   }
@@ -99,18 +134,18 @@ try {
   Assert-Equal $outsideCanaryHash (Get-FileHash -LiteralPath $outsideCanary -Algorithm SHA256).Hash 'Rejected linked evidence must not modify the outside canary.'
   Assert-Equal $sealedHashBeforeFailures (Get-FileHash -LiteralPath $targetEvidence -Algorithm SHA256).Hash 'Rejected linked evidence must not replace sealed target evidence.'
 
-  $faultedWrite = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'This packet must roll back.', '-VerificationCommand', 'git rev-parse HEAD', '-OutputDir', (Join-Path $fixtureRoot 'verify-write-fault'), '-Apply', '-TestFailAfterMutation', '1')
+  $faultedWrite = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'This packet must roll back.', '-OutputDir', (Join-Path $fixtureRoot 'verify-write-fault'), '-Apply', '-TestFailAfterMutation', '1') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs)
   Assert-False ($faultedWrite.exit_code -eq 0) 'Fault-injected verifier target write must fail.'
   Assert-Equal $sealedHashBeforeFailures (Get-FileHash -LiteralPath $targetEvidence -Algorithm SHA256).Hash 'Verifier evidence write must roll back atomically.'
   Assert-Equal $sealedMarkdownHashBeforeFailures (Get-FileHash -LiteralPath $targetVerifierMarkdown -Algorithm SHA256).Hash 'Verifier Markdown write must roll back atomically.'
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.lizard-agent-layer.lock')) 'Verifier rollback must release target lock.'
 
-  $audit = Invoke-TestPowerShell -ScriptPath $auditScript -Arguments @('-TargetPath', $target, '-OutputDir', (Join-Path $fixtureRoot 'audit-pass'), '-Strict')
+  $audit = Invoke-TestPowerShell -ScriptPath $auditScript -Arguments (@('-TargetPath', $target, '-OutputDir', (Join-Path $fixtureRoot 'audit-pass'), '-Strict') + $auditTrustArgs)
   Assert-Equal 0 $audit.exit_code "Fresh verifier evidence must pass strict audit: $($audit.output)"
 
   $evidenceBackup = Join-Path $fixtureRoot 'verifier-evidence.backup.json'
   Move-Item -LiteralPath $targetEvidence -Destination $evidenceBackup
-  $missingEvidenceAudit = Invoke-TestPowerShell -ScriptPath $auditScript -Arguments @('-TargetPath', $target, '-OutputDir', (Join-Path $fixtureRoot 'audit-missing-evidence'), '-Strict')
+  $missingEvidenceAudit = Invoke-TestPowerShell -ScriptPath $auditScript -Arguments (@('-TargetPath', $target, '-OutputDir', (Join-Path $fixtureRoot 'audit-missing-evidence'), '-Strict') + $auditTrustArgs)
   Assert-False ($missingEvidenceAudit.exit_code -eq 0) 'Declared PASS without evidence sidecar must fail audit.'
   Assert-True ($missingEvidenceAudit.output -match 'without a hashed evidence sidecar') 'Missing evidence sidecar failure must be explicit.'
   Move-Item -LiteralPath $evidenceBackup -Destination $targetEvidence
@@ -119,38 +154,38 @@ try {
   Copy-Item -LiteralPath $targetVerifierMarkdown -Destination $markdownBackup
   $tamperedMarkdown = (Get-Content -LiteralPath $targetVerifierMarkdown -Raw) -replace 'Evidence packet hash: [a-f0-9]{64}', ('Evidence packet hash: ' + ('0' * 64))
   Set-Content -LiteralPath $targetVerifierMarkdown -Value $tamperedMarkdown
-  $tamperedMarkdownAudit = Invoke-TestPowerShell -ScriptPath $auditScript -Arguments @('-TargetPath', $target, '-OutputDir', (Join-Path $fixtureRoot 'audit-tampered-markdown'), '-Strict')
+  $tamperedMarkdownAudit = Invoke-TestPowerShell -ScriptPath $auditScript -Arguments (@('-TargetPath', $target, '-OutputDir', (Join-Path $fixtureRoot 'audit-tampered-markdown'), '-Strict') + $auditTrustArgs)
   Assert-False ($tamperedMarkdownAudit.exit_code -eq 0) 'Markdown detached from evidence packet must fail audit.'
-  Assert-True ($tamperedMarkdownAudit.output -match 'not bound to the current evidence packet hash') 'Markdown packet mismatch must be explicit.'
+  Assert-True ($tamperedMarkdownAudit.output -match 'not bound to the current signed evidence packet hash') 'Markdown packet mismatch must be explicit.'
   Copy-Item -LiteralPath $markdownBackup -Destination $targetVerifierMarkdown -Force
 
   $tamperedLifecyclePath = Join-Path $fixtureRoot 'tampered-lifecycle.json'
   $tampered = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $lifecyclePath -Raw)
   $tampered.payload.branch = 'lizard/l2/tampered'
   Set-Content -LiteralPath $tamperedLifecyclePath -Value ($tampered | ConvertTo-Json -Depth 12)
-  $tamperedVerify = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $tamperedLifecyclePath, '-Verifier', 'independent-reviewer', '-OutputDir', (Join-Path $fixtureRoot 'verify-tampered'))
+  $tamperedVerify = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $tamperedLifecyclePath, '-Verifier', 'independent-reviewer', '-OutputDir', (Join-Path $fixtureRoot 'verify-tampered')) + $lifecycleTrustArgs)
   Assert-False ($tamperedVerify.exit_code -eq 0) 'Tampered lifecycle must be rejected.'
   $tamperedReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-tampered\loop-verify-report.json') -Raw)
-  Assert-True ((@($tamperedReport.failures) -join ' ') -match 'EVIDENCE_HASH_MISMATCH') 'Tampered lifecycle must expose hash mismatch.'
+  Assert-True ((@($tamperedReport.failures) -join ' ') -match 'TRUST_(PAYLOAD_HASH_MISMATCH|ENVELOPE_CONTEXT_MISMATCH)') 'Tampered lifecycle must expose signed evidence mismatch.'
 
-  $selfVerify = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'same-agent', '-Implementer', 'same-agent', '-Status', 'PASS', '-VerificationCommand', 'git rev-parse HEAD', '-OutputDir', (Join-Path $fixtureRoot 'verify-self'), '-Apply')
+  $selfVerify = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'same-agent', '-Implementer', 'same-agent', '-Status', 'PASS', '-OutputDir', (Join-Path $fixtureRoot 'verify-self'), '-Apply') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs)
   Assert-False ($selfVerify.exit_code -eq 0) 'Self-verification must fail.'
   $selfReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-self\loop-verify-report.json') -Raw)
   Assert-True ((@($selfReport.failures) -join ' ') -match 'SELF_VERIFICATION_FORBIDDEN') 'Self-verification must expose stable code.'
 
-  $failedCommand = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-VerificationCommand', 'exit 7', '-OutputDir', (Join-Path $fixtureRoot 'verify-command-failure'), '-Apply')
+  $failedCommand = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-OutputDir', (Join-Path $fixtureRoot 'verify-command-failure'), '-Apply') + $failedPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs)
   Assert-False ($failedCommand.exit_code -eq 0) 'PASS with a failed command must fail.'
   Assert-Equal $sealedHashBeforeFailures (Get-FileHash -LiteralPath $targetEvidence -Algorithm SHA256).Hash 'Rejected verdict must not replace sealed target evidence.'
 
   Assert-GitSuccess @('-C', $worktree, 'checkout', '--detach', '--quiet') 'detach failed'
-  $detached = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-OutputDir', (Join-Path $fixtureRoot 'verify-detached'))
+  $detached = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-OutputDir', (Join-Path $fixtureRoot 'verify-detached')) + $lifecycleTrustArgs)
   Assert-False ($detached.exit_code -eq 0) 'Detached HEAD must be rejected.'
   $detachedReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-detached\loop-verify-report.json') -Raw)
   Assert-True ((@($detachedReport.failures) -join ' ') -match 'Detached HEAD') 'Detached HEAD rejection must be explicit.'
   Assert-GitSuccess @('-C', $worktree, 'checkout', '--quiet', $branch) 'branch restore failed'
 
   Add-Content -LiteralPath (Join-Path $worktree 'README.md') -Value 'changed after verification'
-  $staleAudit = Invoke-TestPowerShell -ScriptPath $auditScript -Arguments @('-TargetPath', $target, '-OutputDir', (Join-Path $fixtureRoot 'audit-stale'), '-Strict')
+  $staleAudit = Invoke-TestPowerShell -ScriptPath $auditScript -Arguments (@('-TargetPath', $target, '-OutputDir', (Join-Path $fixtureRoot 'audit-stale'), '-Strict') + $auditTrustArgs)
   Assert-False ($staleAudit.exit_code -eq 0) 'Changed worktree must invalidate prior verifier evidence.'
   Assert-True ($staleAudit.output -match 'stale') 'Stale evidence audit must explain the state mismatch.'
 
@@ -158,13 +193,17 @@ try {
   Assert-False ($unboundCleanup.exit_code -eq 0) 'Cleanup apply without lifecycle must fail closed.'
   Assert-True (Test-Path -LiteralPath $worktree) 'Rejected unbound cleanup must preserve worktree.'
 
-  $tamperedCleanup = Invoke-TestPowerShell -ScriptPath $cleanupScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $tamperedLifecyclePath, '-WorktreePath', $worktree, '-Branch', $branch, '-RemoveBranch', '-Force', '-OutputDir', (Join-Path $fixtureRoot 'cleanup-tampered'), '-Apply', '-HumanApproved')
+  $tamperedCleanup = Invoke-TestPowerShell -ScriptPath $cleanupScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $tamperedLifecyclePath, '-WorktreePath', $worktree, '-Branch', $branch, '-RemoveBranch', '-Force', '-OutputDir', (Join-Path $fixtureRoot 'cleanup-tampered'), '-Apply', '-HumanApproved') + $lifecycleTrustArgs)
   Assert-False ($tamperedCleanup.exit_code -eq 0) 'Cleanup must reject tampered lifecycle.'
   Assert-True (Test-Path -LiteralPath $worktree) 'Tampered cleanup must preserve worktree.'
 
-  $cleanup = Invoke-TestPowerShell -ScriptPath $cleanupScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-WorktreePath', $worktree, '-Branch', $branch, '-RemoveBranch', '-Force', '-OutputDir', (Join-Path $fixtureRoot 'cleanup'), '-Apply', '-HumanApproved')
-  Assert-Equal 0 $cleanup.exit_code "Lifecycle-bound cleanup failed: $($cleanup.output)"
-  Assert-False (Test-Path -LiteralPath $worktree) 'Cleanup must remove worktree.'
+  $cleanup = Invoke-TestPowerShell -ScriptPath $cleanupScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-WorktreePath', $worktree, '-Branch', $branch, '-RemoveBranch', '-Force', '-OutputDir', (Join-Path $fixtureRoot 'cleanup'), '-Apply', '-HumanApproved') + $lifecycleTrustArgs)
+  Assert-False ($cleanup.exit_code -eq 0) 'Built-in Git worktree cleanup must fail closed without a handle-bound external-mutator capability.'
+  Assert-True ($cleanup.output -match 'SAFEFS_EXTERNAL_MUTATOR_UNBOUND') 'Cleanup rejection must expose the stable external-mutator code.'
+  Assert-True (Test-Path -LiteralPath $worktree) 'Rejected built-in cleanup must preserve the worktree.'
+  Assert-GitSuccess @('-C', $target, 'worktree', 'remove', '--force', $worktree) 'test fixture worktree cleanup failed'
+  Assert-GitSuccess @('-C', $target, 'branch', '-D', $branch) 'test fixture branch cleanup failed'
+  Assert-False (Test-Path -LiteralPath $worktree) 'The test harness must clean up its isolated worktree.'
 
   Write-Host 'PASS tests\adversarial\loop-evidence.tests.ps1'
 } finally {

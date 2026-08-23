@@ -107,6 +107,76 @@
       "expected_keyword": "enum"
     },
     {
+      "name": "routing-policy-regulated-default-is-review",
+      "schema": "schemas/routing-policy.schema.json",
+      "base": "routing-policies/staged-balanced.json",
+      "mutations": [{ "op": "replace", "path": "/regulated_data/default_decision", "value": "route" }],
+      "expected_keyword": "const"
+    },
+    {
+      "name": "regulated-approval-requires-approver",
+      "schema": "schemas/regulated-data-approval.schema.json",
+      "base": "tests/schema/fixtures/regulated-data-approval.valid.json",
+      "mutations": [{ "op": "remove", "path": "/approver" }],
+      "expected_keyword": "required"
+    },
+    {
+      "name": "regulated-approval-requires-organization-issuer",
+      "schema": "schemas/regulated-data-approval.schema.json",
+      "base": "tests/schema/fixtures/regulated-data-approval.valid.json",
+      "mutations": [{ "op": "replace", "path": "/issuer_kind", "value": "target" }],
+      "expected_keyword": "const"
+    },
+    {
+      "name": "route-receipt-requires-reason-codes",
+      "schema": "schemas/route-decision-payload.schema.json",
+      "base": "tests/schema/fixtures/route-receipt.valid.json",
+      "mutations": [{ "op": "remove", "path": "/reason_codes" }],
+      "expected_keyword": "required"
+    },
+    {
+      "name": "route-receipt-rejects-free-form-signal",
+      "schema": "schemas/route-decision-payload.schema.json",
+      "base": "tests/schema/fixtures/route-receipt.valid.json",
+      "mutations": [{ "op": "add", "path": "/signals/0", "value": "password=not-metadata" }],
+      "expected_keyword": "enum"
+    },
+    {
+      "name": "route-receipt-requires-typed-sensitivity",
+      "schema": "schemas/route-decision-payload.schema.json",
+      "base": "tests/schema/fixtures/route-receipt.valid.json",
+      "mutations": [{ "op": "replace", "path": "/sensitivity", "value": "unknown" }],
+      "expected_keyword": "const"
+    },
+    {
+      "name": "execution-receipt-rejects-free-form-evidence",
+      "schema": "schemas/execution-receipt-payload.schema.json",
+      "base": "tests/schema/fixtures/execution-receipt.valid.json",
+      "mutations": [{ "op": "replace", "path": "/evidence_ref", "value": "customer@example.test" }],
+      "expected_keyword": "pattern"
+    },
+    {
+      "name": "execution-receipt-requires-retention-class",
+      "schema": "schemas/execution-receipt-payload.schema.json",
+      "base": "tests/schema/fixtures/execution-receipt.valid.json",
+      "mutations": [{ "op": "remove", "path": "/retention_class" }],
+      "expected_keyword": "required"
+    },
+    {
+      "name": "verification-command-plan-rejects-shell",
+      "schema": "schemas/verification-command-plan.schema.json",
+      "base": "tests/schema/fixtures/verification-command-plan.valid.json",
+      "mutations": [{ "op": "replace", "path": "/restrictions/shell", "value": true }],
+      "expected_keyword": "const"
+    },
+    {
+      "name": "verification-command-plan-rejects-command-text",
+      "schema": "schemas/verification-command-plan.schema.json",
+      "base": "tests/schema/fixtures/verification-command-plan.valid.json",
+      "mutations": [{ "op": "replace", "path": "/commands/0/command_id", "value": "powershell -Command whoami" }],
+      "expected_keyword": "enum"
+    },
+    {
       "name": "operation-plan-rejects-unknown-field",
       "schema": "schemas/operation-plan.schema.json",
       "base": "tests/schema/fixtures/operation-plan.valid.json",
@@ -119,6 +189,62 @@
       "base": "tests/schema/fixtures/operation-plan.valid.json",
       "mutations": [{ "op": "remove", "path": "/intent_sha256" }],
       "expected_keyword": "required"
+    },
+    {
+      "name": "operation-plan-removal-requires-physical-identity",
+      "schema": "schemas/operation-plan.schema.json",
+      "base": "tests/schema/fixtures/operation-plan-uninstall.valid.json",
+      "mutations": [{ "op": "remove", "path": "/intent/target_entries/0/precondition_identity_sha256" }],
+      "expected_keyword": "required"
+    },
+    {
+      "name": "operation-plan-removal-requires-layer-ownership",
+      "schema": "schemas/operation-plan.schema.json",
+      "base": "tests/schema/fixtures/operation-plan-uninstall.valid.json",
+      "mutations": [{ "op": "replace", "path": "/intent/target_entries/0/ownership", "value": "adopted" }],
+      "expected_keyword": "const"
+    },
+    {
+      "name": "uninstall-receipt-requires-removed-identity",
+      "schema": "schemas/uninstall-receipt.schema.json",
+      "base": "tests/schema/fixtures/uninstall-receipt.valid.json",
+      "mutations": [{ "op": "remove", "path": "/removed/0/precondition_identity_sha256" }],
+      "expected_keyword": "required"
+    },
+    {
+      "name": "uninstall-receipt-requires-boolean-manifest-state",
+      "schema": "schemas/uninstall-receipt.schema.json",
+      "base": "tests/schema/fixtures/uninstall-receipt.valid.json",
+      "mutations": [{ "op": "replace", "path": "/final_manifest_present", "value": "unknown" }],
+      "expected_keyword": "type"
+    },
+    {
+      "name": "uninstall-receipt-memory-mode-enum",
+      "schema": "schemas/uninstall-receipt.schema.json",
+      "base": "tests/schema/fixtures/uninstall-receipt.valid.json",
+      "mutations": [{ "op": "replace", "path": "/memory_mode", "value": "implicit" }],
+      "expected_keyword": "enum"
+    },
+    {
+      "name": "install-manifest-requires-memory-mode",
+      "schema": "schemas/install-manifest.schema.json",
+      "base": "tests/schema/fixtures/install-manifest-v4.valid.json",
+      "mutations": [{ "op": "remove", "path": "/memory_mode" }],
+      "expected_keyword": "required"
+    },
+    {
+      "name": "install-manifest-pack-source-requires-hash",
+      "schema": "schemas/install-manifest.schema.json",
+      "base": "tests/schema/fixtures/install-manifest-v4.valid.json",
+      "mutations": [{ "op": "remove", "path": "/pack_sources/0/sha256" }],
+      "expected_keyword": "required"
+    },
+    {
+      "name": "install-manifest-builtin-prose-is-reviewed",
+      "schema": "schemas/install-manifest.schema.json",
+      "base": "tests/schema/fixtures/install-manifest-v4.valid.json",
+      "mutations": [{ "op": "replace", "path": "/pack_sources/0/prose_trust", "value": "quarantined" }],
+      "expected_keyword": "const"
     },
     {
       "name": "install-manifest-requires-lifecycle",
@@ -167,6 +293,118 @@
       "schema": "schemas/loop-runtime-report.schema.json",
       "base": "tests/schema/fixtures/loop-runtime-report.valid.json",
       "mutations": [{ "op": "replace", "path": "/auto_merge", "value": true }],
+      "expected_keyword": "const"
+    },
+    {
+      "name": "trust-store-rejects-unknown-role-key-field",
+      "schema": "schemas/trust-store.schema.json",
+      "base": "tests/schema/fixtures/trust-store.valid.json",
+      "mutations": [{ "op": "add", "path": "/keys/0/private_jwk", "value": "forbidden" }],
+      "expected_keyword": "additionalProperties"
+    },
+    {
+      "name": "trust-challenge-requires-one-time-nonce",
+      "schema": "schemas/trust-challenge.schema.json",
+      "base": "tests/schema/fixtures/trust-challenge.valid.json",
+      "mutations": [{ "op": "remove", "path": "/nonce" }],
+      "expected_keyword": "required"
+    },
+    {
+      "name": "verifier-evidence-requires-signature",
+      "schema": "schemas/verifier-evidence.schema.json",
+      "base": "tests/schema/fixtures/verifier-evidence.valid.json",
+      "mutations": [{ "op": "remove", "path": "/signature" }],
+      "expected_keyword": "required"
+    },
+    {
+      "name": "verifier-evidence-requires-rs256",
+      "schema": "schemas/verifier-evidence.schema.json",
+      "base": "tests/schema/fixtures/verifier-evidence.valid.json",
+      "mutations": [{ "op": "replace", "path": "/signature_algorithm", "value": "none" }],
+      "expected_keyword": "const"
+    },
+    {
+      "name": "signed-route-receipt-requires-signature",
+      "schema": "schemas/route-receipt.schema.json",
+      "base": "tests/schema/fixtures/route-receipt-signed.valid.json",
+      "mutations": [{ "op": "remove", "path": "/signature" }],
+      "expected_keyword": "required"
+    },
+    {
+      "name": "signed-execution-receipt-binds-runtime-purpose",
+      "schema": "schemas/execution-receipt.schema.json",
+      "base": "tests/schema/fixtures/execution-receipt-signed.valid.json",
+      "mutations": [{ "op": "replace", "path": "/purpose", "value": "routing" }],
+      "expected_keyword": "const"
+    },
+    {
+      "name": "signed-model-evaluation-requires-evaluator-purpose",
+      "schema": "schemas/model-evaluation.schema.json",
+      "base": "tests/schema/fixtures/model-evaluation-signed.valid.json",
+      "mutations": [{ "op": "replace", "path": "/purpose", "value": "execution-attestation" }],
+      "expected_keyword": "const"
+    },
+    {
+      "name": "signed-worktree-lifecycle-requires-implementer-purpose",
+      "schema": "schemas/worktree-lifecycle.schema.json",
+      "base": "tests/schema/fixtures/worktree-lifecycle-signed.valid.json",
+      "mutations": [{ "op": "replace", "path": "/purpose", "value": "routing" }],
+      "expected_keyword": "const"
+    },
+    {
+      "name": "target-analysis-score-is-not-probability",
+      "schema": "schemas/target-analysis.schema.json",
+      "base": "tests/schema/fixtures/target-analysis.valid.json",
+      "mutations": [{ "op": "replace", "path": "/calibration/score_kind", "value": "probability" }],
+      "expected_keyword": "const"
+    },
+    {
+      "name": "skill-package-rejects-undeclared-permission",
+      "schema": "schemas/skill-package.schema.json",
+      "base": "skills/git-safety/skill.json",
+      "mutations": [{ "op": "replace", "path": "/permissions/network", "value": "unrestricted" }],
+      "expected_keyword": "enum"
+    },
+    {
+      "name": "skill-package-requires-removal-ownership",
+      "schema": "schemas/skill-package.schema.json",
+      "base": "skills/git-safety/skill.json",
+      "mutations": [{ "op": "remove", "path": "/removal/ownership" }],
+      "expected_keyword": "required"
+    },
+    {
+      "name": "removed-skill-state-cannot-claim-files",
+      "schema": "schemas/skill-lifecycle-state.schema.json",
+      "base": "tests/schema/fixtures/skill-lifecycle-state.valid.json",
+      "mutations": [{ "op": "replace", "path": "/status", "value": "removed" }],
+      "expected_keyword": "maxItems"
+    },
+    {
+      "name": "retention-policy-requires-explicit-disposition",
+      "schema": "schemas/retention-policy.schema.json",
+      "base": "retention-policies/conservative.json",
+      "mutations": [{ "op": "replace", "path": "/artifact_classes/0/disposition", "value": "silent-delete" }],
+      "expected_keyword": "const"
+    },
+    {
+      "name": "records-hold-class-scope-requires-class",
+      "schema": "schemas/records-hold-payload.schema.json",
+      "base": "tests/schema/fixtures/records-hold-payload.valid.json",
+      "mutations": [{ "op": "replace", "path": "/holds/0/artifact_classes", "value": [] }],
+      "expected_keyword": "minItems"
+    },
+    {
+      "name": "records-deletion-receipt-never-stores-raw-content",
+      "schema": "schemas/records-deletion-receipt.schema.json",
+      "base": "tests/schema/fixtures/records-deletion-receipt.valid.json",
+      "mutations": [{ "op": "replace", "path": "/raw_content_stored", "value": true }],
+      "expected_keyword": "const"
+    },
+    {
+      "name": "records-export-requires-authorized-audience",
+      "schema": "schemas/records-export.schema.json",
+      "base": "tests/schema/fixtures/records-export.valid.json",
+      "mutations": [{ "op": "replace", "path": "/audience/0", "value": "public" }],
       "expected_keyword": "const"
     }
   ]

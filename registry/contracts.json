@@ -3,9 +3,9 @@
   "contracts": [
     {
       "id": "filesystem-boundaries",
-      "adr": "docs/adr/0012-unix-mount-boundary-enforcement.md",
+      "adr": "docs/adr/0013-handle-bound-filesystem-access.md",
       "migration_required": false,
-      "paths": ["scripts/Lizard.SafeFs.psm1", "scripts/Lizard.MountBoundary.psm1", "scripts/install.ps1", "scripts/update-target.ps1", "scripts/merge-suggestions.ps1", "tests/unit/mount-boundary.tests.ps1", "tests/adversarial/mount-boundary-fixtures.tests.ps1", ".github/workflows/lizard-agent-layer-ci.yml"]
+      "paths": ["scripts/Lizard.SafeFs.psm1", "scripts/Lizard.WindowsHandleFs.psm1", "scripts/native/Lizard.WindowsHandleFs.cs", "scripts/Lizard.UnixHandleFs.psm1", "scripts/native/Lizard.UnixHandleFs.cs", "scripts/Lizard.MountBoundary.psm1", "scripts/install.ps1", "scripts/update-target.ps1", "scripts/merge-suggestions.ps1", "scripts/loop-worktree.ps1", "scripts/loop-worktree-cleanup.ps1", "schemas/safe-fs-capability.schema.json", "tests/unit/safe-fs.tests.ps1", "tests/unit/mount-boundary.tests.ps1", "tests/adversarial/handle-bound-mutation.tests.ps1", "tests/adversarial/worktree-external-mutator.tests.ps1", "tests/adversarial/mount-boundary-fixtures.tests.ps1", ".github/workflows/lizard-agent-layer-ci.yml"]
     },
     {
       "id": "ownership-and-manifest",
@@ -30,6 +30,18 @@
       "adr": "docs/adr/0010-exact-plan-approval-binding.md",
       "migration_required": true,
       "paths": ["scripts/Lizard.Plan.psm1", "scripts/install.ps1", "scripts/update-target.ps1", "schemas/operation-plan.schema.json", "tests/unit/plan.tests.ps1", "tests/integration/install-plan-binding.tests.ps1", "tests/integration/update-plan-binding.tests.ps1", "tests/adversarial/install-plan-tamper.tests.ps1"]
+    },
+    {
+      "id": "uninstall-lifecycle",
+      "adr": "docs/adr/0014-transactional-uninstall.md",
+      "migration_required": true,
+      "paths": ["scripts/uninstall.ps1", "scripts/Lizard.Plan.psm1", "scripts/Lizard.Transaction.psm1", "schemas/operation-plan.schema.json", "schemas/uninstall-receipt.schema.json", "tests/integration/uninstall.tests.ps1", "tests/adversarial/uninstall-tamper.tests.ps1"]
+    },
+    {
+      "id": "effective-memory-modes",
+      "adr": "docs/adr/0015-effective-memory-modes.md",
+      "migration_required": true,
+      "paths": ["scripts/install.ps1", "scripts/update-target.ps1", "scripts/upgrade.ps1", "scripts/doctor.ps1", "scripts/manifest-diff.ps1", "scripts/uninstall.ps1", "schemas/install-manifest.schema.json", "schemas/uninstall-receipt.schema.json", "adapters/*/*.md", "protocols/*.md", "templates/project-context/*.md", "templates/memory/**/*", "templates/agent-gitignore*", "tests/integration/memory-modes.tests.ps1", "tests/integration/memory-mode-update.tests.ps1", "tests/adversarial/memory-mode-transitions.tests.ps1"]
     },
     {
       "id": "json-type-preservation",
@@ -72,6 +84,71 @@
       "adr": "docs/adr/0009-provider-neutral-staged-routing.md",
       "migration_required": false,
       "paths": ["routing-policies/*.json", "protocols/staged-execution.md", "protocols/context-hygiene.md", "skills/staged-execution/*", "scripts/route-task.ps1", "scripts/record-execution.ps1", "scripts/calibrate-model.ps1", "schemas/routing-policy.schema.json", "schemas/model-inventory.schema.json", "schemas/model-evaluation.schema.json", "schemas/routing-runtime.schema.json", "schemas/route-receipt.schema.json", "schemas/execution-receipt.schema.json", "profiles/*.json"]
+    },
+    {
+      "id": "regulated-data-governance",
+      "adr": "docs/adr/0016-regulated-data-default-review.md",
+      "migration_required": true,
+      "paths": ["scripts/route-task.ps1", "scripts/doctor.ps1", "routing-policies/*.json", "schemas/routing-policy.schema.json", "schemas/route-receipt.schema.json", "schemas/regulated-data-approval.schema.json", "tests/adversarial/regulated-approval.tests.ps1", "tests/integration/model-routing.tests.ps1"]
+    },
+    {
+      "id": "typed-safe-routing-reports",
+      "adr": "docs/adr/0017-typed-safe-routing-reports.md",
+      "migration_required": true,
+      "paths": ["scripts/Lizard.SafeReport.psm1", "scripts/route-task.ps1", "scripts/record-execution.ps1", "schemas/routing-policy.schema.json", "schemas/routing-runtime.schema.json", "schemas/route-receipt.schema.json", "schemas/execution-receipt.schema.json", "tests/adversarial/routing-receipt-privacy.tests.ps1", "tests/integration/model-routing.tests.ps1"]
+    },
+    {
+      "id": "prompt-trust",
+      "adr": "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+      "migration_required": true,
+      "paths": ["protocols/prompt-trust.md", "protocols/permissions.md", "adapters/*/*.md", "adapters/cursor/*.mdc", "scripts/install.ps1", "schemas/install-manifest.schema.json", "tests/adversarial/prompt-trust.tests.ps1"]
+    },
+    {
+      "id": "constrained-verifier",
+      "adr": "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+      "migration_required": true,
+      "paths": ["scripts/Lizard.ConstrainedRunner.psm1", "scripts/new-verification-plan.ps1", "scripts/loop-verify.ps1", "scripts/loop-audit.ps1", "schemas/verification-command-plan.schema.json", "schemas/verifier-evidence.schema.json", "tests/adversarial/constrained-verifier.tests.ps1", "tests/adversarial/loop-evidence.tests.ps1", "tests/integration/loop-runtime.tests.ps1"]
+    },
+    {
+      "id": "authenticated-evidence",
+      "adr": "docs/adr/0019-authenticated-evidence-trust.md",
+      "migration_required": true,
+      "paths": ["scripts/Lizard.Trust.psm1", "scripts/Lizard.Plan.psm1", "scripts/Lizard.LoopEvidence.psm1", "scripts/Lizard.LoopRuntime.psm1", "scripts/route-task.ps1", "scripts/record-execution.ps1", "scripts/calibrate-model.ps1", "scripts/loop-worktree.ps1", "scripts/loop-worktree-cleanup.ps1", "scripts/loop-verify.ps1", "scripts/loop-run.ps1", "scripts/loop-audit.ps1", "schemas/trust-*.schema.json", "schemas/route*.schema.json", "schemas/execution-receipt*.schema.json", "schemas/model-evaluation*.schema.json", "schemas/worktree-lifecycle.schema.json", "schemas/verifier-evidence.schema.json", "tests/TestTrustHelpers.psm1", "tests/adversarial/signed-*.tests.ps1", "tests/adversarial/routing-receipt-privacy.tests.ps1", "tests/adversarial/constrained-verifier.tests.ps1", "tests/adversarial/worktree-external-mutator.tests.ps1", "tests/adversarial/loop-evidence.tests.ps1", "tests/integration/model-routing.tests.ps1", "tests/integration/loop-runtime.tests.ps1", "tests/unit/plan.tests.ps1"]
+    },
+    {
+      "id": "bounded-target-analysis",
+      "adr": "docs/adr/0020-bounded-target-analysis.md",
+      "migration_required": true,
+      "paths": ["scripts/analyze-target.ps1", "schemas/target-analysis.schema.json", "tests/schema/fixtures/target-analysis.valid.json", "tests/adversarial/analyzer-hardening.tests.ps1", "docs/target-analysis.md"]
+    },
+    {
+      "id": "host-and-git-boundaries",
+      "adr": "docs/adr/0021-host-invocations-and-git-ref-validation.md",
+      "migration_required": true,
+      "paths": ["scripts/Lizard.Host.psm1", "scripts/Lizard.Git.psm1", "scripts/install.ps1", "scripts/analyze-target.ps1", "scripts/loop-worktree.ps1", "scripts/loop-verify.ps1", "scripts/loop-worktree-cleanup.ps1", "tests/unit/host.tests.ps1", "tests/adversarial/git-ref-validation.tests.ps1"]
+    },
+    {
+      "id": "versioned-skill-packages",
+      "adr": "docs/adr/0022-versioned-skill-package-lifecycle.md",
+      "migration_required": true,
+      "paths": ["skills/*/skill.json", "scripts/Lizard.SkillPackage.psm1", "scripts/skill-lifecycle.ps1", "scripts/install.ps1", "scripts/doctor.ps1", "schemas/skill-package.schema.json", "schemas/skill-lifecycle-state.schema.json", "schemas/operation-plan.schema.json", "tests/integration/skill-lifecycle.tests.ps1", "tests/schema/fixtures/skill-lifecycle-state.valid.json", "tests/schema/fixtures/operation-plan-skill-lifecycle.valid.json"]
+    },
+    {
+      "id": "records-retention-and-lifecycle",
+      "adr": "docs/adr/0023-records-retention-and-legal-hold.md",
+      "migration_required": true,
+      "paths": [
+        "scripts/records-lifecycle.ps1",
+        "scripts/Lizard.Records.psm1",
+        "retention-policies/*.json",
+        "schemas/retention-policy.schema.json",
+        "schemas/records-hold.schema.json",
+        "schemas/records-hold-payload.schema.json",
+        "schemas/records-export.schema.json",
+        "schemas/records-deletion-receipt.schema.json",
+        "tests/integration/records-lifecycle.tests.ps1",
+        "tests/schema/fixtures/records-*.valid.json"
+      ]
     }
   ]
 }

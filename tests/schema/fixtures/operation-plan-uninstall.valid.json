@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "plan_id": "fedcba9876543210fedcba9876543210",
+  "operation_kind": "uninstall",
+  "created_at": "2026-08-22T10:00:00.0000000+00:00",
+  "expires_at": "2026-08-22T10:30:00.0000000+00:00",
+  "intent_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "intent": {
+    "target_root": "C:\\target",
+    "target_root_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "layer_root": "C:\\layer",
+    "layer_version": "2.0.0",
+    "source_git_head": null,
+    "options": { "scope": "managed-only" },
+    "inputs": [],
+    "target_entries": [
+      {
+        "path": ".agent/generated.txt",
+        "kind": "file",
+        "action": "remove",
+        "precondition_kind": "file",
+        "precondition_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "precondition_identity_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "ownership": "layer-owned",
+        "intended_sha256": null
+      }
+    ],
+    "nested_plan": null
+  }
+}

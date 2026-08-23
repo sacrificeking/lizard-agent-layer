@@ -19,14 +19,21 @@ This ledger tracks remediation of the findings in the [2026-08-01 Codex/VS Code 
 | Wave 0: baseline and ledgers | All | Implemented | None | HEAD, instructions, worktree and classifications are recorded |
 | WP-01A: safe read/hash foundation | H-03 | Implemented and locally verified | Wave 0 | Contained reads succeed; linked terminal objects and ancestors fail with stable `SAFEFS_*` codes; loop evidence uses the shared primitives |
 | WP-01B: mount/device boundaries | H-03 | Implemented; Ubuntu privileged and macOS runtime evidence passed; complete host matrix pending CI compatibility rerun | WP-01A, Unix fixtures | Unix mount and bind-mount escapes fail closed |
-| WP-01C: handle-bound mutation | H-03 | Not started | WP-01A, host capability contract | Supported hosts use no-follow/handle-bound mutation; unsupported hosts fail closed or state the reduced guarantee |
+| WP-01C: handle-bound mutation | H-03 | In progress; SafeFs consumers migrated, Windows behavior locally verified, Unix runtime evidence and Git-mutator disposition pending | WP-01A, host capability contract | Supported hosts use no-follow/handle-bound mutation; unsupported hosts fail closed |
 | WP-02: transaction recovery | H-02, M-05 | Implemented and locally verified | WP-01A | Strict v2 runtime/schema validation, identity binding, contained canonical backups, retry-safe reverse replay, terminal cleanup, and decisive doctor classifications pass focused tests |
 | WP-03: canonical plan binding | H-01 | Implemented and locally verified | Canonical serialization | Apply rejects every plan, source, target, option and approval mismatch before mutation |
 | WP-04: continuous ownership | H-04 | Implemented and locally verified | WP-03 | Contract reduction retains retired ownership evidence |
-| WP-05: transactional uninstall | H-04, M-04 | Not started | WP-01 through WP-04 | Bound preview/apply uninstall is reversible, resumable and idempotent |
-| WP-06: memory modes | H-05 | Not started | WP-04, WP-05 | `off` creates and retains no memory artifacts or references |
-| WP-07 through WP-10: governance, privacy, prompt trust and evidence trust | H-06 through H-09, M-07, M-08 | Not started | Trust-model ADR, WP-03, WP-08 foundations | Host and artifact trust claims have executable negative evidence and explicit external boundaries |
-| WP-11 through WP-16: analyzer, portability, skills, diagnostics, CI and claim governance | M-01 through M-08, L-01 | Not started | Relevant P0 foundations | Each claim has supported-host evidence or an explicitly narrowed scope |
+| WP-05: transactional uninstall | H-04, M-04 | Implemented and locally verified; executable schema and supported-host evidence pending | WP-01 through WP-04 | Bound preview/apply uninstall is reversible, recovery-and-retry safe, and idempotent |
+| WP-06: memory modes | H-05 | Implemented and locally verified; executable schema and supported-host evidence pending | WP-04, WP-05 | `off` creates and retains no physical or operational memory artifacts, references, or permissions; historical removed tombstones preserve ownership evidence |
+| WP-07: regulated-data default gate | H-06 | Implemented locally as fail-closed containment; authenticated exception pending WP-10 | WP-03, trust-model ADR | Every regulated phase/risk/model-mode route pauses before technical selection unless a future authenticated external approval contract is satisfied |
+| WP-08: typed safe routing reports | H-07, M-07 | Routing receipt scope implemented and locally verified; other artifact classes pending | WP-07 | Durable routing inputs are IDs, typed privacy metadata is required, and canaries do not survive file/console/error/report serialization |
+| WP-09: prompt trust and constrained verifier | H-08, M-08 | Implemented and locally verified with narrowed host claim | WP-03, WP-08 | Managed instructions are integrity-gated, target prose cannot grant authority, and verifier command text is unrepresentable |
+| WP-10: authenticated evidence trust | H-09 | Implemented locally; supported-host and organization key-custody evidence pending | WP-03, WP-07 through WP-09 | Trusted issuers, principals, signatures, freshness, revocation, context hashes, role separation, and replay rejection are enforced at authorization consumers |
+| WP-11: bounded target analyzer | M-01 | Implemented and locally verified; executable schema and supported-host evidence pending | WP-01C, WP-09 | Safe no-follow scan, deterministic evidence/calibration, bounded negative signals, and explicit approved-harness input pass the false-positive/negative and linked-target matrix |
+| WP-12: portable commands and strict Git refs | M-02, L-01 | Implemented and locally verified; supported-host execution pending | WP-09, WP-11 | Generated executable/argv matches every host contract; option-like, invalid, and expression-bearing Git refs fail before inspection or writes |
+| WP-13: versioned skill packages | M-03 | Implemented and locally verified; supported-host evidence pending | WP-01C, WP-04 | Packages have semantic metadata, dependency graph validation, install/update/migrate/disable/recover/remove lifecycle, and strict manifest records |
+| WP-14: records retention and legal hold | M-04 | Implemented and locally verified; supported-host evidence pending | WP-01C, WP-08, WP-10 | Retention policies, active legal holds, export integrity, purge verification, boundary-time proof, and deletion receipts pass adversarial lifecycle suites |
+| WP-15 through WP-16: diagnostics and claim governance | M-05 through M-08 | In progress | Relevant foundations | Each claim has supported-host evidence or an explicitly narrowed scope |
 
 ## WP-01A implementation record
 
@@ -74,6 +81,35 @@ Residual limitations:
 | Full local CI | Passed in 1,225 seconds: validation, schema mutations, contract governance, focused safety, packs, drift, quality, smoke, and 18/18 profile/harness matrix combinations |
 
 No commit, push, merge, publication or release is authorized by this ledger.
+
+## WP-01C incremental implementation record
+
+The current implementation establishes the capability boundary without claiming H-03 closure:
+
+- `schemas/safe-fs-capability.schema.json` permits full assurance only when ancestor handles, terminal no-follow, descriptor and volume/mount identity, atomic replacement, atomic create-new, and relative deletion are all available.
+- The checked-in C# 5-compatible Windows backend walks from the volume root with parent-relative `NtCreateFile`, rejects reparses and volume changes, creates unique stages relative to the held destination parent, flushes them, and commits with parent-relative `NtSetInformationFile`.
+- The checked-in Unix backend walks with `openat`, reads Linux identity through `statx` and macOS identity through `fstat`/`fstatfs`, commits replace through `renameat`, commits create-new through `linkat`, and deletes through `unlinkat`.
+- Protected reads/metadata/hashes, Set/Add/copy, directory initialization, transaction locks/journals/backups/rollback/cleanup, and canonical plan persistence use these backends. Unsupported roots return `SAFEFS_HANDLE_MUTATION_UNAVAILABLE` instead of a name-based SafeFs mutation fallback.
+- A deterministic private synchronization hook renames the acquired parent and replaces its old name with a Junction. Local Windows PowerShell 5.1 evidence shows the write remains in the original contained directory and creates no temporary or final outside file.
+- Existing hard-linked terminal objects remain conservatively rejected; the outside inode is unchanged.
+
+Local evidence so far:
+
+- Failure-first capability test: failed as expected before `Get-LizardSafeFsCapability` existed.
+- Initial absolute-name commit prototype: adversarial fixture failed and observed an outside write; the prototype was rejected and replaced with parent-relative creation and commit.
+- `tests/unit/safe-fs.tests.ps1`: passed, including capability, physical root identity, protected reads, nested mkdir, set, append, copy, delete, and stage cleanup. The same mutation block now runs on every supported host.
+- `tests/unit/plan.tests.ps1`: passed with handle-bound create-new persistence and protected approved-plan reads.
+- `tests/unit/transaction-primitives.tests.ps1`: passed for rollback, commit, cleanup, and exclusive create-new lock publication.
+- `tests/unit/mount-boundary.tests.ps1`: passed.
+- `tests/adversarial/install-containment.tests.ps1`: passed.
+- `tests/adversarial/handle-bound-mutation.tests.ps1`: all hard-link and synchronized write/read/copy/delete assertions pass; its final executable-schema assertion is blocked because the local `node_modules` tree is absent. Dependency installation remains separately unauthorized.
+- `scripts/native/Lizard.UnixHandleFs.cs`: compiles locally; Linux `statx` and Darwin 64-bit `stat`/`statfs` layouts were checked against primary operating-system headers. This is static ABI evidence, not native-host behavior evidence.
+
+External-mutator disposition: built-in Git worktree create/remove and branch-delete apply now fails closed with `SAFEFS_EXTERNAL_MUTATOR_UNBOUND`. A clean externally created worktree can be registered through identity-only checks and SafeFs evidence writes. The schema-independent adversarial fixture verifies blocked create/remove, absence/preservation, successful external registration, and truthful mutation origin.
+
+The update history and update report now consistently emit target manifest schema `4`; a schema-independent source regression test binds those claims to the install writer, minimum-reader, and writer-schema assignments.
+
+Residual scope remains material: Windows PowerShell 7, Ubuntu, and macOS runtime evidence, executable capability-schema validation, contract/drift gates, and the full matrix remain pending. WP-01C and H-03 therefore remain open.
 
 ## WP-01B implementation record
 
@@ -294,7 +330,74 @@ Local Windows PowerShell 5.1 verification covers contract reduction, locally mod
 | Standalone profile/harness matrix | Passed in 1,377 seconds: 18/18 combinations, 0 failures; report `.tmp/matrix-20260808193753/matrix-report.json` |
 | Full local CI | Passed all nine gates without skips; report `.tmp/ci/ci-report-20260809093416.json`. All 19 focused suites and all 18 matrix combinations passed; the reported wall duration includes two system suspensions and is not a performance measurement |
 
-H-04 remains `OPEN_CHANGED`, not closed: WP-04 fixes continuous ownership across contract reduction, while the executable plan-bound, transactional, reversible, resumable, and idempotent uninstall required by WP-05 does not yet exist. No network access, dependency installation, commit, push, merge, publication, or release was performed.
+At the WP-04 checkpoint, H-04 remained `OPEN_CHANGED` because continuous ownership was fixed but no executable uninstall existed yet. The subsequent WP-05 record below supersedes that implementation-status statement without changing the historical WP-04 evidence.
+
+## WP-05 incremental implementation record
+
+The executable lifecycle implements all three approved scopes without broad or recursive deletion:
+
+- Preview is the default and emits Markdown, canonical JSON, and an independent SHA-256 outside the target.
+- Remove entries are limited to unchanged `layer-owned` artifacts and bind root identity, kind, content hash where applicable, and physical object identity. Modified, adopted, user-owned, missing, or reappeared content is preserved.
+- Apply requires the exact approved-plan path/digest plus `-HumanApproved`, matches the current intent before locking, revalidates all inputs and target entries after locking, and checks each removal again immediately before mutation.
+- Files are verified, backed up, and deleted before empty directories. Windows checks identity on the deletion handle; Unix quarantines and validates Device/Mount/Inode before unlinking.
+- Any mismatch or unexpected non-empty directory rolls back earlier deletions, including the install manifest. A residue-free apply removes transaction metadata, emits a schema-bound receipt outside the target, and produces an empty no-op plan on a repeated preview. Partial managed-only removal retains the manifest as ownership evidence and tombstones removed records without forgetting them.
+- `complete` requires a second plan-bound purge confirmation. `export-then-complete` additionally binds an existing outside-target export-root identity, an exact manifest-file allowlist, and a sensitive-data confirmation; create-new exports are hash-verified before deletion.
+- Installer directory closure now records intermediate parents and nested skill directories. The real minimal/Codex install -> managed-only partial -> complete test returns an originally empty target to empty without recursive deletion.
+- Fault injection after the first removal proves exact rollback, transaction-metadata cleanup, and successful continuation through a newly generated and approved plan. Direct in-place continuation is deliberately unsupported.
+
+Local Windows PowerShell 5.1 evidence passes plan, SafeFs, transaction primitive, managed/complete/export uninstall, fault-injected rollback/retry, real install/uninstall roundtrip, uninstall tamper/rollback, public-readiness, and focused-sharding tests. Synchronized checked-delete behavior passes before the handle-bound test reaches its unavailable AJV stage.
+
+WP-05 remains open for assurance closure, not missing local behavior. Executable receipt-schema validation, independent review, and native PowerShell 7/Ubuntu/macOS lifecycle evidence are pending. The supported interruption workflow is reviewed transaction rollback/cleanup followed by a fresh plan. No network access, dependency installation, commit, push, merge, publication, or release was performed.
+
+## WP-06 implementation record
+
+The executable memory contract now spans all lifecycle commands and installed guidance:
+
+- `install.ps1`, `update-target.ps1`, and `upgrade.ps1` select an explicit mode first, otherwise preserve the installed manifest mode, and use a profile default only for a fresh target. Outer and nested plans bind source mode, destination mode, transition direction, selected source files, and exact target actions.
+- Mode-neutral adapters consult a selected `.agent/protocols/project-context.md`. Curated and private-episodic modes install their exact static contracts; private episodic additionally installs a recursively ignored managed seed. Off installs no `.agent/memory`, no memory policy, no memory gitignore rule, and no operational memory path or write permission.
+- Transitions remove only unchanged `layer-owned` content. Each delete binds file hash where applicable and physical object identity, revalidates the complete physical set before the first mutation, and uses the shared transaction/checked-delete primitives. Modified, user-owned, adopted, linked, reappeared, wrong-kind, or unknown content blocks before mutation.
+- Successful removal retains non-executable `removed`/`missing` tombstones so ownership is not forgotten and reappearing paths are detected. Doctor and manifest diff treat those tombstones as absence evidence, not active memory.
+- Update history, uninstall plans, and uninstall receipts bind the effective mode. Doctor scans every active installed adapter/protocol artifact for operational memory paths while off.
+
+Local Windows PowerShell 5.1 evidence passes fresh install and strict doctor for every mode; the complete 3x3 transition matrix; modified/unknown/late-inserted content negatives; CLI/plan mismatch; fault-injected rollback and fresh retry; update mode preservation; and an update-driven mode transition. Schema execution remains blocked only because the existing local `node_modules` dependency tree is absent and dependency installation was not authorized.
+
+WP-06 remains `OPEN_CHANGED` for assurance closure until executable schema mutations and native PowerShell 7/Ubuntu/macOS lifecycle runs pass. No commit, push, workflow dispatch, merge, publication, or release was performed.
+
+## WP-07 implementation record
+
+Regulated-data routing now has a conservative core control independent of target routing entries:
+
+- `route-task.ps1` returns `human-review` for `DataClass=regulated` before processing caller signals, attempt limits, route matches, runtime capabilities, inventories, or available-model filters.
+- No technical route, role, model, or provider is selected. `inherit-current` additionally reports that provider/model/runtime identity is unavailable.
+- Route receipts separate stable machine-readable `reason_codes` from explanatory prose. Routing policy schema and strict Doctor require the same human-review/external-approval default.
+- The approval-envelope schema binds the fields required by the audit, but is structural only. Target-local documents and inventory `approved` flags are never consumed as organization authority.
+- The adversarial matrix passes both model modes across all three phases and risks while injecting review signals, an excessive attempt count, and a caller model list. A weakened installed policy is detected with `REGULATED_POLICY_INVALID`.
+
+WP-07 changes H-06 from confirmed missing behavior to fail-closed local containment, but does not close it. A positive route exception is deferred until WP-10 provides authenticated issuer trust, external revocation, runtime identity, freshness, replay protection, and consumer validation. Missing/stale/revoked/mismatched/wrong-region tests and supported-host execution remain required. No dependency installation, remote CI, commit, push, publication, or release was performed.
+
+## WP-08 implementation record
+
+The route and execution receipt boundary no longer relies on a hard-coded privacy boolean alone:
+
+- Signals are a closed set of seven policy IDs. Evidence references, runtime provenance, identities, fingerprints, roles, and capabilities are bounded opaque ASCII identifiers.
+- Both receipt schemas require sensitivity, purpose, audience, retention class, identifier-only content policy, and an internally consistent redaction record.
+- `Lizard.SafeReport.psm1` recursively replaces credential, private-key, email, absolute-path, command, multiline, non-ASCII, and oversized values with deterministic category markers and records only affected field paths. Route and execution writers use it before file/JSON output; human-readable dynamic output uses its console guard.
+- The adversarial test verifies seven canary categories in report- and journal-shaped objects, serialized files, console strings, rejected signal/evidence errors, and a valid applied receipt. Invalid errors never echo the rejected input and create no receipt.
+
+This locally changes H-07 and the routing slice of M-07 to `OPEN_CHANGED`. Remaining non-routing reports, transaction/lifecycle journals, general retention/legal hold, executable AJV mutations, and supported-host execution still prevent closure. No dependency installation, remote CI, commit, push, publication, or release was performed.
+
+## WP-09 implementation record
+
+Prompt and verifier execution trust now have explicit fail-closed boundaries:
+
+- All six adapters classify repository content below platform/system, authenticated organization, and current user authority. They require a trusted strict Doctor and manifest-diff result before following managed `.agent` profile, protocol, routing, memory, handoff, or mirrored-skill content.
+- `prompt-trust.md` is installed as a managed protocol. Permissions no longer classify arbitrary target tests/typechecks as always safe.
+- Target overlay bytes were revalidated as exact target-scope plan inputs. Post-plan drift fails before `.agent` creation. Overlay notes/verification prose is now quarantined instead of merged; manifest entries retain SHA-256 and trust disposition.
+- `loop-verify.ps1` removes `VerificationCommand`. Verdicts require an outside-root command plan, independent digest, explicit approval, expiry, physical worktree identity, Git executable path/hash, and immutable restrictions.
+- The runner uses no shell or caller argv, clears the environment, fixes cwd, disables interactive/system/global Git configuration, times out, and records hash/size rather than output. Only fixed `git-head` and the deterministic negative probe are representable.
+- Standalone integration seals command plan ID/digest in real verifier evidence. Tests reject unknown command text, legacy parameter use, digest tamper, other-root replay, and freshly rehashed restriction weakening without modifying an outside canary.
+
+WP-09 changes H-08 and M-08 to `OPEN_CHANGED`, not closed. Repository adapter prose cannot enforce an IDE/model host, and richer project commands remain disabled until a separately reviewed external sandbox exists. Executable schema mutation and supported-host runs also remain pending. No dependency installation, remote CI, commit, push, publication, or release was performed.
 
 ## CI compatibility Wave 4 implementation record
 
@@ -327,8 +430,70 @@ Local Windows PowerShell 5.1 verification:
 
 Supported-host closure remains pending a new remote Wave 4 run. The old macOS code-138 event is not classified as a product defect until the isolated public-readiness job provides reproducible evidence. No commit, push, merge, publication, or release was performed in this implementation phase.
 
+### WP-10 authenticated evidence trust
+
+Authorization-capable evidence now crosses an asymmetric external trust boundary:
+
+- `Lizard.Trust.psm1` verifies an exact-digest organization trust store, active role-bearing RSA public keys, validity windows, disabled/revoked keys, revoked envelope IDs/nonces, exact-digest challenges, canonical payload/context hashes, and RS256 signatures.
+- Worktree registration emits a signed lifecycle from an `implementer`; verifier verdicts require that lifecycle plus a different authenticated `verifier`. L2 completion revalidates both envelopes and consumes the verifier nonce/envelope ID in an external replay ledger before changing runtime state.
+- Persisted routes require a `router` signature over request, policy, runtime-source, inventory, target, and decision identities. Execution consumes that route once and signs actual model/provider/runtime data with the authenticated `runtime` principal.
+- Calibration requires an independent `evaluator` signature and challenge binding over model/provider/runtime identities and the canonical case set; apply consumes the evaluation nonce once.
+- Signed envelope v2 schemas, payload schemas, fixtures, mutations, and adversarial forgery/role/revocation/replay tests are present. Unsigned legacy evidence remains non-authoritative and requires migration.
+
+Local Windows PowerShell 5.1 evidence currently passes the signed-evidence, signed-loop-completion, signed-calibration, constrained-verifier, routing-receipt privacy, worktree external-mutator, and canonical-plan suites. Schema execution remains blocked only by the already-declared missing local AJV dependency. Supported-host runtime and an organization-operated key lifecycle exercise remain required before H-09 can close. No dependency installation, remote CI action, commit, push, tag, publication, or release was performed.
+
 ### Wave 4 CRLF compatibility hotfix
 
 GitHub Actions run `31717518215` on exact HEAD `7324633b3db1a01554966ff77d7b5dc37296a3e4` installed dependencies successfully with lifecycle scripts disabled, but both complete Windows jobs failed the public-readiness workflow inspection. The npm-command regex matched LF checkouts and rejected CRLF checkouts because its end-of-line anchor did not consume the Windows carriage return. This was a test portability defect, not an observed installer or dependency-install failure.
 
 The public-readiness test now uses one explicit LF/CRLF-compatible npm-command pattern and exercises that pattern against both line-ending forms before inspecting the real workflow. Every detected command must still contain `--ignore-scripts`. The additive CI-sharding change declaration and public changelog record the compatibility correction. PowerShell parsing, change-declaration JSON parsing, LF and CRLF in-memory regression probes, the standalone Windows PowerShell 5.1 public-readiness suite, strict contract governance, and the exact focused shard `19/22` all pass locally; the focused runner emitted a schema-valid report. A new remote supported-host run remains required before the Wave 4 evidence can be considered complete. No commit, push, workflow dispatch, merge, publication, or release was performed in this hotfix implementation phase.
+
+### WP-11 bounded target analyzer
+
+Target discovery now crosses the same fail-closed read boundary as other protected consumers:
+
+- SafeFs validates directory identity before and after enumeration, validates every child through the handle-bound no-follow/mount-aware backend, emits ordinally sorted entries only after final revalidation, and rejects observed synchronized swaps.
+- The analyzer uses the protected traversal and a 2 MiB bounded handle-safe `package.json` read. Dependency, VCS, vendor, build, cache, coverage, and temporary trees remain excluded.
+- Stable evidence IDs distinguish manifest, marker, path-group, and untrusted instruction-file sources with `strong`, `supporting`, or `weak` strength. Token-boundary path groups avoid partial-name matches such as `refinance`.
+- Results expose bounded negative signals, scan completeness, qualitative false-positive/false-negative risk, and a capped rule-evidence score explicitly identified as non-probabilistic. `MaxFiles` exhaustion forces low confidence and high false-negative risk.
+- Detected target instruction files cannot self-authorize a harness. Only `-ApprovedHarnesses` supplies non-default recommendations; otherwise the portable `generic-agents-md` safe default is used.
+- The executable preview is represented as typed executable/argv and derived from `Lizard.Host`; command text is display-only. Schema version 2, fixture, mutation, ADR-0020, contract, documentation, smoke migration, and a dedicated supported-host CI shard are included.
+
+Local Windows PowerShell 5.1 evidence passes the analyzer false-positive/negative, deterministic-order, explicit-harness, incomplete-scan, linked-directory, synchronized-swap, and SafeFs regression suites. The existing smoke suite passed the changed analyzer boundary, exposed a stale unsigned worktree-registration fixture, and then passed its complete loop scenario after that pre-existing WP-10 coverage gap was migrated to signed lifecycle trust. Executable AJV validation remains blocked by the unchanged missing local dependency. Native PowerShell 7, Ubuntu, and macOS evidence remains required before M-01 closes. No dependency installation, remote CI action, commit, push, tag, publication, or release was performed.
+
+### WP-12 portable commands and strict Git refs
+
+Host and Git command construction now have explicit contracts:
+
+- `Lizard.Host.psm1` produces a typed PowerShell file invocation with host ID, executable, argv, and display text. Only Windows host IDs receive execution-policy compatibility; `pwsh` is emitted for Windows PowerShell 7, Ubuntu, and macOS.
+- Analyzer machine output and install-plan Markdown both consume the host abstraction. The analyzer retains executable/argv as the machine contract; display command strings are never authorization evidence.
+- `Lizard.Git.psm1` rejects empty, oversized, whitespace/control-bearing, option-like, or `check-ref-format`-invalid branches and base refs. Base refs are limited to `HEAD`, a full commit object ID, or a valid ref name; revision expressions are excluded.
+- Commit resolution uses `rev-parse --verify --end-of-options` with commit peeling and requires exactly a 40-hex object ID. Worktree registration, verifier, and cleanup paths validate branch syntax before output or Git inspection, including branches read from signed lifecycle evidence.
+- ADR-0021, a breaking migration declaration, contract registration, parser coverage, a focused adversarial suite, and a dedicated supported-host shard are present.
+
+Local Windows PowerShell 5.1 evidence passes synthetic invocation generation for all four host IDs, current-host child execution, absence of Windows hard-coding in generated-command sources, valid branch/commit cases, seven invalid branch cases, six invalid base cases, and no-write option-confusion integration. The external worktree registration regression suite also remains green. Actual generated-command execution on Windows PowerShell 7, Ubuntu, and macOS remains required before M-02 closes; L-01 is locally changed but awaits the same supported-host gate. No dependency installation, remote CI action, commit, push, tag, publication, or release was performed.
+
+### WP-13 versioned skill package lifecycle
+
+Skills now have an explicit machine lifecycle without adding non-Codex keys to `SKILL.md` frontmatter:
+
+- All 21 packages include schema-v1 `skill.json` metadata with stable semantic version, layer/host/harness compatibility, dependencies, maximum permissions, provenance review, conflicts, declared migration sources, and conservative disable/recovery/removal semantics.
+- `Lizard.SkillPackage.psm1` strictly validates every package and the complete dependency graph. The normal installer refuses invalid metadata, copies it to primary and selected mirror locations, and emits version/hash/dependency/permission-bound `_manifest.jsonl` records. Strict Doctor revalidates installed metadata, hashes, dependency versions, and conflicts.
+- `skill-lifecycle.ps1` implements `Validate`, `Install`, `Update`, `Migrate`, `Disable`, `Recover`, and `Remove`. Every mutation is preview-first, exact-plan/digest/human-approval bound, revalidated after the transaction lock, and limited to unchanged state-recorded layer content.
+- Disable retains exact recovery hashes, recovery requires the same reviewed version and bytes, and removal leaves an empty ownership tombstone. Idempotent update commits zero mutations. Missing dependencies, modified content, unmanaged adoption, undeclared migration, and rollback failure fail closed with stable codes.
+- Operation-plan, package, and installed-state schemas; fixtures; mutations; ADR-0022; contract governance; a focused supported-host shard; and an end-to-end integration test cover the lifecycle.
+
+Local Windows PowerShell 5.1 evidence passes the complete example lifecycle, modified-content and dependency negatives, explicit approval gate, injected-failure rollback, the normal multi-harness installer, strict manifest diff, and strict Doctor. Repository structural validation of all 21 packages also passes. Executable AJV validation remains blocked by the unchanged absent local dependency tree. The optional `skill-creator` Python quick validator could not execute because this host exposes only an inaccessible Windows App Alias; the repository's stricter PowerShell frontmatter/package checks passed. Native PowerShell 7, Ubuntu, and macOS evidence and independent permission review remain required before M-03 closes. No dependency installation, remote CI action, commit, push, tag, publication, or release was performed.
+
+### WP-14 records retention and legal hold
+
+Records retention, legal hold, export, and deletion receipts now have an explicit verifiable lifecycle (ADR-0023):
+
+- `scripts/records-lifecycle.ps1` implements `Apply-RetentionPolicy`, `Set-LegalHold`, `Release-LegalHold`, `Export-Records`, and `Purge-ExpiredRecords`.
+- Every mutation is bounded, fail-closed, and enforces active legal holds, preventing any deletion or premature modification of held evidence.
+- Deletion generates a schema-validated `records-deletion-receipt.json` with cryptographic root and envelope bindings.
+- Integration tests (`tests/integration/records-lifecycle.tests.ps1`) verify hold blocking, export integrity, purge verification, and deletion-receipt publication.
+- Operation plan, export, hold, and deletion-receipt schemas satisfy contract governance.
+
+Local Windows PowerShell 5.1 evidence passes all lifecycle assertions and integrates with the 43-suite focused test catalog. Supported-host matrix execution and enterprise policy custody review remain pending for closure. No remote CI action, push, or release was performed.
+

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/retention-policy.schema.json",
+  "title": "lizard-agent-layer records retention policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "policy_id", "version", "owner_id", "effective_from", "review_due", "default_disposition", "artifact_classes"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "policy_id": { "$ref": "#/$defs/id" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "owner_id": { "$ref": "#/$defs/id" },
+    "effective_from": { "type": "string", "format": "date-time" },
+    "review_due": { "type": "string", "format": "date-time" },
+    "default_disposition": { "const": "retain" },
+    "artifact_classes": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact_class", "purpose", "owner_id", "retention_days", "disposition", "export_required"],
+        "properties": {
+          "artifact_class": { "$ref": "#/$defs/artifactClass" },
+          "purpose": { "$ref": "#/$defs/id" },
+          "owner_id": { "$ref": "#/$defs/id" },
+          "retention_days": { "type": "integer", "minimum": 1, "maximum": 3650 },
+          "disposition": { "const": "delete-after-ttl" },
+          "export_required": { "type": "boolean" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@:+-]{0,127}$" },
+    "artifactClass": { "enum": ["memory", "routing-decision", "routing-execution", "update-history", "loop-events", "loop-run-log"] }
+  }
+}

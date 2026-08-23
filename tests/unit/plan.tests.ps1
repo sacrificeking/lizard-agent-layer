@@ -3,6 +3,7 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Plan.psm1') -Force
 
 $testRoot = Join-Path $LayerRoot '.tmp\tests'
@@ -34,6 +35,9 @@ try {
     Assert-Equal $leftJson $rightJson 'Canonical JSON must be independent of property insertion order.'
     Assert-Equal '{"a":1234,"array":["two",1],"nested":{"x":null,"y":true},"z":"line1\nline2"}' $leftJson 'Canonical JSON must use invariant integers, sorted nested keys, and escaped newlines.'
     Assert-False ($leftJson -match "`r|`n") 'Canonical JSON must contain no formatting newlines.'
+    Assert-Equal '{"score":0.82}' (ConvertTo-LizardCanonicalJson ([pscustomobject]@{ score = [decimal]'0.82' })) 'Canonical decimals must remain invariant across locale settings.'
+    Assert-Equal '{"score":0.5}' (ConvertTo-LizardCanonicalJson ([pscustomobject]@{ score = [double]0.5 })) 'Exactly representable floating-point values must have stable decimal form.'
+    Assert-ThrowsCode { ConvertTo-LizardCanonicalJson ([pscustomobject]@{ score = [double]::NaN }) | Out-Null } 'PLAN_CANONICAL_NUMBER_INVALID' 'Non-finite JSON numbers must fail closed.'
   } finally {
     [System.Threading.Thread]::CurrentThread.CurrentCulture = $originalCulture
   }
@@ -65,6 +69,35 @@ try {
 
   Assert-ThrowsCode { Read-LizardApprovedPlan -AuthorizedRoot $output -Path $writeResult.path -Sha256 ('0' * 64) -OperationKind install | Out-Null } 'PLAN_BINDING_DIGEST_MISMATCH' 'Wrong approval digest must fail closed.'
   Assert-ThrowsCode { Read-LizardApprovedPlan -AuthorizedRoot $output -Path $writeResult.path -Sha256 $writeResult.sha256 -OperationKind update | Out-Null } 'PLAN_BINDING_OPERATION_MISMATCH' 'Operation mismatch must fail closed.'
+
+  $removalIdentity = ('c' * 64)
+  $identityFixture = Join-Path $target 'identity.txt'
+  Set-SafeContent -AuthorizedRoot $target -Path $identityFixture -Value 'identity'
+  $physicalIdentityBefore = Get-LizardPlanTargetIdentitySha256 -TargetRoot $target -Path $identityFixture -Kind file
+  Remove-SafeItem -AuthorizedRoot $target -Path $identityFixture -Kind File
+  Set-SafeContent -AuthorizedRoot $target -Path $identityFixture -Value 'identity'
+  $physicalIdentityAfter = Get-LizardPlanTargetIdentitySha256 -TargetRoot $target -Path $identityFixture -Kind file
+  Assert-False ($physicalIdentityBefore -eq $physicalIdentityAfter) 'Plan target identity must detect delete-and-recreate even when content is unchanged.'
+  $uninstallPlan = New-LizardOperationPlan -OperationKind uninstall -TargetRoot $target -LayerRoot $LayerRoot -Options ([pscustomobject]@{ scope = 'managed-only' }) -Inputs @() -TargetEntries @(
+    [ordered]@{ path = '.agent/generated.txt'; kind = 'file'; action = 'remove'; precondition_kind = 'file'; precondition_sha256 = ('d' * 64); precondition_identity_sha256 = $removalIdentity; ownership = 'layer-owned'; intended_sha256 = $null }
+  )
+  Assert-Equal 'uninstall' ([string]$uninstallPlan.operation_kind) 'Canonical plans must support uninstall operations.'
+  Assert-Equal $removalIdentity ([string]$uninstallPlan.intent.target_entries[0].precondition_identity_sha256) 'Removal intent must bind physical object identity.'
+  Assert-ThrowsCode {
+    New-LizardOperationPlan -OperationKind uninstall -TargetRoot $target -LayerRoot $LayerRoot -Options ([pscustomobject]@{ scope = 'managed-only' }) -Inputs @() -TargetEntries @(
+      [ordered]@{ path = '.agent/generated.txt'; kind = 'file'; action = 'remove'; precondition_kind = 'file'; precondition_sha256 = ('d' * 64); ownership = 'layer-owned'; intended_sha256 = $null }
+    ) | Out-Null
+  } 'PLAN_BINDING_TARGET_IDENTITY_REQUIRED' 'Removal without physical identity must fail closed.'
+  Assert-ThrowsCode {
+    New-LizardOperationPlan -OperationKind uninstall -TargetRoot $target -LayerRoot $LayerRoot -Options ([pscustomobject]@{ scope = 'managed-only' }) -Inputs @() -TargetEntries @(
+      [ordered]@{ path = '.agent/generated.txt'; kind = 'file'; action = 'remove'; precondition_kind = 'file'; precondition_sha256 = ('d' * 64); precondition_identity_sha256 = $removalIdentity; ownership = 'adopted'; intended_sha256 = $null }
+    ) | Out-Null
+  } 'PLAN_BINDING_TARGET_OWNERSHIP_INVALID' 'Removal of adopted content must fail closed.'
+  Assert-ThrowsCode {
+    New-LizardOperationPlan -OperationKind uninstall -TargetRoot $target -LayerRoot $LayerRoot -Options ([pscustomobject]@{ scope = 'managed-only' }) -Inputs @() -TargetEntries @(
+      [ordered]@{ path = '.agent/generated.txt'; kind = 'directory'; action = 'remove'; precondition_kind = 'file'; precondition_sha256 = ('d' * 64); precondition_identity_sha256 = $removalIdentity; ownership = 'layer-owned'; intended_sha256 = $null }
+    ) | Out-Null
+  } 'PLAN_BINDING_TARGET_INVALID' 'Removal kind disagreement must fail closed.'
 
   $noncanonicalPath = Join-Path $output 'noncanonical.json'
   $noncanonical = (ConvertTo-LizardCanonicalJson $plan) + "`n"

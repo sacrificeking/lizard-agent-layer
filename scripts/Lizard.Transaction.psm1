@@ -23,10 +23,11 @@ function Get-LizardTransactionSha256 {
 
 function Get-LizardTransactionRootIdentity {
   param([Parameter(Mandatory = $true)][string]$TargetRoot)
-  $root = ConvertTo-LizardFullPath -Path $TargetRoot
+  $identity = Get-LizardSafeRootIdentity -AuthorizedRoot $TargetRoot
+  $root = [string]$identity.authorized_root
   if ((Get-LizardPathComparison) -eq [System.StringComparison]::OrdinalIgnoreCase) { $root = $root.ToLowerInvariant() }
   $normalized = $root.Replace('\', '/')
-  return Get-LizardTransactionSha256 -Value ("target-root-v1|{0}" -f $normalized)
+  return Get-LizardTransactionSha256 -Value ("target-root-v2|{0}|{1}|{2}|{3}" -f $identity.backend, $normalized, $identity.volume_id, $identity.file_id)
 }
 
 function Assert-LizardTransactionProperties {
@@ -132,28 +133,12 @@ function Assert-LizardTransactionJournalDocument {
   if ([string]$Journal.state -eq 'rolled-back' -and @($Journal.mutations | Where-Object { $_.status -ne 'rolled-back' }).Count -gt 0) { throw (New-LizardTransactionException -Code 'TRANSACTION_STATE_INVALID' -Message 'Rolled-back journal contains unfinished mutations.') }
 }
 
-function Write-LizardUtf8File {
-  param([string]$Path, [string]$Value)
-  [System.IO.File]::WriteAllText($Path, $Value, (New-Object System.Text.UTF8Encoding($false)))
-}
-
 function Write-LizardTransactionJson {
   param([string]$Path, $Document)
-  $tempPath = "$Path.tmp"
-  Write-LizardUtf8File -Path $tempPath -Value ($Document | ConvertTo-Json -Depth 12)
-  if (Test-Path -LiteralPath $Path) {
-    $previousPath = "$Path.previous"
-    try {
-      if (Test-Path -LiteralPath $previousPath) { [System.IO.File]::Delete($previousPath) }
-      [System.IO.File]::Replace($tempPath, $Path, $previousPath)
-      if (Test-Path -LiteralPath $previousPath) { [System.IO.File]::Delete($previousPath) }
-    } catch {
-      if (Test-Path -LiteralPath $tempPath) { [System.IO.File]::Delete($tempPath) }
-      throw (New-LizardTransactionException -Code 'TRANSACTION_JOURNAL_ATOMIC_WRITE_FAILED' -Message $_.Exception.Message)
-    }
-  } else {
-    [System.IO.File]::Move($tempPath, $Path)
-  }
+  $authorizedRoot = Split-Path -Parent $Path
+  $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes(($Document | ConvertTo-Json -Depth 12))
+  try { Set-SafeBytes -AuthorizedRoot $authorizedRoot -Path $Path -Bytes $bytes }
+  catch { throw (New-LizardTransactionException -Code 'TRANSACTION_JOURNAL_ATOMIC_WRITE_FAILED' -Message $_.Exception.Message) }
 }
 
 function Get-LizardTransactionPaths {
@@ -228,19 +213,16 @@ function Start-LizardTransaction {
     journal_path = ".lizard-agent-layer-transactions/$operationId/journal.json"
   }
 
-  $stream = $null
+  $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes(($lockDocument | ConvertTo-Json -Depth 6))
   try {
-    $stream = [System.IO.File]::Open($paths.lock_path, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
-    $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes(($lockDocument | ConvertTo-Json -Depth 6))
-    $stream.Write($bytes, 0, $bytes.Length)
-  } catch [System.IO.IOException] {
+    Set-SafeBytes -AuthorizedRoot $paths.target_root -Path $paths.lock_path -Bytes $bytes -CreateNew
+  } catch {
+    if ($_.Exception.Message -notmatch 'SAFEFS_DESTINATION_EXISTS' -and -not (Test-Path -LiteralPath $paths.lock_path)) { throw }
     throw (New-LizardTransactionException -Code 'TRANSACTION_LOCK_HELD' -Message "Target is locked. Recover or complete the operation recorded in $($paths.lock_path).")
-  } finally {
-    if ($null -ne $stream) { $stream.Dispose() }
   }
 
   try {
-    [System.IO.Directory]::CreateDirectory($paths.backup_dir) | Out-Null
+    New-SafeDirectory -AuthorizedRoot $paths.target_root -Path $paths.backup_dir | Out-Null
     $journal = [pscustomobject][ordered]@{
       schema_version = 2
       operation_id = $operationId
@@ -268,8 +250,16 @@ function Start-LizardTransaction {
     Save-LizardTransactionContext -Context $script:TransactionContext
     return $script:TransactionContext
   } catch {
-    if (Test-Path -LiteralPath $paths.transaction_dir) { [System.IO.Directory]::Delete($paths.transaction_dir, $true) }
-    if (Test-Path -LiteralPath $paths.lock_path) { [System.IO.File]::Delete($paths.lock_path) }
+    foreach ($candidate in @($paths.journal_path, "$($paths.journal_path).tmp", "$($paths.journal_path).previous")) {
+      if (Test-Path -LiteralPath $candidate -PathType Leaf) { Remove-SafeItem -AuthorizedRoot $paths.target_root -Path $candidate -Kind File }
+    }
+    if (Test-Path -LiteralPath $paths.backup_dir -PathType Container) { Remove-SafeItem -AuthorizedRoot $paths.target_root -Path $paths.backup_dir -Kind EmptyDirectory }
+    if (Test-Path -LiteralPath $paths.transaction_dir -PathType Container) { Remove-SafeItem -AuthorizedRoot $paths.target_root -Path $paths.transaction_dir -Kind EmptyDirectory }
+    if (Test-Path -LiteralPath $paths.store_root -PathType Container) {
+      $remaining = @([System.IO.Directory]::EnumerateFileSystemEntries($paths.store_root))
+      if ($remaining.Count -eq 0) { Remove-SafeItem -AuthorizedRoot $paths.target_root -Path $paths.store_root -Kind EmptyDirectory }
+    }
+    if (Test-Path -LiteralPath $paths.lock_path -PathType Leaf) { Remove-SafeItem -AuthorizedRoot $paths.target_root -Path $paths.lock_path -Kind File }
     $script:TransactionContext = $null
     throw
   }
@@ -347,7 +337,7 @@ function Add-LizardTransactionMutation {
       $backupRel = "backups/{0:D6}.bin" -f $sequence
       $backupPath = Resolve-SafeTargetDestination -AuthorizedRoot $Context.backup_dir -DestinationPath (Join-Path $Context.backup_dir ("{0:D6}.bin" -f $sequence))
       $originalHash = Get-SafeFileHash -AuthorizedRoot $Context.target_root -Path $safePath
-      Copy-SafeItem -AuthorizedRoot $Context.target_root -Source $safePath -Destination $backupPath
+      Copy-SafeItem -SourceAuthorizedRoot $Context.target_root -AuthorizedRoot $Context.target_root -Source $safePath -Destination $backupPath
       $backupHash = Get-SafeFileHash -AuthorizedRoot $Context.backup_dir -Path $backupPath
       if ($backupHash -ne $originalHash) { throw (New-LizardTransactionException -Code 'TRANSACTION_BACKUP_COPY_MISMATCH' -Message "Backup copy hash mismatch for $relative.") }
       $confirmedSourceHash = Get-SafeFileHash -AuthorizedRoot $Context.target_root -Path $safePath
@@ -422,6 +412,17 @@ function Set-LizardTransactionalContent {
   Complete-LizardTransactionMutation -Mutation $mutation
 }
 
+function Set-LizardTransactionalBytes {
+  [CmdletBinding()]
+  param([Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][AllowEmptyCollection()][byte[]]$Bytes)
+  $Context = Sync-LizardTransactionContext
+  $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $Context.target_root -DestinationPath $Path
+  New-LizardTransactionalDirectory -Path (Split-Path -Parent $safePath) | Out-Null
+  $mutation = Add-LizardTransactionMutation -Context $Context -Path $safePath -Kind file
+  Set-SafeBytes -AuthorizedRoot $Context.target_root -Path $safePath -Bytes $Bytes
+  Complete-LizardTransactionMutation -Mutation $mutation
+}
+
 function Add-LizardTransactionalContent {
   [CmdletBinding()]
   param([Parameter(Mandatory = $true)][string]$Path, [AllowNull()][object]$Value, [string]$Encoding = 'UTF8')
@@ -435,28 +436,70 @@ function Add-LizardTransactionalContent {
 
 function Copy-LizardTransactionalFile {
   [CmdletBinding()]
-  param([Parameter(Mandatory = $true)][string]$Source, [Parameter(Mandatory = $true)][string]$Destination, [switch]$Force)
+  param([Parameter(Mandatory = $true)][string]$SourceAuthorizedRoot, [Parameter(Mandatory = $true)][string]$Source, [Parameter(Mandatory = $true)][string]$Destination, [switch]$Force)
   if (-not (Test-Path -LiteralPath $Source -PathType Leaf)) { throw "Missing source file: $Source" }
   $Context = Sync-LizardTransactionContext
   $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $Context.target_root -DestinationPath $Destination
   New-LizardTransactionalDirectory -Path (Split-Path -Parent $safePath) | Out-Null
   $mutation = Add-LizardTransactionMutation -Context $Context -Path $safePath -Kind file
-  Copy-SafeItem -AuthorizedRoot $Context.target_root -Source $Source -Destination $safePath -Force:$Force
+  Copy-SafeItem -SourceAuthorizedRoot $SourceAuthorizedRoot -AuthorizedRoot $Context.target_root -Source $Source -Destination $safePath -Force:$Force
+  Complete-LizardTransactionMutation -Mutation $mutation
+}
+
+function Remove-LizardTransactionalItem {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$Path,
+    [Parameter(Mandatory = $true)][ValidateSet('File', 'EmptyDirectory')][string]$Kind,
+    [AllowNull()]$ExpectedIdentity
+  )
+  $Context = Sync-LizardTransactionContext
+  $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $Context.target_root -DestinationPath $Path
+  $mutationKind = if ($Kind -eq 'File') { 'file' } else { 'directory' }
+  $mutation = Add-LizardTransactionMutation -Context $Context -Path $safePath -Kind $mutationKind
+  if ([string]$mutation.original_state -eq 'missing') {
+    throw (New-LizardTransactionException -Code 'TRANSACTION_DELETE_SOURCE_MISSING' -Message "Removal source is missing: $($mutation.path)")
+  }
+  if ([string]$mutation.original_state -ne $mutationKind) {
+    throw (New-LizardTransactionException -Code 'TRANSACTION_DESTINATION_TYPE' -Message "Removal source kind changed for $($mutation.path).")
+  }
+  Remove-SafeItem -AuthorizedRoot $Context.target_root -Path $safePath -Kind $Kind -ExpectedIdentity $ExpectedIdentity
   Complete-LizardTransactionMutation -Mutation $mutation
 }
 
 function Remove-LizardTransactionMetadata {
   param($Context)
+  $removeLock = $false
   if (Test-Path -LiteralPath $Context.lock_path) {
     $lock = Get-LizardTransactionLock -TargetRoot $Context.target_root
     if ([string]$lock.operation_id -ne [string]$Context.operation_id) { throw (New-LizardTransactionException -Code 'TRANSACTION_ID_MISMATCH' -Message 'Refusing to remove a lock owned by another operation.') }
-    [System.IO.File]::Delete($Context.lock_path)
+    $removeLock = $true
   }
-  if (Test-Path -LiteralPath $Context.transaction_dir) { [System.IO.Directory]::Delete($Context.transaction_dir, $true) }
+  if (Test-Path -LiteralPath $Context.transaction_dir -PathType Container) {
+    foreach ($file in @(Get-ChildItem -LiteralPath $Context.transaction_dir -File -Force)) {
+      if ($file.Name -notin @('journal.json', 'journal.json.tmp', 'journal.json.previous')) {
+        throw (New-LizardTransactionException -Code 'TRANSACTION_CLEANUP_UNEXPECTED_ENTRY' -Message "Unexpected transaction metadata file: $($file.FullName)")
+      }
+      Remove-SafeItem -AuthorizedRoot $Context.target_root -Path $file.FullName -Kind File
+    }
+    if (Test-Path -LiteralPath $Context.backup_dir -PathType Container) {
+      foreach ($backup in @(Get-ChildItem -LiteralPath $Context.backup_dir -Force)) {
+        if ($backup.PSIsContainer -or $backup.Name -notmatch '^[0-9]{6}\.bin$') {
+          throw (New-LizardTransactionException -Code 'TRANSACTION_CLEANUP_UNEXPECTED_ENTRY' -Message "Unexpected transaction backup entry: $($backup.FullName)")
+        }
+        Remove-SafeItem -AuthorizedRoot $Context.target_root -Path $backup.FullName -Kind File
+      }
+      Remove-SafeItem -AuthorizedRoot $Context.target_root -Path $Context.backup_dir -Kind EmptyDirectory
+    }
+    $remainingTransactionEntries = @([System.IO.Directory]::EnumerateFileSystemEntries($Context.transaction_dir))
+    if ($remainingTransactionEntries.Count -ne 0) { throw (New-LizardTransactionException -Code 'TRANSACTION_CLEANUP_UNEXPECTED_ENTRY' -Message 'Transaction directory contains unexpected entries.') }
+    Remove-SafeItem -AuthorizedRoot $Context.target_root -Path $Context.transaction_dir -Kind EmptyDirectory
+  }
   if (Test-Path -LiteralPath $Context.store_root) {
     $remaining = @([System.IO.Directory]::EnumerateFileSystemEntries($Context.store_root))
-    if ($remaining.Count -eq 0) { [System.IO.Directory]::Delete($Context.store_root) }
+    if ($remaining.Count -eq 0) { Remove-SafeItem -AuthorizedRoot $Context.target_root -Path $Context.store_root -Kind EmptyDirectory }
   }
+  if ($removeLock) { Remove-SafeItem -AuthorizedRoot $Context.target_root -Path $Context.lock_path -Kind File }
 }
 
 function Resolve-LizardTransactionBackupPath {
@@ -485,17 +528,18 @@ function Undo-LizardTransaction {
         if (-not (Test-Path -LiteralPath $backupPath -PathType Leaf)) { throw (New-LizardTransactionException -Code 'TRANSACTION_BACKUP_MISSING' -Message "Backup missing for mutation $($mutation.sequence).") }
         $backupHash = Get-SafeFileHash -AuthorizedRoot $Context.backup_dir -Path $backupPath
         if ($backupHash -ne [string]$mutation.original_hash) { throw (New-LizardTransactionException -Code 'TRANSACTION_BACKUP_HASH_MISMATCH' -Message "Backup hash mismatch for $($mutation.path).") }
-        Copy-SafeItem -AuthorizedRoot $Context.target_root -Source $backupPath -Destination $destination -Force
+        Copy-SafeItem -SourceAuthorizedRoot $Context.target_root -AuthorizedRoot $Context.target_root -Source $backupPath -Destination $destination -Force
       } elseif ([string]$mutation.original_state -eq 'missing') {
         if (Test-Path -LiteralPath $destination -PathType Leaf) {
-          [System.IO.File]::Delete($destination)
+          Remove-SafeItem -AuthorizedRoot $Context.target_root -Path $destination -Kind File
         } elseif (Test-Path -LiteralPath $destination -PathType Container) {
           $children = @([System.IO.Directory]::EnumerateFileSystemEntries($destination))
-          if ($children.Count -eq 0) { [System.IO.Directory]::Delete($destination) }
+          if ($children.Count -eq 0) { Remove-SafeItem -AuthorizedRoot $Context.target_root -Path $destination -Kind EmptyDirectory }
           elseif ([string]$mutation.kind -eq 'file') { throw "Expected rollback file but found non-empty directory: $destination" }
         }
       } elseif ([string]$mutation.original_state -eq 'directory') {
-        if (-not (Test-Path -LiteralPath $destination -PathType Container)) { throw (New-LizardTransactionException -Code 'TRANSACTION_ORIGINAL_DIRECTORY_MISSING' -Message "Original directory is not present for $($mutation.path).") }
+        if (Test-Path -LiteralPath $destination -PathType Leaf) { throw (New-LizardTransactionException -Code 'TRANSACTION_DESTINATION_TYPE' -Message "Expected rollback directory but found a file: $destination") }
+        if (-not (Test-Path -LiteralPath $destination -PathType Container)) { New-SafeDirectory -AuthorizedRoot $Context.target_root -Path $destination | Out-Null }
       }
       $entry = @($Context.journal.mutations | Where-Object { [int]$_.sequence -eq [int]$mutation.sequence })[0]
       $entry.status = 'rolled-back'
@@ -620,6 +664,8 @@ Export-ModuleMember -Function @(
   'Get-LizardTransactionRecoveryInfo',
   'Join-LizardTransaction',
   'New-LizardTransactionalDirectory',
+  'Remove-LizardTransactionalItem',
+  'Set-LizardTransactionalBytes',
   'Set-LizardTransactionalContent',
   'Start-LizardTransaction',
   'Undo-LizardTransaction'

@@ -5,6 +5,14 @@ param(
   [switch]$Strict,
   [switch]$Json,
   [string]$OutputDir,
+  [string]$TrustStorePath,
+  [string]$TrustStoreSha256,
+  [string]$TrustChallengePath,
+  [string]$TrustChallengeSha256,
+  [string]$LifecycleTrustStorePath,
+  [string]$LifecycleTrustStoreSha256,
+  [string]$LifecycleChallengePath,
+  [string]$LifecycleChallengeSha256,
   [switch]$AllowTargetReportWrite
 )
 
@@ -12,6 +20,7 @@ $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Trust.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.LoopEvidence.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.LoopRuntime.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
@@ -99,9 +108,18 @@ if ($manifest) {
     $declaredStatus = if ($declaredStatusMatch.Success) { [string]$declaredStatusMatch.Groups[1].Value } else { $null }
     if (Test-Path -LiteralPath $verifierEvidencePath -PathType Leaf) {
       try {
-        $evidenceEnvelope = Read-LizardEvidenceEnvelope -Path $verifierEvidencePath -SchemaVersion 1
+        $evidenceEnvelope = Read-LizardSignedEvidenceFile -Path $verifierEvidencePath
         $evidence = $evidenceEnvelope.payload
-        Add-Pass "Verifier evidence hash is valid: $($evidenceEnvelope.payload_hash)"
+        foreach ($trustInput in @(@{ value = $TrustStorePath; label = 'TrustStorePath' }, @{ value = $TrustStoreSha256; label = 'TrustStoreSha256' }, @{ value = $TrustChallengePath; label = 'TrustChallengePath' }, @{ value = $TrustChallengeSha256; label = 'TrustChallengeSha256' })) { if ([string]::IsNullOrWhiteSpace([string]$trustInput.value)) { throw "LOOP_TRUST_INPUT_REQUIRED: $($trustInput.label) is required to audit signed verifier evidence." } }
+        Assert-PathOutsideRoot -Path $TrustStorePath -ExcludedRoot $TargetRoot -Label 'TrustStorePath'
+        Assert-PathOutsideRoot -Path $TrustChallengePath -ExcludedRoot $TargetRoot -Label 'TrustChallengePath'
+        $evidenceTime = ConvertTo-LizardLoopDateUtc -Value $evidenceEnvelope.issued_at
+        $trustRead = Read-LizardTrustStore -Path $TrustStorePath -ExpectedSha256 $TrustStoreSha256
+        $challengeRead = Read-LizardTrustChallenge -Path $TrustChallengePath -ExpectedSha256 $TrustChallengeSha256 -Now $evidenceTime
+        $trustBinding = Get-LizardVerifierTrustBinding -OperationId ([string]$evidence.operation_id) -LifecycleHash ([string]$evidence.lifecycle_hash) -VerificationPlanSha256 ([string]$evidence.verification_plan_sha256) -TargetRoot $TargetRoot
+        $verifiedSigner = Test-LizardSignedEvidenceEnvelope -Envelope $evidenceEnvelope -TrustStoreRead $trustRead -ChallengeRead $challengeRead -ExpectedPayloadKind 'verifier-evidence' -ExpectedPurpose 'loop-completion' -ExpectedSubject ([string]$evidence.operation_id) -ExpectedBindingSha256 $trustBinding -RequiredRole 'verifier' -Now $evidenceTime
+        if ([string]$verifiedSigner.principal_id -ne [string]$evidence.verifier) { throw 'LOOP_VERIFIER_IDENTITY_MISMATCH: Evidence verifier is not the authenticated signer.' }
+        Add-Pass "Verifier signature and evidence hash are valid: $($evidenceEnvelope.payload_sha256)"
         if ([string]$evidence.effective_status -eq 'INVALID') { Add-Failure 'Verifier evidence has INVALID effective status.' }
         if ([string]::IsNullOrWhiteSpace([string]$evidence.verifier)) { Add-Failure 'Verifier evidence is missing verifier identity.' }
         if ([string]$evidence.effective_status -ne 'NEEDS_REVIEW') {
@@ -110,16 +128,23 @@ if ($manifest) {
           if (@($evidence.commands).Count -eq 0) { Add-Failure 'Verifier verdict contains no command results.' }
         }
         if ([string]$evidence.effective_status -in @('PASS', 'WARN')) {
-          foreach ($command in @($evidence.commands)) { if ([int]$command.exit_code -ne 0) { Add-Failure "Passing verifier evidence contains failed command: $($command.command)" } }
+          foreach ($command in @($evidence.commands)) { if (@($command.expected_exit_codes) -notcontains [int]$command.exit_code) { Add-Failure "Passing verifier evidence contains failed command: $($command.command_id)" } }
         }
         if ([string]::IsNullOrWhiteSpace([string]$evidence.head_sha) -or [string]::IsNullOrWhiteSpace([string]$evidence.git_state_hash)) { Add-Failure 'Verifier evidence is not bound to HEAD and git state hashes.' }
         if ($declaredStatus -ne [string]$evidence.effective_status) { Add-Failure "Verifier Markdown status '$declaredStatus' does not match evidence status '$($evidence.effective_status)'." }
         $packetHashMatch = [regex]::Match($verifierText, '(?m)^Evidence packet hash:\s*([a-f0-9]{64})\s*$')
-        if (-not $packetHashMatch.Success -or [string]$packetHashMatch.Groups[1].Value -ne [string]$evidenceEnvelope.payload_hash) { Add-Failure 'Verifier Markdown is not bound to the current evidence packet hash.' }
+        if (-not $packetHashMatch.Success -or [string]$packetHashMatch.Groups[1].Value -ne [string]$evidenceEnvelope.payload_sha256) { Add-Failure 'Verifier Markdown is not bound to the current signed evidence packet hash.' }
         if ([string]::IsNullOrWhiteSpace([string]$evidence.lifecycle_path)) { Add-Failure 'Verifier evidence is missing lifecycle path.' }
         else {
-          $lifecycleEnvelope = Read-LizardEvidenceEnvelope -Path ([string]$evidence.lifecycle_path) -SchemaVersion 1
-          if ([string]$lifecycleEnvelope.payload_hash -ne [string]$evidence.lifecycle_hash) { Add-Failure 'Verifier lifecycle hash no longer matches its contract.' }
+          foreach ($lifecycleTrustInput in @(@{ value = $LifecycleTrustStorePath; label = 'LifecycleTrustStorePath' }, @{ value = $LifecycleTrustStoreSha256; label = 'LifecycleTrustStoreSha256' }, @{ value = $LifecycleChallengePath; label = 'LifecycleChallengePath' }, @{ value = $LifecycleChallengeSha256; label = 'LifecycleChallengeSha256' })) { if ([string]::IsNullOrWhiteSpace([string]$lifecycleTrustInput.value)) { throw "LOOP_LIFECYCLE_TRUST_REQUIRED: $($lifecycleTrustInput.label) is required." } }
+          $lifecycleEnvelope = Read-LizardSignedEvidenceFile -Path ([string]$evidence.lifecycle_path)
+          $lifecycleTime = ConvertTo-LizardLoopDateUtc -Value $lifecycleEnvelope.issued_at
+          $lifecycleTrustRead = Read-LizardTrustStore -Path $LifecycleTrustStorePath -ExpectedSha256 $LifecycleTrustStoreSha256
+          $lifecycleChallengeRead = Read-LizardTrustChallenge -Path $LifecycleChallengePath -ExpectedSha256 $LifecycleChallengeSha256 -Now $lifecycleTime
+          $lifecycleBinding = Get-LizardLifecycleTrustBinding -OperationId ([string]$lifecycleEnvelope.payload.operation_id) -TargetRoot $TargetRoot -WorktreeRoot ([string]$lifecycleEnvelope.payload.worktree_root) -Branch ([string]$lifecycleEnvelope.payload.branch) -BaseSha ([string]$lifecycleEnvelope.payload.base_sha)
+          $verifiedLifecycleSigner = Test-LizardSignedEvidenceEnvelope -Envelope $lifecycleEnvelope -TrustStoreRead $lifecycleTrustRead -ChallengeRead $lifecycleChallengeRead -ExpectedPayloadKind 'worktree-lifecycle' -ExpectedPurpose 'worktree-registration' -ExpectedSubject ([string]$lifecycleEnvelope.payload.operation_id) -ExpectedBindingSha256 $lifecycleBinding -RequiredRole 'implementer' -Now $lifecycleTime
+          if ([string]$verifiedLifecycleSigner.principal_id -ne [string]$evidence.authenticated_implementer -or [string]$verifiedLifecycleSigner.principal_id -ne [string]$evidence.implementer) { Add-Failure 'Verifier implementer identity does not match the authenticated lifecycle signer.' }
+          if ([string]$lifecycleEnvelope.payload_sha256 -ne [string]$evidence.lifecycle_hash) { Add-Failure 'Verifier lifecycle hash no longer matches its signed contract.' }
           if ([string]$lifecycleEnvelope.payload.operation_id -ne [string]$evidence.operation_id) { Add-Failure 'Verifier operation ID does not match lifecycle contract.' }
         }
         if (-not [string]::IsNullOrWhiteSpace([string]$evidence.worktree_root) -and (Test-Path -LiteralPath ([string]$evidence.worktree_root) -PathType Container)) {

@@ -5,5 +5,5 @@
 - Reuse a prior file summary only while the file content hash is unchanged.
 - Summarize large tool outputs and preserve links or hashes to the underlying evidence.
 - Start a fresh verification context instead of passing the executor conversation verbatim.
-- Use `.agent/memory/working/WORKSPACE.md` for a concise cross-harness handoff.
+- Follow `.agent/protocols/project-context.md` for any cross-harness handoff persistence.
 - Never put secrets, credentials, raw customer data, or private logs into handoff or routing receipts.

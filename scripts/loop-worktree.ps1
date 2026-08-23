@@ -5,8 +5,14 @@ param(
   [string]$Branch,
   [string]$WorktreePath,
   [string]$BaseRef = 'HEAD',
+  [string]$OperationId,
+  [switch]$RegisterExisting,
   [switch]$Apply,
   [switch]$HumanApproved,
+  [string]$TrustChallengePath,
+  [string]$TrustChallengeSha256,
+  [string]$ImplementerPrivateKeyPath,
+  [string]$ImplementerPrivateKeySha256,
   [switch]$Json,
   [string]$OutputDir
 )
@@ -16,9 +22,12 @@ $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.LoopEvidence.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Trust.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Git.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
-$operationId = [Guid]::NewGuid().ToString('N')
+$operationId = if ([string]::IsNullOrWhiteSpace($OperationId)) { [Guid]::NewGuid().ToString('N') } else { $OperationId.ToLowerInvariant() }
+if ($operationId -notmatch '^[a-f0-9]{32}$') { throw 'LIFECYCLE_OPERATION_ID_INVALID: OperationId must be 32 lowercase hex characters.' }
 
 function Sanitize-Name {
   param([string]$Value)
@@ -44,6 +53,8 @@ function Add-Item { param([string[]]$Array, [string]$Value) if ($Value) { return
 
 $safeItem = Sanitize-Name $ItemId
 if ([string]::IsNullOrWhiteSpace($Branch)) { $Branch = "lizard/l2/$safeItem" }
+$Branch = Assert-LizardGitBranchName -Branch $Branch
+$BaseRef = Assert-LizardGitBaseReference -BaseRef $BaseRef
 $safeBranchForPath = (Sanitize-Name $Branch).Replace('/', '-')
 $targetName = Split-Path -Leaf $TargetRoot
 $defaultWorktree = Join-Path $LayerRoot (".tmp\loops\worktrees\{0}-{1}-{2}" -f $targetName, $safeBranchForPath, $stamp)
@@ -83,54 +94,50 @@ if ($gitRoot) {
   if ($mainStatus.Count -gt 0) { $warnings = Add-Item $warnings 'Main worktree has uncommitted changes; preserve them and keep L2 writes isolated.' }
   & git -C $TargetRoot show-ref --verify --quiet "refs/heads/$Branch"
   $branchExists = ($LASTEXITCODE -eq 0)
-  if ($branchExists) { $failures = Add-Item $failures "Branch already exists: $Branch" }
-  $baseRevisionOutput = & git -C $TargetRoot rev-parse $BaseRef 2>&1
-  if ($LASTEXITCODE -ne 0) { $failures = Add-Item $failures "Base ref is invalid: $BaseRef ($baseRevisionOutput)" }
-  else { $baseRevision = [string]($baseRevisionOutput | Select-Object -First 1) }
+  if ($branchExists -and -not $RegisterExisting) { $failures = Add-Item $failures "Branch already exists: $Branch" }
+  if (-not $branchExists -and $RegisterExisting) { $failures = Add-Item $failures "Registration requires the existing branch: $Branch" }
+  try { $baseRevision = Resolve-LizardGitCommit -RepositoryRoot $TargetRoot -BaseRef $BaseRef }
+  catch { $failures = Add-Item $failures $_.Exception.Message }
 }
 
-if ($pathExists) { $failures = Add-Item $failures "Worktree path already exists: $EffectiveWorktreePath" }
+if ($pathExists -and -not $RegisterExisting) { $failures = Add-Item $failures "Worktree path already exists: $EffectiveWorktreePath" }
+if (-not $pathExists -and $RegisterExisting) { $failures = Add-Item $failures "Registration requires an existing worktree path: $EffectiveWorktreePath" }
 if ($Apply -and -not $HumanApproved) { $failures = Add-Item $failures 'Apply requires -HumanApproved for L2 worktree creation.' }
+if ($RegisterExisting -and -not $Apply) { $failures = Add-Item $failures 'RegisterExisting requires -Apply -HumanApproved to seal lifecycle evidence.' }
+if ($Apply -and $RegisterExisting -and ([string]::IsNullOrWhiteSpace($TrustChallengePath) -or [string]::IsNullOrWhiteSpace($TrustChallengeSha256) -or [string]::IsNullOrWhiteSpace($ImplementerPrivateKeyPath) -or [string]::IsNullOrWhiteSpace($ImplementerPrivateKeySha256))) { $failures = Add-Item $failures 'LIFECYCLE_SIGNATURE_REQUIRED: registration requires an external digest-bound challenge and implementer private key.' }
+if ($Apply -and -not $RegisterExisting) {
+  $failures = Add-Item $failures 'SAFEFS_EXTERNAL_MUTATOR_UNBOUND: Built-in git worktree creation is disabled because Git cannot consume the SafeFs parent-handle boundary. Create the reviewed worktree externally, then re-run with -RegisterExisting -Apply -HumanApproved.'
+}
 
 $mode = if ($Apply) { 'APPLY' } else { 'PREVIEW' }
 $created = $false
-if ($Apply -and $failures.Count -eq 0) {
-  $parent = Split-Path -Parent $EffectiveWorktreePath
-  if ($parent -and -not (Test-Path -LiteralPath $parent)) { Initialize-SafeDirectory -Path $parent | Out-Null }
-  $EffectiveWorktreePath = Resolve-SafeTargetDestination -AuthorizedRoot $parent -DestinationPath $EffectiveWorktreePath
-  $worktreeOutput = & git -C $TargetRoot worktree add --quiet -b $Branch $EffectiveWorktreePath $BaseRef 2>&1
-  if ($LASTEXITCODE -ne 0) { $failures = Add-Item $failures "git worktree add failed: $worktreeOutput" }
-  else {
-    $created = $true
+$registered = $false
+if ($Apply -and $RegisterExisting -and $failures.Count -eq 0) {
+  try { $EffectiveWorktreePath = Resolve-SafeRoot -Path $EffectiveWorktreePath -RequireExisting }
+  catch { $failures = Add-Item $failures "Existing worktree root rejected: $($_.Exception.Message)" }
+  if ($failures.Count -eq 0) {
     $commonOutput = & git -C $EffectiveWorktreePath rev-parse --git-common-dir 2>&1
-    if ($LASTEXITCODE -ne 0) { $failures = Add-Item $failures "Created worktree common dir could not be read: $commonOutput" }
+    if ($LASTEXITCODE -ne 0) { $failures = Add-Item $failures "Registered worktree common dir could not be read: $commonOutput" }
     else { $worktreeCommonDir = Get-LizardNormalizedGitPath -Path ([string]($commonOutput | Select-Object -First 1)) -BasePath $EffectiveWorktreePath }
     $observedBranchOutput = & git -C $EffectiveWorktreePath branch --show-current 2>&1
-    if ($LASTEXITCODE -ne 0) { $failures = Add-Item $failures "Created worktree branch could not be read: $observedBranchOutput" }
+    if ($LASTEXITCODE -ne 0) { $failures = Add-Item $failures "Registered worktree branch could not be read: $observedBranchOutput" }
     else { $observedBranch = [string]($observedBranchOutput | Select-Object -First 1) }
     $observedHeadOutput = & git -C $EffectiveWorktreePath rev-parse HEAD 2>&1
-    if ($LASTEXITCODE -ne 0) { $failures = Add-Item $failures "Created worktree HEAD could not be read: $observedHeadOutput" }
+    if ($LASTEXITCODE -ne 0) { $failures = Add-Item $failures "Registered worktree HEAD could not be read: $observedHeadOutput" }
     else { $observedHead = [string]($observedHeadOutput | Select-Object -First 1) }
+    $registeredStatus = @(& git -C $EffectiveWorktreePath status --short 2>$null)
+    if ($LASTEXITCODE -ne 0) { $failures = Add-Item $failures 'Registered worktree status could not be read.' }
+    elseif ($registeredStatus.Count -gt 0) { $failures = Add-Item $failures 'Registration requires a clean worktree before assisted changes begin.' }
     if ($targetCommonDir -and $worktreeCommonDir -and -not $targetCommonDir.Equals($worktreeCommonDir, (Get-LizardPathComparison))) {
-      $failures = Add-Item $failures 'Created worktree does not share the target repository common directory.'
+      $failures = Add-Item $failures 'Registered worktree does not share the target repository common directory.'
     }
-    if ($observedBranch -ne $Branch) { $failures = Add-Item $failures "Created worktree branch mismatch. Expected '$Branch', got '$observedBranch'." }
-    if ($observedHead -ne $baseRevision) { $failures = Add-Item $failures "Created worktree HEAD mismatch. Expected '$baseRevision', got '$observedHead'." }
+    if ($observedBranch -ne $Branch) { $failures = Add-Item $failures "Registered worktree branch mismatch. Expected '$Branch', got '$observedBranch'." }
+    if ($observedHead -ne $baseRevision) { $failures = Add-Item $failures "Registered worktree HEAD mismatch. Expected '$baseRevision', got '$observedHead'." }
+    if ($failures.Count -eq 0) { $registered = $true }
   }
 }
 
-if ($created -and $failures.Count -gt 0) {
-  $rollbackOutput = & git -C $TargetRoot worktree remove --force $EffectiveWorktreePath 2>&1
-  if ($LASTEXITCODE -eq 0) {
-    & git -C $TargetRoot branch -D $Branch 2>&1 | Out-Null
-    $created = $false
-    $warnings = Add-Item $warnings 'Worktree creation was rolled back after lifecycle validation failed.'
-  } else {
-    $failures = Add-Item $failures "Worktree creation rollback failed: $rollbackOutput"
-  }
-}
-
-$status = if ($failures.Count -gt 0) { 'STOP' } elseif ($Apply) { 'CREATED' } else { 'PREVIEW' }
+$status = if ($failures.Count -gt 0) { 'STOP' } elseif ($created -or $registered) { 'CREATED' } else { 'PREVIEW' }
 $lifecyclePayload = [pscustomobject][ordered]@{
   operation_id = $operationId
   status = $status
@@ -146,10 +153,26 @@ $lifecyclePayload = [pscustomobject][ordered]@{
   observed_head_sha = $observedHead
   worktree_root = $EffectiveWorktreePath
   worktree_common_dir = $worktreeCommonDir
+  mutation_origin = if ($registered) { 'external-registered' } elseif ($created) { 'layer' } else { 'none' }
   human_approved = $HumanApproved.IsPresent
   auto_merge = $false
 }
-$lifecycleEnvelope = New-LizardEvidenceEnvelope -SchemaVersion 1 -Payload $lifecyclePayload
+$lifecycleEnvelope = $null
+$lifecycleTrustBinding = $null
+if ($status -eq 'CREATED') {
+  try {
+    $effectiveChallengePath = Resolve-UserPath -Path $TrustChallengePath -Fallback $TrustChallengePath
+    $effectivePrivateKeyPath = Resolve-UserPath -Path $ImplementerPrivateKeyPath -Fallback $ImplementerPrivateKeyPath
+    if ((Is-UnderPath $effectiveChallengePath $TargetRoot) -or (Is-UnderPath $effectivePrivateKeyPath $TargetRoot) -or (Is-UnderPath $effectiveChallengePath $EffectiveWorktreePath) -or (Is-UnderPath $effectivePrivateKeyPath $EffectiveWorktreePath)) { throw 'Lifecycle trust inputs must stay outside target and worktree roots.' }
+    $lifecycleTrustBinding = Get-LizardLifecycleTrustBinding -OperationId $operationId -TargetRoot $TargetRoot -WorktreeRoot $EffectiveWorktreePath -Branch $Branch -BaseSha $baseRevision
+    $lifecycleEnvelope = New-LizardSignedEvidenceEnvelope -Payload $lifecyclePayload -PayloadKind 'worktree-lifecycle' -Purpose 'worktree-registration' -Subject $operationId -BindingSha256 $lifecycleTrustBinding -ChallengePath $effectiveChallengePath -ChallengeSha256 $TrustChallengeSha256 -PrivateKeyPath $effectivePrivateKeyPath -PrivateKeySha256 $ImplementerPrivateKeySha256
+  } catch {
+    $failures = Add-Item $failures $_.Exception.Message
+    $status = 'STOP'; $lifecyclePayload.status = 'STOP'
+  }
+}
+if ($null -eq $lifecycleEnvelope) { $lifecycleEnvelope = New-LizardEvidenceEnvelope -SchemaVersion 1 -Payload $lifecyclePayload }
+$lifecycleEvidenceHash = if ($lifecycleEnvelope.PSObject.Properties.Name -contains 'payload_sha256') { [string]$lifecycleEnvelope.payload_sha256 } else { [string]$lifecycleEnvelope.payload_hash }
 $lifecyclePath = Join-Path $EffectiveOutputDir 'loop-worktree-lifecycle.json'
 Set-SafeContent -AuthorizedRoot $EffectiveOutputDir -Path $lifecyclePath -Value ($lifecycleEnvelope | ConvertTo-Json -Depth 12)
 $report = [pscustomobject]@{
@@ -168,13 +191,17 @@ $report = [pscustomobject]@{
   observed_branch = $observedBranch
   observed_head_sha = $observedHead
   lifecycle_path = $lifecyclePath
-  lifecycle_hash = $lifecycleEnvelope.payload_hash
+  lifecycle_hash = $lifecycleEvidenceHash
+  lifecycle_trust_binding_sha256 = $lifecycleTrustBinding
+  authenticated_implementer = if ($lifecycleEnvelope.PSObject.Properties.Name -contains 'principal_id') { [string]$lifecycleEnvelope.principal_id } else { $null }
+  approval_ref = if ($lifecycleEnvelope.PSObject.Properties.Name -contains 'approval_ref') { [string]$lifecycleEnvelope.approval_ref } else { $null }
   worktree_path = $EffectiveWorktreePath
   path_exists = $pathExists
   branch_exists = $branchExists
   main_worktree_dirty = ($mainStatus.Count -gt 0)
   human_approved = $HumanApproved.IsPresent
   created = $created
+  registered = $registered
   auto_merge = $false
   human_merge_review_required = $true
   warnings = @($warnings)
@@ -197,7 +224,7 @@ $lines += ('- Base ref: `{0}`' -f $BaseRef)
 $lines += ('- Base revision: `{0}`' -f $baseRevision)
 $lines += ('- Operation ID: `{0}`' -f $operationId)
 $lines += ('- Lifecycle contract: `{0}`' -f $lifecyclePath)
-$lines += ('- Lifecycle hash: `{0}`' -f $lifecycleEnvelope.payload_hash)
+$lines += ('- Lifecycle hash: `{0}`' -f $lifecycleEvidenceHash)
 $lines += ('- Human approved: `{0}`' -f $HumanApproved.IsPresent)
 $lines += '- Auto-merge: `forbidden`'
 $lines += '- Human merge review required: `true`'
@@ -230,6 +257,10 @@ if ($Json) {
   Write-Host "Report: $jsonPath"
   Write-Host "Plan: $mdPath"
   if (-not $Apply) { Write-Host 'Preview only. Re-run with -Apply -HumanApproved to create the isolated worktree.' }
+  if ($failures.Count -gt 0) {
+    Write-Host 'Failures:'
+    foreach ($failure in $failures) { Write-Host "  - $failure" }
+  }
 }
 
 if ($failures.Count -gt 0) { exit 1 }

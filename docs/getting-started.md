@@ -8,6 +8,8 @@ For the shortest safe path, use [`INSTALL.md`](../INSTALL.md) with an IDE assist
 
 The source repository contains generic profiles, packs, skills, protocols, adapters, schemas, and scripts. A target repository receives only the selected local layer. The target does not depend on this repository at runtime and does not receive its npm development packages.
 
+Every installed skill carries a reviewed `skill.json` package contract. The generated skill manifest binds its version, metadata hash, dependencies, and maximum permissions; strict Doctor revalidates those declarations. Standalone package lifecycle exercises use the preview-first flow described in [Skill packages](skill-packages.md); profile-installed mirrors remain coordinated through the normal layer update flow.
+
 The installed `.agent/` directory is the shared core. Harness adapters expose that core to Codex, Claude Code, Gemini, Cursor, GitHub Copilot, or generic instruction readers.
 
 Installation is not a model permission grant. Repository permissions, IDE settings, organization AI policy, content exclusion, MCP policy, network access, and human approvals remain authoritative.
@@ -40,7 +42,7 @@ Start with [Enterprise Usage](enterprise-usage.md). Confirm approved AI surfaces
 Run the read-only analyzer:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project -Json
+pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project -ApprovedHarnesses codex -Json
 ```
 
 It reports stack and risk signals, existing instruction files, project shape, recommended profile, harnesses, skills, and packs. It ignores common dependency, build, coverage, cache, and scratch directories.
@@ -100,11 +102,11 @@ Recommended. Commit stable preferences, accepted decisions, reusable lessons, an
 
 ### `private-episodic`
 
-Allows local raw history while keeping it ignored. Use only when organization policy permits it and retention is understood.
+Adds a managed episodic seed while keeping the entire episodic directory recursively ignored. Use only when organization policy permits it and retention is understood. Export or move changed/additional episodic content before switching away from this mode.
 
 ### `off`
 
-Use when project memory is prohibited or unnecessary. Harness instructions and skills can still be installed.
+Use when project memory is prohibited or unnecessary. No `.agent/memory` namespace or memory policy is installed, and managed instructions contain no operational memory path. Harness instructions and skills can still be installed through the mode-neutral project-context contract.
 
 Never store credentials, tokens, customer records, regulated data, private incident content, or unreleased vulnerability details in memory.
 
@@ -121,7 +123,7 @@ L2 is not autonomy. It cannot auto-merge, push, release, deploy, change dependen
 Example:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -RoutingPolicy staged-balanced -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -MemoryMode curated -RoutingPolicy staged-balanced -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
 ```
 
 The plan includes profile, risk, memory, harnesses, packs, skills, planned paths, skipped paths, conflicts, sidecars, and exact preview/apply commands. Preview plus `-WritePlan` writes only the selected report outside the target.
@@ -238,7 +240,36 @@ Use `supabase-react-finance` plus applicable security, Supabase, finance, and fr
 
 See [Troubleshooting And Recovery](troubleshooting.md) for stable codes and detailed procedures.
 
-## 20. Source Repository Validation
+## 20. Customizing Profiles, Skills & Protocols For Your Team
+
+Organizations and teams can define their own standardized profiles and domain skills:
+
+### Creating a Custom Team Profile
+Add a JSON file under `profiles/<your-team-profile>.json`:
+```json
+{
+  "name": "enterprise-backend",
+  "description": "Standard backend profile with PostgreSQL, security hardening, and staged execution.",
+  "riskLevel": "high",
+  "memoryMode": "curated",
+  "routingPolicy": "staged-balanced",
+  "harnesses": ["cursor", "claude-code", "github-copilot"],
+  "skills": ["git-safety", "security-hardening", "staged-execution", "dependency-upgrade"],
+  "packs": ["security-hardening"]
+}
+```
+
+### Adding Reusable Domain Skills
+1. Create `skills/<skill-name>/SKILL.md` (instructions with frontmatter `name` and `description`).
+2. Create `skills/<skill-name>/skill.json` (versioned metadata schema).
+3. Re-run `pwsh -File .\scripts\pack-report.ps1 -Strict` to validate skill metadata.
+
+### Applying Custom Profile to Target Projects
+```powershell
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <path-to-project> -Profile enterprise-backend -Apply -HumanApproved
+```
+
+## 21. Source Repository Validation
 
 Contributors to `lizard-agent-layer` run:
 

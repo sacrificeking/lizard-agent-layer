@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "policy_id": "conservative-default",
+  "version": "1.0.0",
+  "owner_id": "repository-operator",
+  "effective_from": "2026-08-22T00:00:00Z",
+  "review_due": "2027-08-22T00:00:00Z",
+  "default_disposition": "retain",
+  "artifact_classes": [
+    { "artifact_class": "memory", "purpose": "agent-context", "owner_id": "target-user", "retention_days": 365, "disposition": "delete-after-ttl", "export_required": true },
+    { "artifact_class": "routing-decision", "purpose": "route-decision-audit", "owner_id": "repository-operator", "retention_days": 90, "disposition": "delete-after-ttl", "export_required": false },
+    { "artifact_class": "routing-execution", "purpose": "execution-attestation-audit", "owner_id": "repository-operator", "retention_days": 90, "disposition": "delete-after-ttl", "export_required": false },
+    { "artifact_class": "update-history", "purpose": "layer-change-audit", "owner_id": "repository-operator", "retention_days": 365, "disposition": "delete-after-ttl", "export_required": true },
+    { "artifact_class": "loop-events", "purpose": "loop-runtime-audit", "owner_id": "repository-operator", "retention_days": 180, "disposition": "delete-after-ttl", "export_required": true },
+    { "artifact_class": "loop-run-log", "purpose": "loop-operator-log", "owner_id": "target-user", "retention_days": 180, "disposition": "delete-after-ttl", "export_required": true }
+  ]
+}

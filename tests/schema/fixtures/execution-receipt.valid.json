@@ -3,6 +3,10 @@
   "artifact_kind": "execution-receipt",
   "receipt_id": "fixture-execution",
   "route_decision_id": "fixture-route",
+  "route_payload_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+  "authenticated_router_id": "fixture-router",
+  "route_approval_ref": "approval-route-01",
+  "trust_binding_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
   "created_at": "2026-07-19T12:02:00Z",
   "started_at": "2026-07-19T12:00:00Z",
   "completed_at": "2026-07-19T12:01:00Z",
@@ -13,8 +17,14 @@
   "actual_provider": "example-provider",
   "reasoning_setting": "normal",
   "attestation": "observed",
-  "attestation_source": "fixture runtime API",
+  "attestation_source": "fixture-runtime-api",
   "outcome": "succeeded",
+  "sensitivity": "metadata-only",
+  "purpose": "execution-attestation-audit",
+  "audience": ["operators", "auditors"],
+  "retention_class": "organization-policy-required",
+  "content_policy": "identifiers-only",
   "evidence_ref": "fixture-run-123",
-  "raw_prompt_stored": false
+  "raw_prompt_stored": false,
+  "redaction": { "status": "not-required", "fields": [] }
 }

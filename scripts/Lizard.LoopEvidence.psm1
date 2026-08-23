@@ -2,6 +2,7 @@ Set-StrictMode -Version 2.0
 
 Import-Module (Join-Path $PSScriptRoot 'Lizard.SafeFs.psm1')
 Import-Module (Join-Path $PSScriptRoot 'Lizard.Json.psm1')
+Import-Module (Join-Path $PSScriptRoot 'Lizard.Plan.psm1')
 
 function Get-LizardEvidenceSha256 {
   param([AllowNull()][string]$Value)
@@ -38,6 +39,46 @@ function Read-LizardEvidenceEnvelope {
   $actualHash = Get-LizardEvidencePayloadHash -Payload $envelope.payload
   if ($actualHash -ne [string]$envelope.payload_hash) { throw "EVIDENCE_HASH_MISMATCH: Expected $($envelope.payload_hash), got $actualHash." }
   return $envelope
+}
+
+function Get-LizardVerifierTrustBinding {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$OperationId,
+    [Parameter(Mandatory = $true)][string]$LifecycleHash,
+    [Parameter(Mandatory = $true)][string]$VerificationPlanSha256,
+    [Parameter(Mandatory = $true)][string]$TargetRoot
+  )
+  if ($OperationId -notmatch '^[a-f0-9]{32}$' -or $LifecycleHash -notmatch '^[a-f0-9]{64}$' -or $VerificationPlanSha256 -notmatch '^[a-f0-9]{64}$') { throw 'VERIFIER_TRUST_BINDING_INVALID: Operation, lifecycle, and plan identities must be exact hashes.' }
+  $binding = [pscustomobject][ordered]@{
+    binding_kind = 'loop-verifier-decision-v1'
+    operation_id = $OperationId
+    lifecycle_sha256 = $LifecycleHash
+    verification_plan_sha256 = $VerificationPlanSha256
+    target_root_identity_sha256 = Get-LizardPlanRootHash -TargetRoot $TargetRoot
+  }
+  return Get-LizardPlanSha256 -InputObject $binding
+}
+
+function Get-LizardLifecycleTrustBinding {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$OperationId,
+    [Parameter(Mandatory = $true)][string]$TargetRoot,
+    [Parameter(Mandatory = $true)][string]$WorktreeRoot,
+    [Parameter(Mandatory = $true)][string]$Branch,
+    [Parameter(Mandatory = $true)][string]$BaseSha
+  )
+  if ($OperationId -notmatch '^[a-f0-9]{32}$' -or $BaseSha -notmatch '^(?:[a-f0-9]{40}|[a-f0-9]{64})$' -or [string]::IsNullOrWhiteSpace($Branch)) { throw 'LIFECYCLE_TRUST_BINDING_INVALID: Operation, branch, and base identities are required.' }
+  $binding = [pscustomobject][ordered]@{
+    binding_kind = 'worktree-lifecycle-v1'
+    operation_id = $OperationId
+    target_root_identity_sha256 = Get-LizardPlanRootHash -TargetRoot $TargetRoot
+    worktree_root_identity_sha256 = Get-LizardPlanRootHash -TargetRoot $WorktreeRoot
+    branch = $Branch
+    base_sha = $BaseSha
+  }
+  return Get-LizardPlanSha256 -InputObject $binding
 }
 
 function Get-LizardNormalizedGitPath {
@@ -93,7 +134,9 @@ Export-ModuleMember -Function @(
   'Get-LizardEvidencePayloadHash',
   'Get-LizardEvidenceSha256',
   'Get-LizardGitStateEvidence',
+  'Get-LizardLifecycleTrustBinding',
   'Get-LizardNormalizedGitPath',
+  'Get-LizardVerifierTrustBinding',
   'New-LizardEvidenceEnvelope',
   'Read-LizardEvidenceEnvelope'
 )

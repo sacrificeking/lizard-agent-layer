@@ -5,6 +5,8 @@ $RepoRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (
 Import-Module (Join-Path $RepoRoot 'tests\TestHelpers.psm1') -Force
 Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
 Import-Module (Join-Path $RepoRoot 'scripts\Lizard.LoopEvidence.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Trust.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'tests\TestTrustHelpers.psm1') -Force
 $testRoot = Join-Path $RepoRoot '.tmp\tests'
 $fixture = Join-Path $testRoot ("loop-runtime-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $runScript = Join-Path $RepoRoot 'scripts\loop-run.ps1'
@@ -39,16 +41,36 @@ function Get-RuntimePaths {
   }
 }
 function Write-VerifierEvidence {
-  param([string]$Path, [string]$Target, [string]$OperationId, [string]$Status)
+  param([string]$Path, [string]$Target, [string]$OperationId, [string]$Status, [DateTimeOffset]$Now, [switch]$Signed)
   $payload = [pscustomobject][ordered]@{
     operation_id = $OperationId; lifecycle_path = 'fixture'; lifecycle_hash = ('b' * 64)
     requested_status = $Status; effective_status = $Status; verifier = 'independent-verifier'; implementer = 'implementation-agent'
     verified_at = '2026-07-12T08:05:00Z'; head_sha = ('c' * 40); git_state_hash = ('d' * 64)
-    commands = @([pscustomobject]@{ command = 'test'; exit_code = if ($Status -eq 'PASS') { 0 } else { 1 } }); evidence_files = @()
+    verification_plan_id = ('e' * 32); verification_plan_sha256 = ('f' * 64); verification_runner_id = 'lizard-constrained-verifier-v1'
+    commands = @([pscustomobject]@{ command_id = 'git-head'; started_at = '2026-07-12T08:04:00Z'; completed_at = '2026-07-12T08:04:01Z'; exit_code = if ($Status -eq 'PASS') { 0 } else { 1 }; expected_exit_codes = @(0); timed_out = $false; output_sha256 = ('a' * 64); output_bytes = 41 }); evidence_files = @()
     auto_merge = $false; human_merge_review_required = $true; target_root = [System.IO.Path]::GetFullPath($Target)
   }
-  $envelope = New-LizardEvidenceEnvelope -SchemaVersion 1 -Payload $payload
+  $trust = $null
+  if ($Signed) {
+    $worktree = Join-Path $fixture ("lifecycle-worktree-{0}" -f ([Guid]::NewGuid().ToString('N'))); New-Item -ItemType Directory -Path $worktree -Force | Out-Null
+    $baseSha = ('9' * 40)
+    $lifecycleBinding = Get-LizardLifecycleTrustBinding -OperationId $OperationId -TargetRoot $Target -WorktreeRoot $worktree -Branch 'lizard/runtime-test' -BaseSha $baseSha
+    $lifecycleTrust = New-LizardTestTrustMaterial -Root (Join-Path $fixture ("lifecycle-trust-{0}" -f ([Guid]::NewGuid().ToString('N')))) -BindingSha256 $lifecycleBinding -Subject $OperationId -Now $Now -PrincipalId 'implementation-agent' -Roles @('implementer') -Purpose 'worktree-registration' -PayloadKind 'worktree-lifecycle'
+    $lifecyclePayload = [pscustomobject][ordered]@{ operation_id = $OperationId; status = 'CREATED'; target_root = [IO.Path]::GetFullPath($Target); worktree_root = [IO.Path]::GetFullPath($worktree); branch = 'lizard/runtime-test'; base_sha = $baseSha; auto_merge = $false }
+    $lifecycleEnvelope = New-LizardSignedEvidenceEnvelope -Payload $lifecyclePayload -PayloadKind worktree-lifecycle -Purpose worktree-registration -Subject $OperationId -BindingSha256 $lifecycleBinding -ChallengePath $lifecycleTrust.challenge_path -ChallengeSha256 $lifecycleTrust.challenge_sha256 -PrivateKeyPath $lifecycleTrust.private_key_path -PrivateKeySha256 $lifecycleTrust.private_key_sha256 -Now $Now
+    $lifecyclePath = Join-Path $fixture ("lifecycle-{0}.json" -f ([Guid]::NewGuid().ToString('N'))); [IO.File]::WriteAllText($lifecyclePath, ($lifecycleEnvelope | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding($false)))
+    $payload.lifecycle_path = $lifecyclePath; $payload.lifecycle_hash = [string]$lifecycleEnvelope.payload_sha256
+    $payload | Add-Member -NotePropertyName authenticated_implementer -NotePropertyValue 'implementation-agent'
+    $binding = Get-LizardVerifierTrustBinding -OperationId $OperationId -LifecycleHash $payload.lifecycle_hash -VerificationPlanSha256 $payload.verification_plan_sha256 -TargetRoot $Target
+    $trust = New-LizardTestTrustMaterial -Root (Join-Path $fixture ("trust-{0}" -f ([Guid]::NewGuid().ToString('N')))) -BindingSha256 $binding -Subject $OperationId -Now $Now -PrincipalId 'independent-verifier'
+    $envelope = New-LizardSignedEvidenceEnvelope -Payload $payload -PayloadKind verifier-evidence -Purpose loop-completion -Subject $OperationId -BindingSha256 $binding -ChallengePath $trust.challenge_path -ChallengeSha256 $trust.challenge_sha256 -PrivateKeyPath $trust.private_key_path -PrivateKeySha256 $trust.private_key_sha256 -Now $Now
+    $trust | Add-Member -NotePropertyName lifecycle_trust_store_path -NotePropertyValue $lifecycleTrust.trust_store_path
+    $trust | Add-Member -NotePropertyName lifecycle_trust_store_sha256 -NotePropertyValue $lifecycleTrust.trust_store_sha256
+    $trust | Add-Member -NotePropertyName lifecycle_challenge_path -NotePropertyValue $lifecycleTrust.challenge_path
+    $trust | Add-Member -NotePropertyName lifecycle_challenge_sha256 -NotePropertyValue $lifecycleTrust.challenge_sha256
+  } else { $envelope = New-LizardEvidenceEnvelope -SchemaVersion 1 -Payload $payload }
   [System.IO.File]::WriteAllText($Path, ($envelope | ConvertTo-Json -Depth 12), (New-Object System.Text.UTF8Encoding($false)))
+  return $trust
 }
 
 try {
@@ -161,16 +183,21 @@ try {
 
   # L2 completion requires a PASS envelope bound to the lifecycle operation and target.
   $l2 = Initialize-LoopTarget 'l2' 'minimal-fix-assist'
-  Assert-Equal 0 (Invoke-LoopRun $l2 @('-Action', 'Start', '-RunId', 'l2-run', '-ItemId', 'fix-1', '-Owner', 'implementation-agent', '-OperationId', 'worktree-op-1', '-TokenEstimate', '100', '-TestNowUtc', '2026-07-12T08:00:00Z', '-Apply')).exit_code 'L2 start must bind an operation.'
+  $l2Operation = ('1' * 32)
+  Assert-Equal 0 (Invoke-LoopRun $l2 @('-Action', 'Start', '-RunId', 'l2-run', '-ItemId', 'fix-1', '-Owner', 'implementation-agent', '-OperationId', $l2Operation, '-TokenEstimate', '100', '-TestNowUtc', '2026-07-12T08:00:00Z', '-Apply')).exit_code 'L2 start must bind an operation.'
   $missingVerifier = Invoke-LoopRun $l2 @('-Action', 'Complete', '-RunId', 'l2-run', '-Owner', 'implementation-agent', '-ActualTokens', '90', '-TestNowUtc', '2026-07-12T08:05:00Z', '-Apply')
   Assert-False ($missingVerifier.exit_code -eq 0) 'L2 completion without evidence must fail.'
   Assert-True ($missingVerifier.output -match 'LOOP_VERIFIER_REQUIRED') 'Missing L2 verifier must be explicit.'
-  $rejectPath = Join-Path $fixture 'verifier-reject.json'; Write-VerifierEvidence $rejectPath $l2 'worktree-op-1' 'FAIL'
+  $rejectPath = Join-Path $fixture 'verifier-reject.json'; Write-VerifierEvidence $rejectPath $l2 $l2Operation 'FAIL' ([DateTimeOffset]'2026-07-12T08:06:00Z') | Out-Null
   $rejected = Invoke-LoopRun $l2 @('-Action', 'Complete', '-RunId', 'l2-run', '-Owner', 'implementation-agent', '-ActualTokens', '90', '-VerifierEvidencePath', $rejectPath, '-TestNowUtc', '2026-07-12T08:06:00Z', '-Apply')
   Assert-False ($rejected.exit_code -eq 0) 'Rejected verifier must fail completion.'
   Assert-True ($rejected.output -match 'LOOP_VERIFIER_REJECTED') 'Verifier rejection must be explicit.'
-  $passPath = Join-Path $fixture 'verifier-pass.json'; Write-VerifierEvidence $passPath $l2 'worktree-op-1' 'PASS'
-  $verified = Invoke-LoopRun $l2 @('-Action', 'Complete', '-RunId', 'l2-run', '-Owner', 'implementation-agent', '-ActualTokens', '90', '-VerifierEvidencePath', $passPath, '-TestNowUtc', '2026-07-12T08:07:00Z', '-Apply')
+  $syntheticPassPath = Join-Path $fixture 'verifier-synthetic-pass.json'; Write-VerifierEvidence $syntheticPassPath $l2 $l2Operation 'PASS' ([DateTimeOffset]'2026-07-12T08:07:00Z') | Out-Null
+  $syntheticPass = Invoke-LoopRun $l2 @('-Action', 'Complete', '-RunId', 'l2-run', '-Owner', 'implementation-agent', '-ActualTokens', '90', '-VerifierEvidencePath', $syntheticPassPath, '-TestNowUtc', '2026-07-12T08:07:00Z', '-Apply')
+  Assert-False ($syntheticPass.exit_code -eq 0) 'An unkeyed synthetic PASS envelope must fail closed.'
+  Assert-True ($syntheticPass.output -match 'LOOP_TRUST_INPUT_REQUIRED') 'Synthetic PASS rejection must require the external trust contract.'
+  $passPath = Join-Path $fixture 'verifier-pass.json'; $l2Trust = Write-VerifierEvidence $passPath $l2 $l2Operation 'PASS' ([DateTimeOffset]'2026-07-12T08:07:00Z') -Signed
+  $verified = Invoke-LoopRun $l2 @('-Action', 'Complete', '-RunId', 'l2-run', '-Owner', 'implementation-agent', '-ActualTokens', '90', '-VerifierEvidencePath', $passPath, '-TrustStorePath', $l2Trust.trust_store_path, '-TrustStoreSha256', $l2Trust.trust_store_sha256, '-TrustChallengePath', $l2Trust.challenge_path, '-TrustChallengeSha256', $l2Trust.challenge_sha256, '-LifecycleTrustStorePath', $l2Trust.lifecycle_trust_store_path, '-LifecycleTrustStoreSha256', $l2Trust.lifecycle_trust_store_sha256, '-LifecycleChallengePath', $l2Trust.lifecycle_challenge_path, '-LifecycleChallengeSha256', $l2Trust.lifecycle_challenge_sha256, '-ReplayLedgerPath', $l2Trust.replay_ledger_path, '-TestNowUtc', '2026-07-12T08:07:00Z', '-Apply')
   Assert-Equal 0 $verified.exit_code "Valid verifier must complete L2: $($verified.output)"
   $l2State = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Get-RuntimePaths $l2).state -Raw)
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$l2State.runs[0].verifier_evidence_hash)) 'L2 state must retain verifier evidence hash.'

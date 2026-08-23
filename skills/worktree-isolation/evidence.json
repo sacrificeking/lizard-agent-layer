@@ -12,11 +12,18 @@
   },
   "fixtures": [
     {
-      "id": "isolated-worktree-created",
+      "id": "external-worktree-registered",
       "kind": "positive",
-      "test_path": "tests/adversarial/loop-evidence.tests.ps1",
-      "assertion_pattern": "Worktree creation failed",
-      "description": "Creates an approved isolated worktree and binds its lifecycle evidence."
+      "test_path": "tests/adversarial/worktree-external-mutator.tests.ps1",
+      "assertion_pattern": "Existing worktree registration failed",
+      "description": "Registers an externally created clean worktree and binds its lifecycle evidence without product-owned Git mutation."
+    },
+    {
+      "id": "external-git-mutation-fails-closed",
+      "kind": "negative",
+      "test_path": "tests/adversarial/worktree-external-mutator.tests.ps1",
+      "assertion_pattern": "Built-in Git worktree mutation must fail closed",
+      "description": "Rejects built-in worktree creation and cleanup where Git cannot consume the SafeFs handle boundary."
     },
     {
       "id": "nested-worktree-rejected",

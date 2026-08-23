@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "typed-safe-routing-reports",
+  "date": "2026-08-22",
+  "summary": "Replace free-form routing receipt inputs with typed IDs and a shared deterministic safe-report serializer.",
+  "changed_paths": [
+    "scripts/Lizard.SafeReport.psm1",
+    "scripts/route-task.ps1",
+    "scripts/record-execution.ps1",
+    "schemas/routing-policy.schema.json",
+    "schemas/routing-runtime.schema.json",
+    "schemas/route-receipt.schema.json",
+    "schemas/execution-receipt.schema.json",
+    "routing-policies/staged-balanced.json",
+    "tests/schema/fixtures/routing-runtime.valid.json",
+    "tests/schema/fixtures/route-receipt.valid.json",
+    "tests/schema/fixtures/execution-receipt.valid.json",
+    "tools/schema-validator/mutation-corpus.json",
+    "tests/integration/model-routing.tests.ps1",
+    "tests/adversarial/routing-receipt-privacy.tests.ps1",
+    "tests/run-focused.ps1",
+    "scripts/validate.ps1",
+    ".github/workflows/lizard-agent-layer-ci.yml",
+    "registry/contracts.json",
+    "registry/drift-baseline.json",
+    "docs/adr/0017-typed-safe-routing-reports.md",
+    "docs/adr/README.md",
+    "docs/staged-execution.md",
+    "docs/enterprise-usage.md",
+    "skills/staged-execution/SKILL.md",
+    "CHANGELOG.md",
+    "docs/remediation/remediation-ledger.md",
+    "docs/remediation/claim-ledger.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0007-report-boundaries-and-privacy.md",
+    "docs/adr/0009-provider-neutral-staged-routing.md",
+    "docs/adr/0016-regulated-data-default-review.md",
+    "docs/adr/0017-typed-safe-routing-reports.md"
+  ],
+  "migration": {
+    "disposition": "migration-required",
+    "note": "Receipt consumers must accept required typed privacy fields; callers must use enumerated signals and opaque evidence/runtime identifiers."
+  },
+  "compatibility": {
+    "impact": "breaking",
+    "note": "Free-form signal and evidence text is rejected, runtime capability sources are identifiers, and both receipt schemas require typed privacy metadata."
+  }
+}

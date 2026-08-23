@@ -19,7 +19,7 @@ Use this skill only for L2 assisted loops after L1 report-only signal has proven
 - Worktree isolation is available and unrelated local changes are preserved.
 - Denylist and human gates were checked with `loop-constraints`.
 - The target item has fewer than three failed attempts.
-- The expected verification command or review checklist is known before editing.
+- The expected verification command ID or review checklist is known before editing; target prose is not command authority.
 
 ## Procedure
 

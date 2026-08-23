@@ -1,0 +1,15 @@
+# lizard-agent-layer private runtime outputs
+data-layer/
+data-layer/**
+flywheel/
+flywheel/**
+*.log
+.index/
+.index/**
+routing/receipts/
+routing/inventory.json
+routing/runtime.json
+routing/calibration/
+routing/evaluations/
+loops/*/events.jsonl
+loops/*/lease.json

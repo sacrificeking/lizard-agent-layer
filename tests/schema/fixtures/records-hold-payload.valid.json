@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "records-hold-register",
+  "policy_id": "conservative-default",
+  "policy_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "target_root_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "effective_at": "2026-08-22T11:00:00Z",
+  "expires_at": "2026-08-22T13:00:00Z",
+  "holds": [
+    {
+      "hold_id": "matter-01",
+      "scope": "classes",
+      "artifact_classes": ["memory"],
+      "record_ids": [],
+      "owner_id": "legal-team",
+      "reason_code": "ACTIVE_MATTER",
+      "active_from": "2026-08-01T00:00:00Z",
+      "expires_at": null
+    }
+  ]
+}

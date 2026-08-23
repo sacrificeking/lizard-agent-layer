@@ -1,6 +1,141 @@
 Set-StrictMode -Version 2.0
 Import-Module (Join-Path $PSScriptRoot 'Lizard.MountBoundary.psm1') -Force
 
+function Test-LizardSafeFsWindows {
+  return -not ($PSVersionTable.ContainsKey('Platform') -and $PSVersionTable['Platform'] -eq 'Unix')
+}
+
+if (Test-LizardSafeFsWindows) {
+  Import-Module (Join-Path $PSScriptRoot 'Lizard.WindowsHandleFs.psm1') -Force
+} else {
+  Import-Module (Join-Path $PSScriptRoot 'Lizard.UnixHandleFs.psm1') -Force
+}
+
+$script:LizardSafeFsTestHooks = @{}
+
+function Set-LizardSafeFsTestHook {
+  param(
+    [Parameter(Mandatory = $true)][ValidateSet('after-parent-handle-acquired', 'after-directory-identity-acquired')][string]$Event,
+    [Parameter(Mandatory = $true)][scriptblock]$Action
+  )
+  if ([string]$env:LIZARD_SAFEFS_TESTING -ne '1') {
+    throw 'SAFEFS_TEST_HOOK_DISABLED: SafeFs synchronization hooks are available only when LIZARD_SAFEFS_TESTING=1.'
+  }
+  $script:LizardSafeFsTestHooks[$Event] = $Action
+}
+
+function Clear-LizardSafeFsTestHooks {
+  $script:LizardSafeFsTestHooks.Clear()
+}
+
+function Invoke-LizardSafeFsTestHook {
+  param([Parameter(Mandatory = $true)][string]$Event, [AllowNull()]$Context)
+  if ([string]$env:LIZARD_SAFEFS_TESTING -ne '1') { return }
+  if ($script:LizardSafeFsTestHooks.ContainsKey($Event)) {
+    & $script:LizardSafeFsTestHooks[$Event] $Context
+  }
+}
+
+function ConvertTo-LizardSafeContentBytes {
+  param(
+    [AllowNull()][object]$Value,
+    [Parameter(Mandatory = $true)][string]$Encoding,
+    [switch]$NoPreamble
+  )
+
+  $normalized = $Encoding.ToUpperInvariant()
+  $emitUtf8Bom = ([string]$PSVersionTable.PSEdition -eq 'Desktop') -and -not $NoPreamble
+  $encoder = switch ($normalized) {
+    'UTF8' { New-Object System.Text.UTF8Encoding($emitUtf8Bom); break }
+    'UTF-8' { New-Object System.Text.UTF8Encoding($emitUtf8Bom); break }
+    'UNICODE' { New-Object System.Text.UnicodeEncoding($false, (-not $NoPreamble)); break }
+    'BIGENDIANUNICODE' { New-Object System.Text.UnicodeEncoding($true, (-not $NoPreamble)); break }
+    'ASCII' { [System.Text.Encoding]::ASCII; break }
+    default { [System.Text.Encoding]::GetEncoding($Encoding) }
+  }
+
+  $body = [byte[]]@()
+  if ($null -ne $Value) {
+    $lines = @($Value | ForEach-Object { if ($null -eq $_) { '' } else { [string]$_ } })
+    $text = ($lines -join [Environment]::NewLine) + [Environment]::NewLine
+    $body = $encoder.GetBytes($text)
+  }
+  $preamble = [byte[]]@()
+  if (-not $NoPreamble) { $preamble = $encoder.GetPreamble() }
+  $bytes = New-Object byte[] ($preamble.Length + $body.Length)
+  if ($preamble.Length -gt 0) { [Array]::Copy($preamble, 0, $bytes, 0, $preamble.Length) }
+  if ($body.Length -gt 0) { [Array]::Copy($body, 0, $bytes, $preamble.Length, $body.Length) }
+  return ,$bytes
+}
+
+function ConvertFrom-LizardSafeContentBytes {
+  param(
+    [Parameter(Mandatory = $true)][byte[]]$Bytes,
+    [Parameter(Mandatory = $true)][string]$Encoding,
+    [switch]$Raw
+  )
+
+  $encoder = switch ($Encoding.ToUpperInvariant()) {
+    'UTF8' { New-Object System.Text.UTF8Encoding($false, $true); break }
+    'UTF-8' { New-Object System.Text.UTF8Encoding($false, $true); break }
+    'UNICODE' { [System.Text.Encoding]::Unicode; break }
+    'BIGENDIANUNICODE' { [System.Text.Encoding]::BigEndianUnicode; break }
+    'ASCII' { [System.Text.Encoding]::ASCII; break }
+    default { [System.Text.Encoding]::GetEncoding($Encoding) }
+  }
+  $stream = New-Object System.IO.MemoryStream (,$Bytes)
+  $reader = New-Object System.IO.StreamReader($stream, $encoder, $true)
+  try { $text = $reader.ReadToEnd() }
+  finally { $reader.Dispose(); $stream.Dispose() }
+  if ($Raw) { return $text }
+
+  $lines = @($text -split "`r`n|`n|`r")
+  if ($lines.Count -gt 0 -and $lines[$lines.Count - 1] -eq '') {
+    if ($lines.Count -eq 1) { return @() }
+    return @($lines[0..($lines.Count - 2)])
+  }
+  return $lines
+}
+
+function Open-LizardSafeDirectoryLease {
+  param([Parameter(Mandatory = $true)][string]$AuthorizedRoot, [Parameter(Mandatory = $true)][string]$Destination)
+  if (Test-LizardSafeFsWindows) { return Open-LizardWindowsDirectoryLease -AuthorizedRoot $AuthorizedRoot -Destination $Destination }
+  return Open-LizardUnixDirectoryLease -AuthorizedRoot $AuthorizedRoot -Destination $Destination
+}
+
+function Read-LizardHandleSafeFile {
+  param(
+    [Parameter(Mandatory = $true)][string]$AuthorizedRoot,
+    [Parameter(Mandatory = $true)][string]$Path,
+    [switch]$MetadataOnly,
+    [ValidateRange(1, 2147483647)][int64]$MaximumBytes = 2147483647
+  )
+
+  Assert-LizardSafeFsMutationCapability -AuthorizedRoot $AuthorizedRoot | Out-Null
+  $lease = Open-LizardSafeDirectoryLease -AuthorizedRoot $AuthorizedRoot -Destination $Path
+  try {
+    Invoke-LizardSafeFsTestHook -Event 'after-parent-handle-acquired' -Context ([pscustomobject]@{ authorized_root = $AuthorizedRoot; path = $Path; operation = 'read' })
+    if ($MetadataOnly) { return $lease.GetExistingMetadata() }
+    $bytes = $lease.ReadExisting($MaximumBytes)
+    return ,$bytes
+  } finally {
+    if ($null -ne $lease) { $lease.Dispose() }
+  }
+}
+
+function Get-SafeBytes {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$AuthorizedRoot,
+    [Parameter(Mandatory = $true)][string]$Path,
+    [ValidateRange(1, 2147483647)][int64]$MaximumBytes = 67108864
+  )
+
+  $fullRoot = Resolve-SafeRoot -Path $AuthorizedRoot -RequireExisting
+  $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $fullRoot -DestinationPath $Path
+  return ,(Read-LizardHandleSafeFile -AuthorizedRoot $fullRoot -Path $safePath -MaximumBytes $MaximumBytes)
+}
+
 function Get-LizardPathComparison {
   if ($PSVersionTable.ContainsKey('Platform') -and $PSVersionTable['Platform'] -eq 'Unix') {
     return [System.StringComparison]::Ordinal
@@ -259,11 +394,40 @@ function Get-SafeFileMetadata {
     [Parameter(Mandatory = $true)][string]$Path
   )
 
-  $snapshot = Get-LizardSafeFileSnapshot -AuthorizedRoot $AuthorizedRoot -Path $Path
+  return Get-SafeItemMetadata -AuthorizedRoot $AuthorizedRoot -Path $Path -Kind File
+}
+
+function Get-SafeItemMetadata {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$AuthorizedRoot,
+    [Parameter(Mandatory = $true)][string]$Path,
+    [Parameter(Mandatory = $true)][ValidateSet('File', 'Directory')][string]$Kind
+  )
+
+  $fullRoot = Resolve-SafeRoot -Path $AuthorizedRoot -RequireExisting
+  $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $fullRoot -DestinationPath $Path
+  Assert-LizardSafeFsMutationCapability -AuthorizedRoot $fullRoot | Out-Null
+  $lease = Open-LizardSafeDirectoryLease -AuthorizedRoot $fullRoot -Destination $safePath
+  try {
+    Invoke-LizardSafeFsTestHook -Event 'after-parent-handle-acquired' -Context ([pscustomobject]@{ authorized_root = $fullRoot; path = $safePath; operation = 'metadata' })
+    $metadata = if ($Kind -eq 'File') { $lease.GetExistingMetadata() } else { $lease.GetExistingDirectoryMetadata() }
+  } finally {
+    if ($null -ne $lease) { $lease.Dispose() }
+  }
+  $volumeId = if ($metadata.PSObject.Properties.Name -contains 'VolumeSerial') { ([uint64]$metadata.VolumeSerial).ToString('x') } else { ([uint64]$metadata.Device).ToString('x') }
+  $fileId = if ($metadata.PSObject.Properties.Name -contains 'FileId') { [uint64]$metadata.FileId } else { [uint64]$metadata.Inode }
+  $mountId = if ($metadata.PSObject.Properties.Name -contains 'MountId') { ([int64]$metadata.MountId).ToString([System.Globalization.CultureInfo]::InvariantCulture) } else { $volumeId }
+  $capability = Get-LizardSafeFsCapability -AuthorizedRoot $fullRoot
   return [pscustomobject]@{
-    path = [string]$snapshot.path
-    length = [int64]$snapshot.length
-    last_write_utc = ([DateTime]::new([int64]$snapshot.last_write_utc_ticks, [DateTimeKind]::Utc)).ToString('o')
+    backend = [string]$capability.backend
+    path = $safePath
+    kind = $Kind.ToLowerInvariant()
+    length = [int64]$metadata.Length
+    last_write_utc = ([DateTime]::new([int64]$metadata.LastWriteUtcTicks, [DateTimeKind]::Utc)).ToString('o')
+    volume_id = $volumeId
+    mount_id = $mountId
+    file_id = $fileId.ToString('x16')
   }
 }
 
@@ -275,11 +439,12 @@ function Get-SafeFileHash {
     [ValidateSet('SHA256')][string]$Algorithm = 'SHA256'
   )
 
-  $before = Get-LizardSafeFileSnapshot -AuthorizedRoot $AuthorizedRoot -Path $Path
-  $hash = (Get-FileHash -LiteralPath $before.path -Algorithm $Algorithm -ErrorAction Stop).Hash.ToLowerInvariant()
-  $after = Get-LizardSafeFileSnapshot -AuthorizedRoot $before.authorized_root -Path $before.path
-  Assert-LizardSafeFileUnchanged -Before $before -After $after
-  return $hash
+  $fullRoot = Resolve-SafeRoot -Path $AuthorizedRoot -RequireExisting
+  $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $fullRoot -DestinationPath $Path
+  $bytes = Read-LizardHandleSafeFile -AuthorizedRoot $fullRoot -Path $safePath
+  $hasher = [System.Security.Cryptography.SHA256]::Create()
+  try { return ([BitConverter]::ToString($hasher.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant() }
+  finally { $hasher.Dispose() }
 }
 
 function Get-SafeContent {
@@ -288,14 +453,133 @@ function Get-SafeContent {
     [Parameter(Mandatory = $true)][string]$AuthorizedRoot,
     [Parameter(Mandatory = $true)][string]$Path,
     [switch]$Raw,
-    [string]$Encoding = 'UTF8'
+    [string]$Encoding = 'UTF8',
+    [ValidateRange(1, 2147483647)][int64]$MaximumBytes = 67108864
   )
 
-  $before = Get-LizardSafeFileSnapshot -AuthorizedRoot $AuthorizedRoot -Path $Path
-  $content = Get-Content -LiteralPath $before.path -Raw:$Raw -Encoding $Encoding -ErrorAction Stop
-  $after = Get-LizardSafeFileSnapshot -AuthorizedRoot $before.authorized_root -Path $before.path
-  Assert-LizardSafeFileUnchanged -Before $before -After $after
-  return $content
+  $fullRoot = Resolve-SafeRoot -Path $AuthorizedRoot -RequireExisting
+  $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $fullRoot -DestinationPath $Path
+  $bytes = Read-LizardHandleSafeFile -AuthorizedRoot $fullRoot -Path $safePath -MaximumBytes $MaximumBytes
+  return ConvertFrom-LizardSafeContentBytes -Bytes $bytes -Encoding $Encoding -Raw:$Raw
+}
+
+function Get-LizardSafeDirectoryIdentity {
+  param(
+    [Parameter(Mandatory = $true)][string]$AuthorizedRoot,
+    [Parameter(Mandatory = $true)][string]$Path
+  )
+
+  $comparison = Get-LizardPathComparison
+  if ($Path.Equals($AuthorizedRoot, $comparison)) {
+    $identity = Get-LizardSafeRootIdentity -AuthorizedRoot $AuthorizedRoot
+    return [pscustomobject]@{ volume_id = [string]$identity.volume_id; mount_id = [string]$identity.volume_id; file_id = [string]$identity.file_id }
+  }
+  return Get-SafeItemMetadata -AuthorizedRoot $AuthorizedRoot -Path $Path -Kind Directory
+}
+
+function Assert-LizardSafeDirectoryIdentityEqual {
+  param([Parameter(Mandatory = $true)]$Before, [Parameter(Mandatory = $true)]$After, [Parameter(Mandatory = $true)][string]$Path)
+  if ([string]$Before.volume_id -ne [string]$After.volume_id -or
+      [string]$Before.mount_id -ne [string]$After.mount_id -or
+      [string]$Before.file_id -ne [string]$After.file_id) {
+    throw (New-LizardSafeFsException -Code 'SAFEFS_CHANGED_DURING_ENUMERATION' -Message ("Directory identity changed while entries were enumerated: {0}" -f $Path) -Path $Path -AuthorizedRoot $Path)
+  }
+}
+
+function Get-SafeDirectoryEntries {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$AuthorizedRoot,
+    [Parameter(Mandatory = $true)][string]$Path
+  )
+
+  $fullRoot = Resolve-SafeRoot -Path $AuthorizedRoot -RequireExisting
+  $comparison = Get-LizardPathComparison
+  $fullPath = ConvertTo-LizardFullPath -Path $Path
+  $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $fullRoot -DestinationPath $fullPath -AllowRoot:($fullPath.Equals($fullRoot, $comparison))
+  Assert-LizardSafeFsMutationCapability -AuthorizedRoot $fullRoot | Out-Null
+  $before = Get-LizardSafeDirectoryIdentity -AuthorizedRoot $fullRoot -Path $safePath
+  Invoke-LizardSafeFsTestHook -Event 'after-directory-identity-acquired' -Context ([pscustomobject]@{ authorized_root = $fullRoot; path = $safePath; operation = 'enumerate' })
+
+  try { $rawEntries = @(Get-ChildItem -LiteralPath $safePath -Force -ErrorAction Stop) }
+  catch { throw (New-LizardSafeFsException -Code 'SAFEFS_DIRECTORY_ENUMERATION_FAILED' -Message $_.Exception.Message -Path $safePath -AuthorizedRoot $fullRoot) }
+
+  $after = Get-LizardSafeDirectoryIdentity -AuthorizedRoot $fullRoot -Path $safePath
+  Assert-LizardSafeDirectoryIdentityEqual -Before $before -After $after -Path $safePath
+
+  $names = New-Object System.Collections.Generic.List[string]
+  $byName = @{}
+  foreach ($entry in $rawEntries) {
+    $name = [string]$entry.Name
+    if ([string]::IsNullOrWhiteSpace($name) -or $name -in @('.', '..') -or $name.IndexOfAny([char[]]@('\', '/', [char]0)) -ge 0) {
+      throw (New-LizardSafeFsException -Code 'SAFEFS_INVALID_SEGMENT' -Message ("Invalid directory entry name: {0}" -f $name) -Path $safePath -AuthorizedRoot $fullRoot)
+    }
+    if ($byName.ContainsKey($name)) {
+      throw (New-LizardSafeFsException -Code 'SAFEFS_DUPLICATE_ENTRY' -Message ("Duplicate directory entry name: {0}" -f $name) -Path $safePath -AuthorizedRoot $fullRoot)
+    }
+    $names.Add($name) | Out-Null
+    $byName[$name] = $entry
+  }
+  $names.Sort([System.StringComparer]::Ordinal)
+
+  $result = New-Object System.Collections.Generic.List[object]
+  foreach ($name in $names) {
+    $entry = $byName[$name]
+    $entryPath = Join-Path $safePath $name
+    $resolved = Resolve-SafeTargetDestination -AuthorizedRoot $fullRoot -DestinationPath $entryPath
+    $kind = if ($entry.PSIsContainer) { 'Directory' } else { 'File' }
+    $metadata = Get-SafeItemMetadata -AuthorizedRoot $fullRoot -Path $resolved -Kind $kind
+    $result.Add([pscustomobject][ordered]@{
+      name = $name
+      path = $resolved
+      kind = $kind.ToLowerInvariant()
+      volume_id = [string]$metadata.volume_id
+      mount_id = [string]$metadata.mount_id
+      file_id = [string]$metadata.file_id
+    }) | Out-Null
+  }
+
+  $final = Get-LizardSafeDirectoryIdentity -AuthorizedRoot $fullRoot -Path $safePath
+  Assert-LizardSafeDirectoryIdentityEqual -Before $before -After $final -Path $safePath
+  return @($result.ToArray())
+}
+
+function Get-LizardSafeFsCapability {
+  [CmdletBinding()]
+  param([Parameter(Mandatory = $true)][string]$AuthorizedRoot)
+
+  $fullRoot = Resolve-SafeRoot -Path $AuthorizedRoot -RequireExisting
+  if (Test-LizardSafeFsWindows) {
+    return Get-LizardWindowsHandleCapability -AuthorizedRoot $fullRoot
+  }
+  return Get-LizardUnixHandleCapability -AuthorizedRoot $fullRoot
+}
+
+function Assert-LizardSafeFsMutationCapability {
+  param([Parameter(Mandatory = $true)][string]$AuthorizedRoot)
+  $capability = Get-LizardSafeFsCapability -AuthorizedRoot $AuthorizedRoot
+  if (-not [bool]$capability.available) {
+    throw (New-LizardSafeFsException -Code 'SAFEFS_HANDLE_MUTATION_UNAVAILABLE' -Message ("Handle-bound mutation is unavailable for {0}." -f $capability.authorized_root) -Path ([string]$capability.authorized_root) -AuthorizedRoot ([string]$capability.authorized_root))
+  }
+  return $capability
+}
+
+function Get-LizardSafeRootIdentity {
+  [CmdletBinding()]
+  param([Parameter(Mandatory = $true)][string]$AuthorizedRoot)
+
+  $fullRoot = Resolve-SafeRoot -Path $AuthorizedRoot -RequireExisting
+  $capability = Assert-LizardSafeFsMutationCapability -AuthorizedRoot $fullRoot
+  $native = if (Test-LizardSafeFsWindows) { Get-LizardWindowsRootIdentity -AuthorizedRoot $fullRoot } else { Get-LizardUnixRootIdentity -AuthorizedRoot $fullRoot }
+  $volumeId = if ($native.PSObject.Properties.Name -contains 'VolumeSerial') { ([uint64]$native.VolumeSerial).ToString('x') } else { ([uint64]$native.Device).ToString('x') }
+  $fileId = if ($native.PSObject.Properties.Name -contains 'FileId') { [uint64]$native.FileId } else { [uint64]$native.Inode }
+  return [pscustomobject][ordered]@{
+    schema_version = 1
+    backend = [string]$capability.backend
+    authorized_root = $fullRoot
+    volume_id = $volumeId
+    file_id = $fileId.ToString('x16')
+  }
 }
 
 function Assert-PathOutsideRoot {
@@ -319,8 +603,17 @@ function Initialize-SafeDirectory {
 
   $fullPath = Resolve-SafeRoot -Path $Path
   if (-not (Test-Path -LiteralPath $fullPath)) {
-    Assert-NoReparsePointEscape -AuthorizedRoot $fullPath -DestinationPath $fullPath | Out-Null
-    New-Item -ItemType Directory -Path $fullPath -Force | Out-Null
+    $existingAncestor = [System.IO.Path]::GetDirectoryName($fullPath)
+    while (-not [string]::IsNullOrWhiteSpace($existingAncestor) -and -not (Test-Path -LiteralPath $existingAncestor -PathType Container)) {
+      $parent = [System.IO.Path]::GetDirectoryName($existingAncestor)
+      if ([string]::IsNullOrWhiteSpace($parent) -or $parent -eq $existingAncestor) { break }
+      $existingAncestor = $parent
+    }
+    if ([string]::IsNullOrWhiteSpace($existingAncestor) -or -not (Test-Path -LiteralPath $existingAncestor -PathType Container)) {
+      throw (New-LizardSafeFsException -Code 'SAFEFS_ROOT_MISSING' -Message ("No existing authorized ancestor can create directory: {0}" -f $fullPath) -Path $fullPath -AuthorizedRoot $fullPath)
+    }
+    $ancestorRoot = Resolve-SafeRoot -Path $existingAncestor -RequireExisting
+    New-SafeDirectory -AuthorizedRoot $ancestorRoot -Path $fullPath | Out-Null
   }
   Resolve-SafeRoot -Path $fullPath -RequireExisting | Out-Null
   return $fullPath
@@ -337,7 +630,12 @@ function New-SafeDirectory {
   $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $AuthorizedRoot -DestinationPath $Path -AllowRoot:$AllowRoot
   if (-not (Test-Path -LiteralPath $safePath)) {
     $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $AuthorizedRoot -DestinationPath $safePath -AllowRoot:$AllowRoot
-    New-Item -ItemType Directory -Path $safePath -Force | Out-Null
+    Assert-LizardSafeFsMutationCapability -AuthorizedRoot $AuthorizedRoot | Out-Null
+    if (Test-LizardSafeFsWindows) {
+      New-LizardWindowsSafeDirectory -AuthorizedRoot $AuthorizedRoot -Path $safePath
+    } else {
+      New-LizardUnixSafeDirectory -AuthorizedRoot $AuthorizedRoot -Path $safePath
+    }
   }
   return $safePath
 }
@@ -352,7 +650,34 @@ function Set-SafeContent {
   )
 
   $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $AuthorizedRoot -DestinationPath $Path
-  Set-Content -LiteralPath $safePath -Value $Value -Encoding $Encoding
+  $bytes = ConvertTo-LizardSafeContentBytes -Value $Value -Encoding $Encoding
+  Set-SafeBytes -AuthorizedRoot $AuthorizedRoot -Path $safePath -Bytes $bytes
+}
+
+function Set-SafeBytes {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$AuthorizedRoot,
+    [Parameter(Mandatory = $true)][string]$Path,
+    [Parameter(Mandatory = $true)][byte[]]$Bytes,
+    [switch]$CreateNew
+  )
+
+  $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $AuthorizedRoot -DestinationPath $Path
+  Assert-LizardSafeFsMutationCapability -AuthorizedRoot $AuthorizedRoot | Out-Null
+  $lease = Open-LizardSafeDirectoryLease -AuthorizedRoot $AuthorizedRoot -Destination $safePath
+  try {
+    Invoke-LizardSafeFsTestHook -Event 'after-parent-handle-acquired' -Context ([pscustomobject]@{ authorized_root = $AuthorizedRoot; path = $safePath; operation = 'write' })
+    try { $lease.WriteAtomic($Bytes, (-not $CreateNew)) }
+    catch {
+      if ($CreateNew -and (Test-Path -LiteralPath $safePath)) {
+        throw (New-LizardSafeFsException -Code 'SAFEFS_DESTINATION_EXISTS' -Message ("Create-new destination already exists: {0}" -f $safePath) -Path $safePath -AuthorizedRoot $AuthorizedRoot)
+      }
+      throw
+    }
+  } finally {
+    if ($null -ne $lease) { $lease.Dispose() }
+  }
 }
 
 function Add-SafeContent {
@@ -365,20 +690,78 @@ function Add-SafeContent {
   )
 
   $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $AuthorizedRoot -DestinationPath $Path
-  Add-Content -LiteralPath $safePath -Value $Value -Encoding $Encoding
+  Assert-LizardSafeFsMutationCapability -AuthorizedRoot $AuthorizedRoot | Out-Null
+  $lease = Open-LizardSafeDirectoryLease -AuthorizedRoot $AuthorizedRoot -Destination $safePath
+  try {
+    Invoke-LizardSafeFsTestHook -Event 'after-parent-handle-acquired' -Context ([pscustomobject]@{ authorized_root = $AuthorizedRoot; path = $safePath })
+    try { $existing = $lease.ReadExisting(2147483647) }
+    catch { if ($_.Exception.Message -match 'SAFEFS_FILE_MISSING') { $existing = [byte[]]@() } else { throw } }
+    $appended = ConvertTo-LizardSafeContentBytes -Value $Value -Encoding $Encoding -NoPreamble
+    $bytes = New-Object byte[] ($existing.Length + $appended.Length)
+    if ($existing.Length -gt 0) { [Array]::Copy($existing, 0, $bytes, 0, $existing.Length) }
+    if ($appended.Length -gt 0) { [Array]::Copy($appended, 0, $bytes, $existing.Length, $appended.Length) }
+    $lease.WriteAtomic($bytes, $true)
+  } finally {
+    if ($null -ne $lease) { $lease.Dispose() }
+  }
 }
 
 function Copy-SafeItem {
   [CmdletBinding()]
   param(
+    [Parameter(Mandatory = $true)][string]$SourceAuthorizedRoot,
     [Parameter(Mandatory = $true)][string]$AuthorizedRoot,
     [Parameter(Mandatory = $true)][string]$Source,
     [Parameter(Mandatory = $true)][string]$Destination,
     [switch]$Force
   )
 
+  $fullSourceRoot = Resolve-SafeRoot -Path $SourceAuthorizedRoot -RequireExisting
+  $safeSource = Resolve-SafeTargetDestination -AuthorizedRoot $fullSourceRoot -DestinationPath $Source
   $safeDestination = Resolve-SafeTargetDestination -AuthorizedRoot $AuthorizedRoot -DestinationPath $Destination
-  Copy-Item -LiteralPath $Source -Destination $safeDestination -Force:$Force
+  Assert-LizardSafeFsMutationCapability -AuthorizedRoot $fullSourceRoot | Out-Null
+  Assert-LizardSafeFsMutationCapability -AuthorizedRoot $AuthorizedRoot | Out-Null
+  $bytes = Read-LizardHandleSafeFile -AuthorizedRoot $fullSourceRoot -Path $safeSource
+  $lease = Open-LizardSafeDirectoryLease -AuthorizedRoot $AuthorizedRoot -Destination $safeDestination
+  try {
+    Invoke-LizardSafeFsTestHook -Event 'after-parent-handle-acquired' -Context ([pscustomobject]@{ authorized_root = $AuthorizedRoot; path = $safeDestination; operation = 'copy-destination' })
+    $lease.WriteAtomic($bytes, [bool]$Force)
+  } finally {
+    if ($null -ne $lease) { $lease.Dispose() }
+  }
+}
+
+function Remove-SafeItem {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$AuthorizedRoot,
+    [Parameter(Mandatory = $true)][string]$Path,
+    [Parameter(Mandatory = $true)][ValidateSet('File', 'EmptyDirectory')][string]$Kind,
+    [AllowNull()]$ExpectedIdentity
+  )
+
+  $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $AuthorizedRoot -DestinationPath $Path
+  Assert-LizardSafeFsMutationCapability -AuthorizedRoot $AuthorizedRoot | Out-Null
+  $lease = Open-LizardSafeDirectoryLease -AuthorizedRoot $AuthorizedRoot -Destination $safePath
+  try {
+    Invoke-LizardSafeFsTestHook -Event 'after-parent-handle-acquired' -Context ([pscustomobject]@{ authorized_root = $AuthorizedRoot; path = $safePath; operation = 'delete' })
+    if ($null -eq $ExpectedIdentity) {
+      if ($Kind -eq 'File') { $lease.RemoveFile() } else { $lease.RemoveEmptyDirectory() }
+    } else {
+      foreach ($name in @('volume_id', 'mount_id', 'file_id')) {
+        if ($ExpectedIdentity.PSObject.Properties.Name -notcontains $name -or [string]::IsNullOrWhiteSpace([string]$ExpectedIdentity.$name)) { throw (New-LizardSafeFsException -Code 'SAFEFS_IDENTITY_INVALID' -Message "Expected removal identity lacks '$name'." -Path $safePath -AuthorizedRoot $AuthorizedRoot) }
+      }
+      if (Test-LizardSafeFsWindows) {
+        if ($Kind -eq 'File') { $lease.RemoveFileChecked([string]$ExpectedIdentity.volume_id, [string]$ExpectedIdentity.file_id) }
+        else { $lease.RemoveEmptyDirectoryChecked([string]$ExpectedIdentity.volume_id, [string]$ExpectedIdentity.file_id) }
+      } else {
+        if ($Kind -eq 'File') { $lease.RemoveFileChecked([string]$ExpectedIdentity.volume_id, [string]$ExpectedIdentity.file_id, [string]$ExpectedIdentity.mount_id) }
+        else { $lease.RemoveEmptyDirectoryChecked([string]$ExpectedIdentity.volume_id, [string]$ExpectedIdentity.file_id, [string]$ExpectedIdentity.mount_id) }
+      }
+    }
+  } finally {
+    if ($null -ne $lease) { $lease.Dispose() }
+  }
 }
 
 Export-ModuleMember -Function @(
@@ -388,9 +771,14 @@ Export-ModuleMember -Function @(
   'ConvertTo-LizardCanonicalTemporaryPath',
   'ConvertTo-LizardFullPath',
   'Copy-SafeItem',
+  'Get-SafeBytes',
+  'Get-LizardSafeFsCapability',
+  'Get-LizardSafeRootIdentity',
   'Get-SafeContent',
+  'Get-SafeDirectoryEntries',
   'Get-SafeFileHash',
   'Get-SafeFileMetadata',
+  'Get-SafeItemMetadata',
   'Get-LizardPathComparer',
   'Get-LizardPathComparison',
   'Initialize-SafeDirectory',
@@ -398,6 +786,8 @@ Export-ModuleMember -Function @(
   'Resolve-SafeRoot',
   'Resolve-LizardSafeTemporaryRoot',
   'Resolve-SafeTargetDestination',
+  'Remove-SafeItem',
+  'Set-SafeBytes',
   'Set-SafeContent',
   'Test-LizardPathWithinRoot'
 )

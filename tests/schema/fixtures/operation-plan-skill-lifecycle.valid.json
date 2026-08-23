@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "plan_id": "1123456789abcdef0123456789abcdef",
+  "operation_kind": "skill-lifecycle",
+  "created_at": "2026-08-22T10:00:00.0000000+00:00",
+  "expires_at": "2026-08-22T10:30:00.0000000+00:00",
+  "intent_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "intent": {
+    "target_root": "C:\\target",
+    "target_root_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "layer_root": "C:\\layer",
+    "layer_version": "1.1.0",
+    "source_git_head": null,
+    "options": {
+      "action": "install",
+      "package_version": "1.0.0",
+      "previous_status": "absent",
+      "previous_version": null,
+      "skill": "git-safety"
+    },
+    "inputs": [
+      {
+        "scope": "layer",
+        "path": "skills/git-safety/skill.json",
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    ],
+    "target_entries": [
+      {
+        "path": ".agent/skills/git-safety/skill.json",
+        "kind": "file",
+        "action": "create",
+        "precondition_kind": "absent",
+        "precondition_sha256": null,
+        "ownership": "unmanaged",
+        "intended_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    ],
+    "nested_plan": null
+  }
+}

@@ -42,6 +42,10 @@ For self-hosted runners, isolate workloads, use ephemeral runners where possible
 | Security incidents and unreleased vulnerabilities | Use private channels and isolated evidence |
 | Generated reports | Metadata-only by default; context-inclusive reports are sensitive |
 
+The built-in router now stops every regulated-data route for human review before selecting a role or model. There is deliberately no repository-local approval bypass: the included approval-envelope schema is structural only and cannot establish issuer trust, revocation status, legal approval, or provider authorization. Keep regulated data excluded until the deploying organization supplies and independently enforces those controls.
+
+Routing receipts use enumerated/opaque identifiers and typed privacy metadata. Their retention class is `organization-policy-required`: the repository does not invent a universal TTL or legal-hold policy, so the deploying organization must configure disposal and preservation outside this receipt writer.
+
 ## Deployment Decision Checklist
 
 1. Confirm the MIT license and dependency licenses are acceptable.
@@ -58,6 +62,7 @@ For self-hosted runners, isolate workloads, use ephemeral runners where possible
 
 - Instructions cannot prevent a compromised model, IDE extension, runner, dependency, account, or operating system from violating policy.
 - Prompt injection in repository content can influence an AI assistant; permissions and human review remain authoritative.
+- Repository instructions remain lower-trust than platform, organization, and user policy. The installed adapter requests strict integrity verification before following managed target content, but actual precedence enforcement still belongs to the IDE/agent host.
 - Manually merged instructions cannot always be removed mechanically without reviewing the target file.
 - Model output can be incorrect, insecure, biased, or incompatible even when the workflow completes successfully.
 - Provider features and policy coverage change over time and require separate organizational review.

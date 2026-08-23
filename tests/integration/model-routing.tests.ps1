@@ -5,6 +5,8 @@ $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
 Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Manifest.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Trust.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests\TestTrustHelpers.psm1') -Force
 
 $testRoot = Join-Path $LayerRoot '.tmp\tests'
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
@@ -101,13 +103,23 @@ try {
   Assert-True ($friendlyHuman.output -match 'PAUSE FOR HUMAN REVIEW') 'Human-review output must clearly tell a beginner to pause.'
   Assert-False ($friendlyHuman.output -match '(?m)^Model:') 'Human-review output must not display a model as though execution will continue.'
 
+  $regulatedDefault = Invoke-Route -Root $target -Arguments @('-Phase', 'execution', '-TaskClass', 'implementation', '-RiskLevel', 'low', '-DataClass', 'regulated', '-ReceiptId', 'regulated-default')
+  Assert-Equal 'human-review' ([string]$regulatedDefault.decision) 'Regulated data must require human review when current provider/model/runtime identity is unavailable.'
+  Assert-True ($null -eq $regulatedDefault.recommended_model) 'Regulated human-review stop must not recommend an unidentified current model.'
+  Assert-True (@($regulatedDefault.reason_codes) -contains 'REGULATED_APPROVAL_REQUIRED') 'Regulated review must expose its stable authoritative decision code.'
+  Assert-True (@($regulatedDefault.reason_codes) -contains 'REGULATED_RUNTIME_IDENTITY_UNAVAILABLE') 'Portable routing must report that regulated runtime identity is unavailable.'
+
   $secrets = Invoke-Route -Root $target -Arguments @('-Phase', 'execution', '-TaskClass', 'implementation', '-RiskLevel', 'high', '-DataClass', 'secrets', '-ReceiptId', 'secrets')
   Assert-Equal 'block' ([string]$secrets.decision) 'Secrets must be blocked before staged execution.'
+  Assert-True (@($secrets.reason_codes) -contains 'SECRETS_BLOCKED') 'Secret blocking must expose its stable decision code.'
   $friendlyBlock = Invoke-TestPowerShell -ScriptPath $routeScript -Arguments @('-TargetPath', $target, '-Phase', 'execution', '-TaskClass', 'implementation', '-RiskLevel', 'high', '-DataClass', 'secrets')
   Assert-True ($friendlyBlock.output -match 'Routing result: BLOCKED') 'Blocked output must clearly tell a beginner that execution stopped.'
   Assert-False ($friendlyBlock.output -match '(?m)^Model:') 'Blocked output must not display a model as though execution will continue.'
 
-  $receipt = Invoke-Route -Root $target -Arguments @('-Phase', 'execution', '-TaskClass', 'implementation', '-RiskLevel', 'medium', '-DataClass', 'internal-code', '-ReceiptId', 'persisted', '-Apply')
+  $persistedBase = @('-Phase', 'execution', '-TaskClass', 'implementation', '-RiskLevel', 'medium', '-DataClass', 'internal-code', '-ReceiptId', 'persisted', '-RouterId', 'portable-router')
+  $persistedPreview = Invoke-Route -Root $target -Arguments $persistedBase
+  $persistedTrust = New-LizardTestTrustMaterial -Root (Join-Path $fixture 'persisted-route-trust') -BindingSha256 ([string]$persistedPreview.trust_binding_sha256) -Subject 'persisted' -Now ([DateTimeOffset]::UtcNow) -PrincipalId 'portable-router' -Roles @('router') -Purpose 'routing' -PayloadKind 'route-decision'
+  $receipt = Invoke-Route -Root $target -Arguments ($persistedBase + @('-Apply', '-TrustChallengePath', $persistedTrust.challenge_path, '-TrustChallengeSha256', $persistedTrust.challenge_sha256, '-RouterPrivateKeyPath', $persistedTrust.private_key_path, '-RouterPrivateKeySha256', $persistedTrust.private_key_sha256))
   $receiptPath = Join-Path $target '.agent\routing\receipts\decisions\persisted.json'
   Assert-True (Test-Path -LiteralPath $receiptPath) 'Apply must write a metadata-only receipt.'
   Assert-Equal $false ([bool]$receipt.raw_prompt_stored) 'Receipts must never claim to store raw prompts.'
@@ -195,7 +207,7 @@ try {
   "selection": "per-call",
   "actual_model_reporting": true,
   "attestation": "observed",
-  "capability_source": "fixture runtime API",
+  "capability_source": "fixture-runtime-api",
   "configuration_fingerprint": "fixture-codex-config-v1",
   "verified_at": "2026-07-19T12:00:00Z",
   "expires_at": "2027-07-19T12:00:00Z"
@@ -213,7 +225,10 @@ try {
   $advancedDoctor = Invoke-TestPowerShell -ScriptPath $doctorScript -Arguments @('-TargetPath', $advancedTarget, '-Strict')
   Assert-Equal 0 $advancedDoctor.exit_code "Advanced inventory doctor must pass: $($advancedDoctor.output)"
 
-  $advanced = Invoke-Route -Root $advancedTarget -Arguments @('-Phase', 'execution', '-TaskClass', 'implementation', '-RiskLevel', 'medium', '-DataClass', 'internal-code', '-ReceiptId', 'advanced', '-Apply')
+  $advancedBase = @('-Phase', 'execution', '-TaskClass', 'implementation', '-RiskLevel', 'medium', '-DataClass', 'internal-code', '-ReceiptId', 'advanced')
+  $advancedRoutePreview = Invoke-Route -Root $advancedTarget -Arguments $advancedBase
+  $advancedRouteTrust = New-LizardTestTrustMaterial -Root (Join-Path $fixture 'advanced-route-trust') -BindingSha256 ([string]$advancedRoutePreview.trust_binding_sha256) -Subject 'advanced' -Now ([DateTimeOffset]::UtcNow) -PrincipalId 'fixture/codex-runtime-v1' -Roles @('router') -Purpose 'routing' -PayloadKind 'route-decision'
+  $advanced = Invoke-Route -Root $advancedTarget -Arguments ($advancedBase + @('-Apply', '-TrustChallengePath', $advancedRouteTrust.challenge_path, '-TrustChallengeSha256', $advancedRouteTrust.challenge_sha256, '-RouterPrivateKeyPath', $advancedRouteTrust.private_key_path, '-RouterPrivateKeySha256', $advancedRouteTrust.private_key_sha256))
   Assert-Equal 'route-decision' ([string]$advanced.artifact_kind) 'Advanced routing output must identify itself as a decision, not execution proof.'
   Assert-Equal 'vendor-zeta/build-plus@2026-07' ([string]$advanced.recommended_model) 'Advanced routing must recommend by calibrated role evidence, not provider naming.'
   Assert-Equal 'per-call' ([string]$advanced.selection_capability) 'Advanced routing must require automatic execution capability.'
@@ -224,6 +239,9 @@ try {
   Assert-False ([string]$advanced.recommended_model -eq 'expired-provider/old-perfect') 'Expired calibration evidence must remain ineligible.'
   Assert-False ([string]$advanced.recommended_model -eq 'wrong-runtime/misleading-perfect') 'Calibration from a different runtime configuration must remain ineligible.'
 
+  $advancedEnvelope = Get-Content -LiteralPath (Join-Path $advancedTarget '.agent\routing\receipts\decisions\advanced.json') -Raw | ConvertFrom-Json
+  $executionBinding = Get-LizardExecutionTrustBinding -TargetRoot $advancedTarget -ReceiptId 'advanced-execution' -RouteDecisionId 'advanced' -RoutePayloadSha256 ([string]$advancedEnvelope.payload_sha256) -ExecutorId 'fixture/codex-runtime-v1' -ConfigurationFingerprint 'fixture-codex-config-v1' -ActualModel 'vendor-zeta/build-plus@2026-07' -ActualProvider 'vendor-zeta'
+  $runtimeTrust = New-LizardTestTrustMaterial -Root (Join-Path $fixture 'advanced-runtime-trust') -BindingSha256 $executionBinding -Subject 'advanced-execution' -Now ([DateTimeOffset]::UtcNow) -PrincipalId 'fixture/codex-runtime-v1' -Roles @('runtime') -Purpose 'execution-attestation' -PayloadKind 'execution-receipt'
   $execution = Invoke-TestPowerShell -ScriptPath $recordExecutionScript -Arguments @(
     '-TargetPath', $advancedTarget,
     '-RouteDecisionId', 'advanced',
@@ -234,6 +252,11 @@ try {
     '-CompletedAt', '2026-07-19T12:01:00Z',
     '-ReceiptId', 'advanced-execution',
     '-Outcome', 'succeeded',
+    '-RouteTrustStorePath', $advancedRouteTrust.trust_store_path, '-RouteTrustStoreSha256', $advancedRouteTrust.trust_store_sha256,
+    '-RouteTrustChallengePath', $advancedRouteTrust.challenge_path, '-RouteTrustChallengeSha256', $advancedRouteTrust.challenge_sha256,
+    '-RouteReplayLedgerPath', $advancedRouteTrust.replay_ledger_path,
+    '-TrustChallengePath', $runtimeTrust.challenge_path, '-TrustChallengeSha256', $runtimeTrust.challenge_sha256,
+    '-RuntimePrivateKeyPath', $runtimeTrust.private_key_path, '-RuntimePrivateKeySha256', $runtimeTrust.private_key_sha256,
     '-Apply', '-Json'
   )
   Assert-Equal 0 $execution.exit_code "Attesting runtime receipt must succeed: $($execution.output)"
@@ -244,14 +267,14 @@ try {
   $executionPath = Join-Path $advancedTarget '.agent\routing\receipts\executions\advanced-execution.json'
   Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/execution-receipt.schema.json' -InstancePath $executionPath -Message 'Execution receipt must satisfy schema.'
 
-  $mismatchExecution = Invoke-TestPowerShell -ScriptPath $recordExecutionScript -Arguments @('-TargetPath', $advancedTarget, '-RouteDecisionId', 'advanced', '-ActualModel', 'different/model', '-ActualProvider', 'vendor-zeta', '-Harness', 'codex', '-StartedAt', '2026-07-19T12:00:00Z', '-Apply')
+  $mismatchExecution = Invoke-TestPowerShell -ScriptPath $recordExecutionScript -Arguments @('-TargetPath', $advancedTarget, '-RouteDecisionId', 'advanced', '-ActualModel', 'different/model', '-ActualProvider', 'vendor-zeta', '-Harness', 'codex', '-StartedAt', '2026-07-19T12:00:00Z', '-RouteTrustStorePath', $advancedRouteTrust.trust_store_path, '-RouteTrustStoreSha256', $advancedRouteTrust.trust_store_sha256, '-RouteTrustChallengePath', $advancedRouteTrust.challenge_path, '-RouteTrustChallengeSha256', $advancedRouteTrust.challenge_sha256, '-Apply')
   Assert-False ($mismatchExecution.exit_code -eq 0) 'Execution receipt must reject a model identity that differs from the route decision.'
 
   $advancedVerification = Invoke-Route -Root $advancedTarget -Arguments @('-Phase', 'verification', '-TaskClass', 'implementation', '-RiskLevel', 'high', '-DataClass', 'internal-code', '-PreviousModel', 'vendor-zeta/build-plus@2026-07', '-PreviousProvider', 'vendor-zeta', '-ReceiptId', 'advanced-verification')
   Assert-Equal 'lab-alpha/think-x' ([string]$advancedVerification.recommended_model) 'Calibrated independent verification should prefer a different model and provider.'
   Assert-Equal 'independent-model-preferred' ([string]$advancedVerification.verification_mode) 'A route decision may express an independent-model preference without claiming execution.'
 
-  $evaluationPath = Join-Path $fixture 'future-model-evaluation.json'
+  $evaluationPayloadPath = Join-Path $fixture 'future-model-evaluation-payload.json'
   @'
 {
   "schema_version": 1,
@@ -270,13 +293,21 @@ try {
   ],
   "raw_prompts_stored": false
 }
-'@ | Set-Content -LiteralPath $evaluationPath -Encoding UTF8
-  Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/model-evaluation.schema.json' -InstancePath $evaluationPath -Message 'Model promotion evaluation must satisfy schema.'
+'@ | Set-Content -LiteralPath $evaluationPayloadPath -Encoding UTF8
+  Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/model-evaluation-payload.schema.json' -InstancePath $evaluationPayloadPath -Message 'Model promotion evaluation payload must satisfy schema.'
+  $evaluationPayload = Get-Content -LiteralPath $evaluationPayloadPath -Raw | ConvertFrom-Json
+  $calibrationBinding = Get-LizardCalibrationTrustBinding -TargetRoot $advancedTarget -EvaluationId $evaluationPayload.evaluation_id -ModelId $evaluationPayload.model_id -Provider $evaluationPayload.provider -ExecutorId $evaluationPayload.executor_id -ConfigurationFingerprint $evaluationPayload.configuration_fingerprint -Cases @($evaluationPayload.cases)
+  $evaluationTrust = New-LizardTestTrustMaterial -Root (Join-Path $fixture 'evaluation-trust') -BindingSha256 $calibrationBinding -Subject $evaluationPayload.evaluation_id -Now ([DateTimeOffset]::UtcNow) -PrincipalId 'independent-evaluator' -Roles @('evaluator') -Purpose 'model-calibration' -PayloadKind 'model-evaluation'
+  $evaluationEnvelope = New-LizardSignedEvidenceEnvelope -Payload $evaluationPayload -PayloadKind model-evaluation -Purpose model-calibration -Subject $evaluationPayload.evaluation_id -BindingSha256 $calibrationBinding -ChallengePath $evaluationTrust.challenge_path -ChallengeSha256 $evaluationTrust.challenge_sha256 -PrivateKeyPath $evaluationTrust.private_key_path -PrivateKeySha256 $evaluationTrust.private_key_sha256
+  $evaluationPath = Join-Path $fixture 'future-model-evaluation.json'
+  [IO.File]::WriteAllText($evaluationPath, ($evaluationEnvelope | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding($false)))
+  Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/model-evaluation.schema.json' -InstancePath $evaluationPath -Message 'Signed model promotion evaluation must satisfy schema.'
   $inventoryHashBeforeCalibration = Get-LizardSha256 $inventoryPath
-  $calibrationPreview = Invoke-TestPowerShell -ScriptPath $calibrateModelScript -Arguments @('-TargetPath', $advancedTarget, '-EvaluationPath', $evaluationPath, '-Json')
+  $calibrationTrustArgs = @('-TrustStorePath', $evaluationTrust.trust_store_path, '-TrustStoreSha256', $evaluationTrust.trust_store_sha256, '-TrustChallengePath', $evaluationTrust.challenge_path, '-TrustChallengeSha256', $evaluationTrust.challenge_sha256, '-ReplayLedgerPath', $evaluationTrust.replay_ledger_path)
+  $calibrationPreview = Invoke-TestPowerShell -ScriptPath $calibrateModelScript -Arguments (@('-TargetPath', $advancedTarget, '-EvaluationPath', $evaluationPath, '-Json') + $calibrationTrustArgs)
   Assert-Equal 0 $calibrationPreview.exit_code "Calibration preview must succeed: $($calibrationPreview.output)"
   Assert-Equal $inventoryHashBeforeCalibration (Get-LizardSha256 $inventoryPath) 'Calibration preview must not mutate inventory evidence.'
-  $calibrationApply = Invoke-TestPowerShell -ScriptPath $calibrateModelScript -Arguments @('-TargetPath', $advancedTarget, '-EvaluationPath', $evaluationPath, '-Apply', '-Json')
+  $calibrationApply = Invoke-TestPowerShell -ScriptPath $calibrateModelScript -Arguments (@('-TargetPath', $advancedTarget, '-EvaluationPath', $evaluationPath, '-Apply', '-Json') + $calibrationTrustArgs)
   Assert-Equal 0 $calibrationApply.exit_code "Calibration apply must succeed: $($calibrationApply.output)"
   $promotedInventory = Get-Content -LiteralPath $inventoryPath -Raw | ConvertFrom-Json
   $promoted = @($promotedInventory.models | Where-Object { [string]$_.id -eq 'future-provider/unseen-perfect' })[0]

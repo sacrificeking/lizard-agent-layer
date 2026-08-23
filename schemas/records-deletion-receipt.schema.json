@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/records-deletion-receipt.schema.json",
+  "title": "transactionally bound records deletion receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artifact_kind", "receipt_id", "policy_id", "policy_sha256", "hold_envelope_id", "records_officer", "target_root_hash", "as_of", "selected_classes", "deleted_records", "export_performed", "export_manifest_sha256", "sensitivity", "purpose", "audience", "retention_class", "content_policy", "raw_content_stored", "transactionally_bound"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "records-deletion-receipt" },
+    "receipt_id": { "$ref": "#/$defs/id" },
+    "policy_id": { "$ref": "#/$defs/id" },
+    "policy_sha256": { "$ref": "#/$defs/hash" },
+    "hold_envelope_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "records_officer": { "$ref": "#/$defs/longId" },
+    "target_root_hash": { "$ref": "#/$defs/hash" },
+    "as_of": { "type": "string", "format": "date-time" },
+    "selected_classes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/artifactClass" } },
+    "deleted_records": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["record_id", "artifact_class", "path", "content_sha256", "expired_at", "disposition"],
+        "properties": {
+          "record_id": { "$ref": "#/$defs/recordId" },
+          "artifact_class": { "$ref": "#/$defs/artifactClass" },
+          "path": { "$ref": "#/$defs/relativePath" },
+          "content_sha256": { "$ref": "#/$defs/hash" },
+          "expired_at": { "type": "string", "format": "date-time" },
+          "disposition": { "const": "deleted" }
+        }
+      }
+    },
+    "export_performed": { "type": "boolean" },
+    "export_manifest_sha256": { "oneOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }] },
+    "sensitivity": { "const": "metadata-only" },
+    "purpose": { "const": "records-deletion-evidence" },
+    "audience": { "type": "array", "const": ["operators", "auditors"] },
+    "retention_class": { "const": "organization-policy-required" },
+    "content_policy": { "const": "identifiers-and-relative-paths-only" },
+    "raw_content_stored": { "const": false },
+    "transactionally_bound": { "const": true }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$" },
+    "longId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@:+-]{0,127}$" },
+    "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "recordId": { "type": "string", "pattern": "^rec_[a-f0-9]{32}$" },
+    "artifactClass": { "enum": ["memory", "routing-decision", "routing-execution", "update-history", "loop-events", "loop-run-log"] },
+    "relativePath": { "type": "string", "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\\\:\\u0000-\\u001f]+$" }
+  },
+  "allOf": [
+    { "if": { "properties": { "export_performed": { "const": true } }, "required": ["export_performed"] }, "then": { "properties": { "export_manifest_sha256": { "$ref": "#/$defs/hash" } } }, "else": { "properties": { "export_manifest_sha256": { "type": "null" } } } }
+  ]
+}

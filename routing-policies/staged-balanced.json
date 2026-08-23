@@ -18,6 +18,12 @@
     "require_actual_model_reporting": true,
     "never_interrupt_for_model_switch": true
   },
+  "regulated_data": {
+    "default_decision": "human-review",
+    "organization_approval_required": true,
+    "require_inventory_identity": true,
+    "approval_must_be_outside_target": true
+  },
   "routes": [
     {
       "id": "strategy-default",

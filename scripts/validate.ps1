@@ -5,6 +5,7 @@ param(
 $ErrorActionPreference = "Stop"
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Manifest.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SkillPackage.psm1') -Force
 $Failures = New-Object System.Collections.Generic.List[string]
 $Warnings = New-Object System.Collections.Generic.List[string]
 
@@ -236,10 +237,16 @@ $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-profile.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\routing-policy.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-inventory.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-evaluation.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-evaluation-payload.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\routing-runtime.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\route-receipt.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\route-decision-payload.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\transaction-journal.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\execution-receipt.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\execution-receipt-payload.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\verification-command-plan.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\trust-store.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\trust-challenge.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\quality-registry.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\maturity-levels.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\pack.schema.json')
@@ -253,7 +260,11 @@ $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\worktree-lifecycle.schema.j
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\merge-suggestions-report.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\behavioral-readiness.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\skill-evidence.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\skill-package.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\skill-lifecycle-state.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\focused-test-report.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\safe-fs-capability.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\uninstall-receipt.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\contracts.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\contract-change.schema.json')
 $null = Read-JsonFile (Join-Path $LayerRoot 'schemas\contract-check-report.schema.json')
@@ -305,18 +316,45 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory | ForEach-
   if ([string]::IsNullOrWhiteSpace($values['description'])) { Fail "Skill '$folderName' has empty description." }
 }
 
-foreach ($script in @('install.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'contract-check.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1', 'manifest-diff.ps1', 'update-target.ps1', 'transaction-recover.ps1', 'route-task.ps1', 'record-execution.ps1', 'calibrate-model.ps1', 'loop-init.ps1', 'loop-audit.ps1', 'loop-report.ps1', 'loop-sync.ps1', 'loop-cost.ps1', 'loop-worktree.ps1', 'loop-verify.ps1', 'loop-worktree-cleanup.ps1')) {
+try {
+  $layerVersion = (Get-Content -LiteralPath (Join-Path $LayerRoot 'VERSION') -Raw).Trim()
+  $validatedSkillPackages = @(Assert-LizardSkillRepository -SkillsRoot (Join-Path $LayerRoot 'skills') -LayerVersion $layerVersion)
+  if ($validatedSkillPackages.Count -ne @(Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'skills') -Directory).Count) { Fail 'Validated skill package count does not match the skill directory count.' }
+} catch { Fail $_.Exception.Message }
+
+foreach ($script in @('install.ps1', 'uninstall.ps1', 'validate.ps1', 'doctor.ps1', 'sync-manifest.ps1', 'upgrade.ps1', 'matrix.ps1', 'analyze-target.ps1', 'merge-suggestions.ps1', 'ci.ps1', 'contract-check.ps1', 'score-layer.ps1', 'drift-check.ps1', 'pack-report.ps1', 'manifest-diff.ps1', 'update-target.ps1', 'transaction-recover.ps1', 'skill-lifecycle.ps1', 'route-task.ps1', 'record-execution.ps1', 'calibrate-model.ps1', 'loop-init.ps1', 'loop-audit.ps1', 'loop-report.ps1', 'loop-sync.ps1', 'loop-cost.ps1', 'loop-worktree.ps1', 'loop-verify.ps1', 'loop-worktree-cleanup.ps1')) {
   $path = Join-Path $LayerRoot "scripts\$script"
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing script $script."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }
   catch { Fail "PowerShell parse failure in ${script}: $($_.Exception.Message)" }
 }
 
-foreach ($relative in @('scripts\Lizard.Json.psm1', 'scripts\Lizard.SafeFs.psm1', 'scripts\Lizard.MountBoundary.psm1', 'scripts\Lizard.Manifest.psm1', 'scripts\Lizard.Host.psm1', 'scripts\Lizard.Transaction.psm1', 'scripts\Lizard.LoopEvidence.psm1', 'scripts\Lizard.QualityEvidence.psm1', 'tests\TestHelpers.psm1', 'tests\run-focused.ps1', 'tests\unit\json.tests.ps1', 'tests\unit\safe-fs.tests.ps1', 'tests\unit\mount-boundary.tests.ps1', 'tests\unit\host.tests.ps1', 'tests\integration\manifest-v3.tests.ps1', 'tests\integration\manifest-lifecycle.tests.ps1', 'tests\integration\transaction.tests.ps1', 'tests\integration\model-routing.tests.ps1', 'tests\adversarial\mount-boundary-fixtures.tests.ps1', 'tests\adversarial\install-containment.tests.ps1', 'tests\adversarial\report-privacy.tests.ps1', 'tests\adversarial\quality-evidence.tests.ps1', 'tests\adversarial\contract-governance.tests.ps1', 'tests\adversarial\version-gates.tests.ps1', 'tests\adversarial\loop-evidence.tests.ps1')) {
+foreach ($relative in @('scripts\Lizard.Json.psm1', 'scripts\Lizard.SafeFs.psm1', 'scripts\Lizard.WindowsHandleFs.psm1', 'scripts\Lizard.UnixHandleFs.psm1', 'scripts\Lizard.MountBoundary.psm1', 'scripts\Lizard.Manifest.psm1', 'scripts\Lizard.Host.psm1', 'scripts\Lizard.Git.psm1', 'scripts\Lizard.Transaction.psm1', 'scripts\Lizard.LoopEvidence.psm1', 'scripts\Lizard.QualityEvidence.psm1', 'scripts\Lizard.SafeReport.psm1', 'scripts\Lizard.ConstrainedRunner.psm1', 'scripts\Lizard.Trust.psm1', 'tests\TestHelpers.psm1', 'tests\TestTrustHelpers.psm1', 'tests\run-focused.ps1', 'tests\unit\json.tests.ps1', 'tests\unit\safe-fs.tests.ps1', 'tests\unit\mount-boundary.tests.ps1', 'tests\unit\host.tests.ps1', 'tests\unit\transaction-primitives.tests.ps1', 'tests\unit\manifest-version-consistency.tests.ps1', 'tests\integration\manifest-v3.tests.ps1', 'tests\integration\manifest-lifecycle.tests.ps1', 'tests\integration\transaction.tests.ps1', 'tests\integration\uninstall.tests.ps1', 'tests\integration\uninstall-install-roundtrip.tests.ps1', 'tests\integration\memory-modes.tests.ps1', 'tests\integration\memory-mode-update.tests.ps1', 'tests\integration\model-routing.tests.ps1', 'tests\adversarial\uninstall-tamper.tests.ps1', 'tests\adversarial\memory-mode-transitions.tests.ps1', 'tests\adversarial\regulated-approval.tests.ps1', 'tests\adversarial\routing-receipt-privacy.tests.ps1', 'tests\adversarial\prompt-trust.tests.ps1', 'tests\adversarial\constrained-verifier.tests.ps1', 'tests\adversarial\signed-evidence.tests.ps1', 'tests\adversarial\signed-loop-completion.tests.ps1', 'tests\adversarial\analyzer-hardening.tests.ps1', 'tests\adversarial\git-ref-validation.tests.ps1', 'tests\adversarial\handle-bound-mutation.tests.ps1', 'tests\adversarial\worktree-external-mutator.tests.ps1', 'tests\adversarial\mount-boundary-fixtures.tests.ps1', 'tests\adversarial\install-containment.tests.ps1', 'tests\adversarial\report-privacy.tests.ps1', 'tests\adversarial\quality-evidence.tests.ps1', 'tests\adversarial\contract-governance.tests.ps1', 'tests\adversarial\version-gates.tests.ps1', 'tests\adversarial\loop-evidence.tests.ps1')) {
   $path = Join-Path $LayerRoot $relative
   if (-not (Test-Path -LiteralPath $path)) { Fail "Missing safety artifact $relative."; continue }
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $path -Raw)) }
   catch { Fail "PowerShell parse failure in ${relative}: $($_.Exception.Message)" }
+}
+
+$signedCalibrationTest = Join-Path $LayerRoot 'tests\adversarial\signed-calibration.tests.ps1'
+if (-not (Test-Path -LiteralPath $signedCalibrationTest -PathType Leaf)) { Fail 'Missing safety artifact tests\adversarial\signed-calibration.tests.ps1.' }
+else {
+  try { $null = [scriptblock]::Create((Get-Content -LiteralPath $signedCalibrationTest -Raw)) }
+  catch { Fail "PowerShell parse failure in signed-calibration.tests.ps1: $($_.Exception.Message)" }
+}
+
+$skillLifecycleTest = Join-Path $LayerRoot 'tests\integration\skill-lifecycle.tests.ps1'
+if (-not (Test-Path -LiteralPath $skillLifecycleTest -PathType Leaf)) { Fail 'Missing safety artifact tests\integration\skill-lifecycle.tests.ps1.' }
+else {
+  try { $null = [scriptblock]::Create((Get-Content -LiteralPath $skillLifecycleTest -Raw)) }
+  catch { Fail "PowerShell parse failure in skill-lifecycle.tests.ps1: $($_.Exception.Message)" }
+}
+
+if (-not (Test-Path -LiteralPath (Join-Path $LayerRoot 'scripts\native\Lizard.WindowsHandleFs.cs') -PathType Leaf)) {
+  Fail 'Missing Windows handle-bound native source scripts\native\Lizard.WindowsHandleFs.cs.'
+}
+if (-not (Test-Path -LiteralPath (Join-Path $LayerRoot 'scripts\native\Lizard.UnixHandleFs.cs') -PathType Leaf)) {
+  Fail 'Missing Unix handle-bound native source scripts\native\Lizard.UnixHandleFs.cs.'
 }
 
 $schemaValidator = Join-Path $LayerRoot 'tools\schema-validator\validate.mjs'

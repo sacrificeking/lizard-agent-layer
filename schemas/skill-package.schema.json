@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/skill-package.schema.json",
+  "title": "lizard-agent-layer skill package metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "name", "version", "lifecycle_state", "compatibility", "dependencies", "permissions", "provenance", "conflicts", "migration", "disablement", "recovery", "removal"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "name": { "$ref": "#/$defs/name" },
+    "version": { "$ref": "#/$defs/version" },
+    "lifecycle_state": { "const": "active" },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimum_layer_version", "hosts", "harnesses"],
+      "properties": {
+        "minimum_layer_version": { "$ref": "#/$defs/version" },
+        "hosts": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["windows-powershell-5.1", "windows-powershell-7", "linux-powershell-7", "macos-powershell-7"] } },
+        "harnesses": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/name" } }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "version", "optional"],
+        "properties": {
+          "name": { "$ref": "#/$defs/name" },
+          "version": { "type": "string", "pattern": "^(?:>=)?[0-9]+\\.[0-9]+\\.[0-9]+$" },
+          "optional": { "type": "boolean" }
+        }
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["filesystem", "network", "process", "secrets"],
+      "properties": {
+        "filesystem": { "enum": ["denied", "read-only", "workspace-scoped", "approval-required"] },
+        "network": { "enum": ["denied", "approval-required"] },
+        "process": { "enum": ["denied", "bounded", "approval-required"] },
+        "secrets": { "enum": ["denied", "approval-required"] }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "source_path", "reviewed_at", "review_record"],
+      "properties": {
+        "owner": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "source_path": { "type": "string", "pattern": "^skills/[a-z0-9][a-z0-9-]{0,62}$" },
+        "reviewed_at": { "type": "string", "format": "date" },
+        "review_record": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "conflicts": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/name" } },
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from_versions", "strategy"],
+      "properties": {
+        "from_versions": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/version" } },
+        "strategy": { "const": "replace-unchanged-managed-files" }
+      }
+    },
+    "disablement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "preserve_user_content"],
+      "properties": {
+        "strategy": { "const": "remove-unchanged-managed-files" },
+        "preserve_user_content": { "const": true }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "verification"],
+      "properties": {
+        "strategy": { "const": "reinstall-exact-reviewed-package" },
+        "verification": { "const": "sha256" }
+      }
+    },
+    "removal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "ownership"],
+      "properties": {
+        "strategy": { "const": "remove-unchanged-managed-files" },
+        "ownership": { "const": "layer-owned-only" }
+      }
+    }
+  },
+  "$defs": {
+    "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" }
+  }
+}

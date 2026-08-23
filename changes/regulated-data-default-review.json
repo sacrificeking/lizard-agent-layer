@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "regulated-data-default-review",
+  "date": "2026-08-22",
+  "summary": "Fail regulated-data routing to human review until authenticated external organization approval exists.",
+  "changed_paths": [
+    "scripts/route-task.ps1",
+    "scripts/doctor.ps1",
+    "routing-policies/staged-balanced.json",
+    "schemas/routing-policy.schema.json",
+    "schemas/route-receipt.schema.json",
+    "schemas/regulated-data-approval.schema.json",
+    "tests/schema/fixtures/route-receipt.valid.json",
+    "tests/schema/fixtures/regulated-data-approval.valid.json",
+    "tools/schema-validator/bindings.json",
+    "tools/schema-validator/mutation-corpus.json",
+    "tests/integration/model-routing.tests.ps1",
+    "tests/adversarial/regulated-approval.tests.ps1",
+    "tests/run-focused.ps1",
+    "scripts/validate.ps1",
+    ".github/workflows/lizard-agent-layer-ci.yml",
+    "registry/contracts.json",
+    "registry/drift-baseline.json",
+    "docs/adr/0016-regulated-data-default-review.md",
+    "docs/adr/README.md",
+    "docs/staged-execution.md",
+    "docs/enterprise-usage.md",
+    "skills/staged-execution/SKILL.md",
+    "CHANGELOG.md",
+    "docs/remediation/remediation-ledger.md",
+    "docs/remediation/claim-ledger.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0009-provider-neutral-staged-routing.md",
+    "docs/adr/0016-regulated-data-default-review.md"
+  ],
+  "migration": {
+    "disposition": "migration-required",
+    "note": "Consumers of route receipt schema v1 must accept the new required reason_codes field; regulated routes that previously proceeded now require human review."
+  },
+  "compatibility": {
+    "impact": "breaking",
+    "note": "Regulated data no longer follows ordinary technical routes, and route receipts add required stable reason codes."
+  }
+}

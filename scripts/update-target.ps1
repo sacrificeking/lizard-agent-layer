@@ -4,6 +4,8 @@
   [string]$Profile,
   [string[]]$Harnesses,
   [string[]]$Packs,
+  [ValidateSet('curated', 'private-episodic', 'off')]
+  [string]$MemoryMode,
   [string]$RoutingPolicy,
   [ValidateSet('inherit-current', 'inventory-routing')]
   [string]$ModelMode,
@@ -88,6 +90,7 @@ function Format-CommandLine {
   if (-not [string]::IsNullOrWhiteSpace($SelectedProfile)) { $parts.Add(('-Profile {0}' -f $SelectedProfile)) | Out-Null }
   if ($SelectedHarnesses.Count -gt 0) { $parts.Add(('-Harnesses {0}' -f ($SelectedHarnesses -join ','))) | Out-Null }
   if ($SelectedPacks.Count -gt 0) { $parts.Add(('-Packs {0}' -f ($SelectedPacks -join ','))) | Out-Null }
+  $parts.Add(('-MemoryMode {0}' -f $SelectedMemoryMode)) | Out-Null
   if (-not [string]::IsNullOrWhiteSpace($SelectedRoutingPolicy)) { $parts.Add(('-RoutingPolicy {0}' -f $SelectedRoutingPolicy)) | Out-Null }
   if (-not [string]::IsNullOrWhiteSpace($SelectedModelMode)) { $parts.Add(('-ModelMode {0}' -f $SelectedModelMode)) | Out-Null }
   if (-not [string]::IsNullOrWhiteSpace($SelectedModelInventory)) { $parts.Add(('-ModelInventory "{0}"' -f $SelectedModelInventory)) | Out-Null }
@@ -158,6 +161,7 @@ function New-UpdatePlanMarkdown {
   $lines.Add(('- Harnesses: `{0}`' -f (Format-ListValue $SelectedHarnesses))) | Out-Null
   $lines.Add(('- Requested packs: `{0}`' -f (Format-ListValue $SelectedPacks))) | Out-Null
   $lines.Add(('- Installed expanded packs: `{0}`' -f (Format-ListValue $InstalledExpandedPacks))) | Out-Null
+  $lines.Add(('- Memory mode: `{0}` -> `{1}`' -f $InstalledMemoryMode, $SelectedMemoryMode)) | Out-Null
   $lines.Add(('- Routing policy: `{0}`' -f $SelectedRoutingPolicy)) | Out-Null
   $lines.Add(('- Model mode: `{0}`' -f $SelectedModelMode)) | Out-Null
   $lines.Add(('- Daily use: {0}' -f $(if ($SelectedModelMode -eq 'inherit-current') { 'Submit ordinary task prompts; the active IDE model completes all stages without picker changes.' } else { 'Submit ordinary task prompts; the configured automatic runtime selects models without manual picker changes.' }))) | Out-Null
@@ -175,12 +179,13 @@ function New-UpdatePlanMarkdown {
   } else {
     $lines.Add('- Preview only. No target project files are changed by this update plan.') | Out-Null
   }
-  $lines.Add('- The update reuses the installed profile, requested packs, and harnesses unless this command overrides them.') | Out-Null
+  $lines.Add('- The update reuses the installed profile, requested packs, harnesses, and memory mode unless this command overrides them.') | Out-Null
   $lines.Add('- Without `-ForceManaged`, existing target files are preserved and missing/generated layer files are repaired.') | Out-Null
   $lines.Add('- With `-ForceManaged`, generated layer artifacts may be replaced from the current layer after reviewing this plan; unowned root instruction files remain merge-reviewed.') | Out-Null
   $lines.Add('- Existing project instruction files can still produce sidecar merge suggestions instead of silent edits, depending on adapter policy.') | Out-Null
   $lines.Add('- Schema v2 manifests migrate conservatively to v4; ambiguous legacy files become user-owned and are not force-refreshed. Schema v3 records migrate as active.') | Out-Null
-  $lines.Add('- Deselected artifacts retain ownership evidence as retired-present or retired-missing and are never deleted by update.') | Out-Null
+  $lines.Add('- Deselected non-memory artifacts retain ownership evidence as retired-present or retired-missing and are never deleted by update.') | Out-Null
+  $lines.Add('- An explicit memory-mode transition may remove only unchanged, identity-bound layer-owned memory artifacts; modified or unknown content blocks the update before mutation.') | Out-Null
   $lines.Add('- A newer installed layer version requires both `-AllowDowngrade` and `-HumanApproved`.') | Out-Null
   $lines.Add('- After apply, manifest diff is run again in strict mode and an update-history JSONL entry is appended in `.agent/`.') | Out-Null
   $lines.Add('') | Out-Null
@@ -258,11 +263,16 @@ $InstalledManifestSchema = if ($null -ne $Manifest.schema_version) { try { [int]
 if ($InstalledManifestSchema -lt 2) { throw "MANIFEST_SCHEMA_UNSUPPORTED: Schema $InstalledManifestSchema is older than minimum readable schema 2." }
 if ($InstalledManifestSchema -gt 4) { throw "MANIFEST_READER_TOO_OLD: Target schema $InstalledManifestSchema is newer than supported schema 4." }
 if ($Manifest.minimum_reader_schema_version -and [int]$Manifest.minimum_reader_schema_version -gt 4) { throw "MANIFEST_READER_TOO_OLD: Target requires reader schema $($Manifest.minimum_reader_schema_version)." }
+if ($InstalledManifestSchema -ge 4 -and ($Manifest.PSObject.Properties.Name -notcontains 'memory_mode' -or [string]::IsNullOrWhiteSpace([string]$Manifest.memory_mode))) { throw 'MEMORY_MODE_MANIFEST_INVALID: Schema-v4 manifest is missing memory_mode.' }
 try { $null = [Version]$CurrentVersion } catch { throw "VERSION_FORMAT_INVALID: Current layer version '$CurrentVersion' is not a supported semantic version." }
 try { $null = [Version]$InstalledVersion } catch { throw "VERSION_FORMAT_INVALID: Installed layer version '$InstalledVersion' is not a supported semantic version." }
 $SelectedProfile = if (-not [string]::IsNullOrWhiteSpace($Profile)) { $Profile } elseif ($Manifest.profile) { [string]$Manifest.profile } elseif ($ProfileDoc.profile) { [string]$ProfileDoc.profile } else { 'standard' }
 $SelectedHarnesses = if ($Harnesses -and $Harnesses.Count -gt 0) { Expand-ValueList $Harnesses } elseif ($Manifest.harnesses) { Expand-ValueList $Manifest.harnesses } elseif ($ProfileDoc.harnesses) { Expand-ValueList $ProfileDoc.harnesses } else { @() }
 $SelectedPacks = if ($Packs -and $Packs.Count -gt 0) { Expand-ValueList $Packs } elseif ($Manifest.requested_packs) { Expand-ValueList $Manifest.requested_packs } elseif ($ProfileDoc.requestedPacks) { Expand-ValueList $ProfileDoc.requestedPacks } elseif ($Manifest.packs) { Expand-ValueList $Manifest.packs } else { @() }
+$InstalledMemoryMode = if (-not [string]::IsNullOrWhiteSpace([string]$Manifest.memory_mode)) { [string]$Manifest.memory_mode } elseif (-not [string]::IsNullOrWhiteSpace([string]$ProfileDoc.memoryMode)) { [string]$ProfileDoc.memoryMode } else { $null }
+if ($InstalledMemoryMode -notin @('curated', 'private-episodic', 'off')) { throw "MEMORY_MODE_MANIFEST_INVALID: Unsupported or missing installed memory mode '$InstalledMemoryMode'." }
+$SelectedMemoryMode = if (-not [string]::IsNullOrWhiteSpace($MemoryMode)) { $MemoryMode } else { $InstalledMemoryMode }
+$MemoryTransitionName = if ($InstalledMemoryMode -eq $SelectedMemoryMode) { 'none' } else { "$InstalledMemoryMode->$SelectedMemoryMode" }
 $SelectedRoutingPolicy = if (-not [string]::IsNullOrWhiteSpace($RoutingPolicy)) { $RoutingPolicy.Trim() } elseif ($Manifest.routing_policy) { [string]$Manifest.routing_policy } elseif ($ProfileDoc.routingPolicy) { [string]$ProfileDoc.routingPolicy } else { 'staged-balanced' }
 if ($SelectedRoutingPolicy -notmatch '^[a-z0-9][a-z0-9-]{0,62}$') { throw "Invalid routing policy '$SelectedRoutingPolicy'." }
 $SelectedModelMode = if (-not [string]::IsNullOrWhiteSpace($ModelMode)) { $ModelMode } elseif ($Manifest.model_mode) { [string]$Manifest.model_mode } elseif ($ProfileDoc.modelMode) { [string]$ProfileDoc.modelMode } else { 'inherit-current' }
@@ -299,6 +309,9 @@ function Get-UpdatePlanOptions {
     profile = $SelectedProfile
     harnesses = @($SelectedHarnesses | Sort-Object -Unique)
     requested_packs = @($SelectedPacks | Sort-Object -Unique)
+    previous_memory_mode = $InstalledMemoryMode
+    memory_mode = $SelectedMemoryMode
+    memory_transition = $MemoryTransitionName
     routing_policy = $SelectedRoutingPolicy
     model_mode = $SelectedModelMode
     model_inventory = $SelectedModelInventory
@@ -357,6 +370,7 @@ function Get-InstallPlanArguments {
   )
   if ($SelectedHarnesses.Count -gt 0) { $args += '-Harnesses'; $args += ($SelectedHarnesses -join ',') }
   if ($SelectedPacks.Count -gt 0) { $args += '-Packs'; $args += ($SelectedPacks -join ',') }
+  $args += '-MemoryMode'; $args += $SelectedMemoryMode
   $args += '-RoutingPolicy'; $args += $SelectedRoutingPolicy
   $args += '-ModelMode'; $args += $SelectedModelMode
   if ($SelectedModelInventory) { $args += '-ModelInventory'; $args += $SelectedModelInventory }
@@ -414,7 +428,7 @@ if (-not $Apply) {
   $installPreviewArgs = Get-InstallPlanArguments -CanonicalPath $installCanonicalPlanPath
   $installPreviewOutput = & $PowerShellHost @installPreviewArgs 2>&1 | Out-String
   if ($LASTEXITCODE -ne 0) { throw "INSTALL_PLAN_PREVIEW_FAILED: $installPreviewOutput" }
-  $installPlanSha256 = (Get-FileHash -LiteralPath $installCanonicalPlanPath -Algorithm SHA256).Hash.ToLowerInvariant()
+  $installPlanSha256 = Get-SafeFileHash -AuthorizedRoot (Split-Path -Parent $installCanonicalPlanPath) -Path $installCanonicalPlanPath
   $installApprovalPlan = Read-LizardApprovedPlan -Path $installCanonicalPlanPath -ExpectedSha256 $installPlanSha256 -ExpectedOperationKind install
   $updatePlan = New-UpdatePlanMarkdown -DiffReport $preDiff -RetiredArtifacts @($installApprovalPlan.intent.options.retired_artifacts)
   Set-SafeContent -AuthorizedRoot $planParent -Path $effectivePlanPath -Value $updatePlan
@@ -448,11 +462,14 @@ if ($Apply) {
       from_version = $InstalledVersion
       to_version = $CurrentVersion
       from_manifest_schema = $InstalledManifestSchema
-      to_manifest_schema = 3
+      to_manifest_schema = 4
       version_relation_before = $VersionRelation
       profile = $SelectedProfile
       requested_packs = @($SelectedPacks)
       harnesses = @($SelectedHarnesses)
+      previous_memory_mode = $InstalledMemoryMode
+      memory_mode = $SelectedMemoryMode
+      memory_transition = $MemoryTransitionName
       routing_policy = $SelectedRoutingPolicy
       model_mode = $SelectedModelMode
       model_inventory = $SelectedModelInventory
@@ -496,10 +513,13 @@ $report = [ordered]@{
   current_layer_version = $CurrentVersion
   version_relation = $VersionRelation
   installed_manifest_schema = $InstalledManifestSchema
-  target_manifest_schema = 3
+  target_manifest_schema = 4
   profile = $SelectedProfile
   harnesses = @($SelectedHarnesses)
   requested_packs = @($SelectedPacks)
+  previous_memory_mode = $InstalledMemoryMode
+  memory_mode = $SelectedMemoryMode
+  memory_transition = $MemoryTransitionName
   routing_policy = $SelectedRoutingPolicy
   model_mode = $SelectedModelMode
   model_inventory = $SelectedModelInventory
@@ -534,6 +554,7 @@ Write-Status "Version relation: $VersionRelation"
 Write-Status "Profile: $SelectedProfile"
 Write-Status "Harnesses: $(Format-ListValue $SelectedHarnesses)"
 Write-Status "Requested packs: $(Format-ListValue $SelectedPacks)"
+Write-Status "Memory mode: $InstalledMemoryMode -> $SelectedMemoryMode"
 Write-Status "Routing policy: $SelectedRoutingPolicy"
 Write-Status "Model mode: $SelectedModelMode"
 Write-Status "Daily use: $(if ($SelectedModelMode -eq 'inherit-current') { 'Submit normal task prompts; keep the current IDE model.' } else { 'Submit normal task prompts; the configured runtime selects models automatically.' })"

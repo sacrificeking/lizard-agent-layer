@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "transactional-uninstall",
+  "date": "2026-08-22",
+  "summary": "Add the exact-plan-bound, preview-first, transactional uninstall lifecycle and deletion evidence.",
+  "changed_paths": [
+    "scripts/Lizard.Plan.psm1",
+    "scripts/Lizard.SafeFs.psm1",
+    "scripts/Lizard.Transaction.psm1",
+    "scripts/install.ps1",
+    "scripts/uninstall.ps1",
+    "scripts/native/Lizard.WindowsHandleFs.cs",
+    "scripts/native/Lizard.UnixHandleFs.cs",
+    "schemas/operation-plan.schema.json",
+    "schemas/uninstall-receipt.schema.json",
+    "tests/unit/plan.tests.ps1",
+    "tests/unit/safe-fs.tests.ps1",
+    "tests/unit/transaction-primitives.tests.ps1",
+    "tests/integration/uninstall.tests.ps1",
+    "tests/integration/uninstall-install-roundtrip.tests.ps1",
+    "tests/adversarial/uninstall-tamper.tests.ps1",
+    "tests/adversarial/handle-bound-mutation.tests.ps1",
+    "tests/run-focused.ps1",
+    "tests/schema/fixtures/operation-plan-uninstall.valid.json",
+    "tests/schema/fixtures/uninstall-receipt.valid.json",
+    "tools/schema-validator/bindings.json",
+    "tools/schema-validator/mutation-corpus.json",
+    "registry/contracts.json",
+    "registry/drift-baseline.json",
+    "scripts/validate.ps1",
+    ".github/workflows/lizard-agent-layer-ci.yml",
+    "docs/adr/0014-transactional-uninstall.md",
+    "docs/adr/README.md",
+    "UNINSTALL.md",
+    "CHANGELOG.md",
+    "docs/remediation/remediation-ledger.md",
+    "docs/remediation/claim-ledger.md"
+  ],
+  "decision_records": [
+    "docs/adr/0002-filesystem-and-report-containment.md",
+    "docs/adr/0003-ownership-and-manifest-identity.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0006-transaction-and-recovery-semantics.md",
+    "docs/adr/0010-exact-plan-approval-binding.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0013-handle-bound-filesystem-access.md",
+    "docs/adr/0014-transactional-uninstall.md"
+  ],
+  "migration": {
+    "disposition": "migration-required",
+    "note": "Existing install and update plans remain readable; uninstall plans require readers that understand removal identity binding."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "The new operation and target action are additive, while unsupported older readers reject them closed."
+  }
+}

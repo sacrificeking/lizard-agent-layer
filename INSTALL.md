@@ -33,7 +33,7 @@ Resolve the path and confirm it is the intended repository root. Do not use the 
 Run:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath <absolute-target-path> -Json
+pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath <absolute-target-path> -ApprovedHarnesses codex -Json
 ```
 
 Summarize detected stack, size, risk signals, existing instruction files, recommended profile, packs, skills, and harnesses. Distinguish detected facts from recommendations.
@@ -74,8 +74,8 @@ Explain why every recommended pack applies. Do not add a pack merely because it 
 ### Memory
 
 - `curated`: recommended; stable preferences, decisions, lessons, and working handoff.
-- `private-episodic`: permits local raw history but keeps it ignored and private.
-- `off`: for repositories where project memory is not permitted.
+- `private-episodic`: adds a managed episodic seed under a recursively ignored local directory; export or move changed/additional content before switching away.
+- `off`: creates no `.agent/memory` namespace, installs no memory policy, and rejects operational managed-memory references or writes.
 
 Never place credentials, customer records, regulated data, private incidents, or unreleased vulnerability details in memory.
 
@@ -112,7 +112,7 @@ Ask the user to correct this record. Do not infer approval from silence.
 Build the command with the confirmed values:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -RoutingPolicy <routing-policy> -ModelMode inherit-current -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -MemoryMode <curated|private-episodic|off> -RoutingPolicy <routing-policy> -ModelMode inherit-current -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
 ```
 
 Omit `-Packs` when none were selected. Review the console output and plan report. If existing instruction files require integration, generate metadata-only merge suggestions:
@@ -134,7 +134,7 @@ Record the canonical plan path and independently verify or retain its lowercase 
 Only an explicit approval permits:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -RoutingPolicy <routing-policy> -ModelMode inherit-current -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -MemoryMode <curated|private-episodic|off> -RoutingPolicy <routing-policy> -ModelMode inherit-current -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
 ```
 
 Do not add `-Force` or `-ForceManaged` during initial installation.
@@ -151,6 +151,48 @@ pwsh -NoProfile -File .\scripts\manifest-diff.ps1 -TargetPath <absolute-target-p
 If loop engineering was selected, initialize a specific loop only after a separate preview and approval. Do not initialize L2 merely because the pack was installed.
 
 Conclude with the installed version, manifest path, selected profile, packs, harnesses, manual merges still required, verification results, and the command for a future update preview.
+
+## Developer Quick Reference & CLI Cheat Sheet
+
+For experienced developers who prefer running direct commands without the interactive AI prompt:
+
+### Quick 1-Liner (Auto-clones latest from GitHub):
+```powershell
+if (-not (Test-Path "$HOME/.lizard-agent-layer")) { git clone https://github.com/sacrificeking/lizard-agent-layer.git "$HOME/.lizard-agent-layer" } else { git -C "$HOME/.lizard-agent-layer" pull --quiet }
+pwsh -File "$HOME/.lizard-agent-layer/scripts/install.ps1" -TargetPath "." -Profile standard -Harnesses cursor,github-copilot,codex -Apply -HumanApproved
+```
+
+### Standard Local Installation (Cursor + VS Code / Copilot)
+```powershell
+# 1. Preview installation (safe, dry-run)
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile standard -Harnesses cursor,github-copilot,codex -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
+
+# 2. Apply installation
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile standard -Harnesses cursor,github-copilot,codex -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 <sha256-from-preview> -HumanApproved
+
+# 3. Verify health
+pwsh -NoProfile -File .\scripts\doctor.ps1 -TargetPath "C:\path\to\your-project" -Strict
+```
+
+### Full-Stack Supabase / React / Finance Stack
+```powershell
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile supabase-react-finance -Harnesses cursor,claude-code,gemini -Packs frontend-product,supabase-react,security-hardening -Apply -HumanApproved
+```
+
+### Future Updates & Modifications
+```powershell
+# Preview update against latest layer source
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath "C:\path\to\your-project" -OutputDir .\.tmp\update-plan
+
+# Apply update
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath "C:\path\to\your-project" -OutputDir .\.tmp\update-plan -Apply -ApprovedPlanPath .\.tmp\update-plan\update-plan.json -ApprovedPlanSha256 <sha256-from-preview> -HumanApproved
+```
+
+### Diagnostic Health Checks
+```powershell
+pwsh -NoProfile -File .\scripts\doctor.ps1 -TargetPath "C:\path\to\your-project" -Strict
+pwsh -NoProfile -File .\scripts\manifest-diff.ps1 -TargetPath "C:\path\to\your-project" -Strict
+```
 
 ## Stop Conditions
 

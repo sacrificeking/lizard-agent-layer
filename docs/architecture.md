@@ -51,6 +51,7 @@ A target project may receive:
     _index.md
     _manifest.jsonl
     <skill>/SKILL.md
+    <skill>/skill.json
 
 AGENTS.md or AGENTS.lizard-agent-layer.md       # Codex/generic
 CLAUDE.md or CLAUDE.lizard-agent-layer.md       # Claude Code

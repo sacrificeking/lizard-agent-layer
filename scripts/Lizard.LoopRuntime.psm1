@@ -4,6 +4,7 @@ Import-Module (Join-Path $PSScriptRoot 'Lizard.SafeFs.psm1')
 Import-Module (Join-Path $PSScriptRoot 'Lizard.Json.psm1')
 Import-Module (Join-Path $PSScriptRoot 'Lizard.LoopEvidence.psm1')
 Import-Module (Join-Path $PSScriptRoot 'Lizard.Transaction.psm1')
+Import-Module (Join-Path $PSScriptRoot 'Lizard.Trust.psm1')
 
 function New-LizardLoopRuntimeException {
   param([string]$Code, [string]$Message)
@@ -255,7 +256,7 @@ function Invoke-LizardLoopStart {
 
 function Invoke-LizardLoopFinish {
   [CmdletBinding()]
-  param($Context, [ValidateSet('completed', 'failed')][string]$Outcome, [string]$RunId, [string]$Actor, [int]$ActualTokens, [string]$Summary, [string]$VerifierEvidencePath, [DateTime]$Now, [int]$FailAfterMutation = 0)
+  param($Context, [ValidateSet('completed', 'failed')][string]$Outcome, [string]$RunId, [string]$Actor, [int]$ActualTokens, [string]$Summary, [string]$VerifierEvidencePath, [string]$TrustStorePath, [string]$TrustStoreSha256, [string]$TrustChallengePath, [string]$TrustChallengeSha256, [string]$LifecycleTrustStorePath, [string]$LifecycleTrustStoreSha256, [string]$LifecycleChallengePath, [string]$LifecycleChallengeSha256, [string]$ReplayLedgerPath, [DateTime]$Now, [int]$FailAfterMutation = 0)
   if ([string]::IsNullOrWhiteSpace($Actor)) { throw (New-LizardLoopRuntimeException -Code 'LOOP_ACTOR_REQUIRED' -Message 'Actor is required.') }
   $documents = Get-LizardLoopRuntimeDocuments -Context $Context
   Test-LizardLoopEventChain -Context $Context | Out-Null
@@ -268,13 +269,32 @@ function Invoke-LizardLoopFinish {
   $verifierHash = $null
   if ($Outcome -eq 'completed' -and [string]$Context.readiness_level -eq 'L2') {
     if ([string]::IsNullOrWhiteSpace($VerifierEvidencePath)) { throw (New-LizardLoopRuntimeException -Code 'LOOP_VERIFIER_REQUIRED' -Message 'L2 completion requires verifier evidence.') }
-    $envelope = Read-LizardEvidenceEnvelope -Path $VerifierEvidencePath -SchemaVersion 1
+    $envelope = Read-LizardSignedEvidenceFile -Path $VerifierEvidencePath
     if ([string]$envelope.payload.effective_status -ne 'PASS') { throw (New-LizardLoopRuntimeException -Code 'LOOP_VERIFIER_REJECTED' -Message "Verifier status is '$($envelope.payload.effective_status)', expected PASS.") }
+    foreach ($required in @(@{ value = $TrustStorePath; label = 'TrustStorePath' }, @{ value = $TrustStoreSha256; label = 'TrustStoreSha256' }, @{ value = $TrustChallengePath; label = 'TrustChallengePath' }, @{ value = $TrustChallengeSha256; label = 'TrustChallengeSha256' }, @{ value = $LifecycleTrustStorePath; label = 'LifecycleTrustStorePath' }, @{ value = $LifecycleTrustStoreSha256; label = 'LifecycleTrustStoreSha256' }, @{ value = $LifecycleChallengePath; label = 'LifecycleChallengePath' }, @{ value = $LifecycleChallengeSha256; label = 'LifecycleChallengeSha256' }, @{ value = $ReplayLedgerPath; label = 'ReplayLedgerPath' })) {
+      if ([string]::IsNullOrWhiteSpace([string]$required.value)) { throw (New-LizardLoopRuntimeException -Code 'LOOP_TRUST_INPUT_REQUIRED' -Message "$($required.label) is required for L2 completion.") }
+    }
     if ([string]$envelope.payload.operation_id -ne [string]$run.operation_id) { throw (New-LizardLoopRuntimeException -Code 'LOOP_VERIFIER_OPERATION_MISMATCH' -Message 'Verifier evidence belongs to another lifecycle operation.') }
     $evidenceRoot = [System.IO.Path]::GetFullPath([string]$envelope.payload.target_root)
     if (-not $evidenceRoot.Equals([string]$Context.target_root, (Get-LizardPathComparison))) { throw (New-LizardLoopRuntimeException -Code 'LOOP_VERIFIER_TARGET_MISMATCH' -Message 'Verifier evidence belongs to another target.') }
     if ([bool]$envelope.payload.auto_merge -or -not [bool]$envelope.payload.human_merge_review_required) { throw (New-LizardLoopRuntimeException -Code 'LOOP_VERIFIER_POLICY_INVALID' -Message 'Verifier evidence violates no-auto-merge policy.') }
-    $verifierHash = [string]$envelope.payload_hash
+    $binding = Get-LizardVerifierTrustBinding -OperationId ([string]$run.operation_id) -LifecycleHash ([string]$envelope.payload.lifecycle_hash) -VerificationPlanSha256 ([string]$envelope.payload.verification_plan_sha256) -TargetRoot ([string]$Context.target_root)
+    $trustRead = Read-LizardTrustStore -Path $TrustStorePath -ExpectedSha256 $TrustStoreSha256 -Now $Now
+    $challengeRead = Read-LizardTrustChallenge -Path $TrustChallengePath -ExpectedSha256 $TrustChallengeSha256 -Now $Now
+    $verified = Test-LizardSignedEvidenceEnvelope -Envelope $envelope -TrustStoreRead $trustRead -ChallengeRead $challengeRead -ExpectedPayloadKind 'verifier-evidence' -ExpectedPurpose 'loop-completion' -ExpectedSubject ([string]$run.operation_id) -ExpectedBindingSha256 $binding -RequiredRole 'verifier' -Now $Now
+    if ([string]$verified.principal_id -ne [string]$envelope.payload.verifier) { throw (New-LizardLoopRuntimeException -Code 'LOOP_VERIFIER_IDENTITY_MISMATCH' -Message 'Verifier payload identity is not the authenticated signer principal.') }
+    if ([string]$envelope.payload.implementer -ne $Actor) { throw (New-LizardLoopRuntimeException -Code 'LOOP_IMPLEMENTER_IDENTITY_MISMATCH' -Message 'Completion actor does not match the verifier-reviewed implementer.') }
+    if ([string]$verified.principal_id -eq $Actor) { throw (New-LizardLoopRuntimeException -Code 'LOOP_ROLE_SEPARATION_INVALID' -Message 'Authenticated verifier and implementer identities must differ.') }
+    $lifecycleEnvelope = Read-LizardSignedEvidenceFile -Path ([string]$envelope.payload.lifecycle_path)
+    if ([string]$lifecycleEnvelope.payload_sha256 -ne [string]$envelope.payload.lifecycle_hash -or [string]$lifecycleEnvelope.payload.operation_id -ne [string]$run.operation_id) { throw (New-LizardLoopRuntimeException -Code 'LOOP_LIFECYCLE_BINDING_MISMATCH' -Message 'Signed lifecycle does not match verifier evidence and operation.') }
+    $lifecycleTime = ConvertTo-LizardLoopDateUtc -Value $lifecycleEnvelope.issued_at
+    $lifecycleTrustRead = Read-LizardTrustStore -Path $LifecycleTrustStorePath -ExpectedSha256 $LifecycleTrustStoreSha256
+    $lifecycleChallengeRead = Read-LizardTrustChallenge -Path $LifecycleChallengePath -ExpectedSha256 $LifecycleChallengeSha256 -Now $lifecycleTime
+    $lifecycleBinding = Get-LizardLifecycleTrustBinding -OperationId ([string]$run.operation_id) -TargetRoot ([string]$Context.target_root) -WorktreeRoot ([string]$lifecycleEnvelope.payload.worktree_root) -Branch ([string]$lifecycleEnvelope.payload.branch) -BaseSha ([string]$lifecycleEnvelope.payload.base_sha)
+    $verifiedLifecycle = Test-LizardSignedEvidenceEnvelope -Envelope $lifecycleEnvelope -TrustStoreRead $lifecycleTrustRead -ChallengeRead $lifecycleChallengeRead -ExpectedPayloadKind 'worktree-lifecycle' -ExpectedPurpose 'worktree-registration' -ExpectedSubject ([string]$run.operation_id) -ExpectedBindingSha256 $lifecycleBinding -RequiredRole 'implementer' -Now $lifecycleTime
+    if ([string]$verifiedLifecycle.principal_id -ne $Actor -or [string]$verifiedLifecycle.principal_id -ne [string]$envelope.payload.authenticated_implementer) { throw (New-LizardLoopRuntimeException -Code 'LOOP_IMPLEMENTER_IDENTITY_MISMATCH' -Message 'Completion actor is not the authenticated lifecycle implementer.') }
+    Use-LizardReplayLedger -LedgerPath $ReplayLedgerPath -EnvelopeId $verified.envelope_id -Nonce $verified.nonce -Purpose 'loop-completion' -Now $Now | Out-Null
+    $verifierHash = [string]$envelope.payload_sha256
   }
   $actual = if ($ActualTokens -lt 0) { 0 } else { $ActualTokens }
   $state.budget_window.tokens_used = [Math]::Max(0, [int]$state.budget_window.tokens_used - [int]$run.token_estimate + $actual)

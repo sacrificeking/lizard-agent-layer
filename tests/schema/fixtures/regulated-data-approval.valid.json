@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "regulated-data-approval",
+  "approval_id": "legal-ai-2026-0042",
+  "issuer_kind": "organization",
+  "organization_id": "example-org",
+  "approval_owner": "privacy-office",
+  "approver": "privacy-review-board",
+  "decision_reference": "GRC-2026-0042",
+  "status": "approved",
+  "valid_from": "2026-08-01T00:00:00Z",
+  "expires_at": "2027-08-01T00:00:00Z",
+  "provider": "vendor-zeta",
+  "model": "vendor-zeta/build-plus@2026-07",
+  "harness": "codex",
+  "purpose": "implementation-review",
+  "data_class": "regulated",
+  "region": "eu",
+  "runtime_configuration_fingerprint": "fixture-codex-config-v1",
+  "phases": ["strategy", "execution", "verification"],
+  "risk_levels": ["low", "medium", "high"]
+}

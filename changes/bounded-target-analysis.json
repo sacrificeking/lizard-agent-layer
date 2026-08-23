@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": "bounded-target-analysis",
+  "date": "2026-08-22",
+  "summary": "Make target analysis fail closed at filesystem boundaries and expose deterministic evidence, calibration limits, approved harnesses, and portable invocations.",
+  "changed_paths": [
+    "scripts/Lizard.SafeFs.psm1",
+    "scripts/analyze-target.ps1",
+    "schemas/target-analysis.schema.json",
+    "tests/schema/fixtures/target-analysis.valid.json",
+    "tests/adversarial/analyzer-hardening.tests.ps1",
+    "tests/smoke.ps1",
+    "tests/run-focused.ps1",
+    "tools/schema-validator/bindings.json",
+    "tools/schema-validator/mutation-corpus.json",
+    "scripts/validate.ps1",
+    ".github/workflows/lizard-agent-layer-ci.yml",
+    "registry/contracts.json",
+    "registry/drift-baseline.json",
+    "docs/adr/0020-bounded-target-analysis.md",
+    "docs/adr/README.md",
+    "docs/target-analysis.md",
+    "docs/packs.md",
+    "docs/getting-started.md",
+    "INSTALL.md",
+    "README.md",
+    "docs/remediation/remediation-ledger.md",
+    "docs/remediation/claim-ledger.md",
+    "CHANGELOG.md"
+  ],
+  "decision_records": [
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0013-handle-bound-filesystem-access.md",
+    "docs/adr/0020-bounded-target-analysis.md"
+  ],
+  "migration": {
+    "disposition": "migration-required",
+    "note": "Analyzer automation that wants non-default harnesses must pass its organization-approved allowlist through -ApprovedHarnesses and consume target-analysis schema version 2."
+  },
+  "compatibility": {
+    "impact": "breaking",
+    "note": "The analyzer no longer treats profile defaults or detected target instruction files as harness authorization; JSON output adds a versioned evidence and invocation contract."
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": 2,
+  "target": "C:\\work\\example",
+  "recommendedProfile": "standard",
+  "riskLevel": "medium",
+  "recommendedHarnesses": ["codex"],
+  "harnessApprovalSource": "explicit-input",
+  "detectedHarnesses": ["claude-code"],
+  "recommendedSkills": ["git-safety", "research-audit"],
+  "recommendedPacks": ["frontend-product"],
+  "signals": ["node", "react"],
+  "evidence": [
+    { "id": "manifest:package.json", "signal": "node", "kind": "manifest", "strength": "strong" },
+    { "id": "manifest:package.json#react", "signal": "react", "kind": "manifest", "strength": "strong" }
+  ],
+  "negativeSignals": ["finance-path-groups-below-threshold"],
+  "reasons": ["package.json is a valid bounded manifest."],
+  "warnings": [],
+  "calibration": {
+    "method": "deterministic-rule-evidence-v1",
+    "score_kind": "bounded-evidence-score-not-probability",
+    "evidence_score": 36,
+    "confidence": "medium",
+    "false_positive_risk": "low",
+    "false_negative_risk": "low",
+    "scan_complete": true,
+    "scanned_files": 14,
+    "fixture_matrix": "analyzer-calibration-v1"
+  },
+  "projectShape": { "monorepo": false, "nonNode": false, "highRisk": false },
+  "previewInvocation": { "executable": "pwsh", "argv": ["-NoProfile", "-File", ".\\scripts\\install.ps1", "-TargetPath", "C:\\work\\example"] },
+  "previewCommand": "pwsh -NoProfile -File .\\scripts\\install.ps1 -TargetPath C:\\work\\example"
+}

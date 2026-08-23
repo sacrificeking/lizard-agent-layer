@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "host-invocations-git-ref-validation",
+  "date": "2026-08-22",
+  "summary": "Render generated PowerShell commands through the current host abstraction and reject malformed, option-like, or expression-bearing Git references before inspection.",
+  "changed_paths": [
+    "scripts/Lizard.Host.psm1",
+    "scripts/Lizard.Git.psm1",
+    "scripts/install.ps1",
+    "scripts/analyze-target.ps1",
+    "scripts/loop-worktree.ps1",
+    "scripts/loop-verify.ps1",
+    "scripts/loop-worktree-cleanup.ps1",
+    "tests/unit/host.tests.ps1",
+    "tests/adversarial/git-ref-validation.tests.ps1",
+    "tests/adversarial/worktree-external-mutator.tests.ps1",
+    "tests/smoke.ps1",
+    "tests/run-focused.ps1",
+    "scripts/validate.ps1",
+    ".github/workflows/lizard-agent-layer-ci.yml",
+    "registry/contracts.json",
+    "registry/drift-baseline.json",
+    "docs/adr/0021-host-invocations-and-git-ref-validation.md",
+    "docs/adr/README.md",
+    "docs/compatibility.md",
+    "docs/remediation/remediation-ledger.md",
+    "docs/remediation/claim-ledger.md",
+    "CHANGELOG.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0008-loop-lifecycle-and-no-auto-merge.md",
+    "docs/adr/0010-exact-plan-approval-binding.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0013-handle-bound-filesystem-access.md",
+    "docs/adr/0015-effective-memory-modes.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0019-authenticated-evidence-trust.md",
+    "docs/adr/0020-bounded-target-analysis.md",
+    "docs/adr/0021-host-invocations-and-git-ref-validation.md"
+  ],
+  "migration": {
+    "disposition": "migration-required",
+    "note": "Regenerate display plans on their execution host and replace Git revision expressions or option-like values with HEAD, a full commit ID, or a valid ref name."
+  },
+  "compatibility": {
+    "impact": "breaking",
+    "note": "The accepted Git reference language is intentionally narrower, and generated commands now identify the current PowerShell host rather than always naming Windows PowerShell."
+  }
+}

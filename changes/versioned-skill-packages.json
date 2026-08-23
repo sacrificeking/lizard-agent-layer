@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "versioned-skill-packages",
+  "date": "2026-08-22",
+  "summary": "Package every skill with reviewed version, compatibility, dependency, permission, provenance, migration, disablement, recovery, and removal contracts plus an exact-plan-bound transactional lifecycle.",
+  "changed_paths": [
+    "skills/*/skill.json",
+    "scripts/Lizard.SkillPackage.psm1",
+    "scripts/skill-lifecycle.ps1",
+    "scripts/Lizard.Plan.psm1",
+    "scripts/install.ps1",
+    "scripts/doctor.ps1",
+    "scripts/validate.ps1",
+    "schemas/skill-package.schema.json",
+    "schemas/skill-lifecycle-state.schema.json",
+    "schemas/operation-plan.schema.json",
+    "tests/schema/fixtures/skill-lifecycle-state.valid.json",
+    "tests/schema/fixtures/operation-plan-skill-lifecycle.valid.json",
+    "tests/integration/skill-lifecycle.tests.ps1",
+    "tests/run-focused.ps1",
+    "tools/schema-validator/bindings.json",
+    "tools/schema-validator/mutation-corpus.json",
+    ".github/workflows/lizard-agent-layer-ci.yml",
+    "registry/contracts.json",
+    "registry/drift-baseline.json",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md",
+    "docs/adr/README.md",
+    "docs/skill-packages.md",
+    "docs/architecture.md",
+    "docs/getting-started.md",
+    "docs/remediation/remediation-ledger.md",
+    "docs/remediation/claim-ledger.md",
+    "CHANGELOG.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0006-transaction-and-recovery-semantics.md",
+    "docs/adr/0008-loop-lifecycle-and-no-auto-merge.md",
+    "docs/adr/0009-provider-neutral-staged-routing.md",
+    "docs/adr/0010-exact-plan-approval-binding.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0013-handle-bound-filesystem-access.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "migration-required",
+    "note": "Regenerate and approve installation/update plans so every installed skill gains skill.json and the versioned _manifest.jsonl record. Unversioned installed skill manifests fail strict Doctor until migrated. Individual migrations are accepted only from metadata-declared source versions."
+  },
+  "compatibility": {
+    "impact": "breaking",
+    "note": "Strict validation now requires skill.json for every source package and versioned records for installed skill manifests; apply remains preview-first and never adopts unmanaged skill directories."
+  }
+}

@@ -54,7 +54,7 @@ function Copy-Template {
   if ($Apply) {
     $parent = Split-Path -Parent $dest
     if ($parent -and -not (Test-Path -LiteralPath $parent)) { New-LizardTransactionalDirectory -Path $parent | Out-Null }
-    Copy-LizardTransactionalFile -Source $source -Destination $dest -Force:$CanOverwrite
+    Copy-LizardTransactionalFile -SourceAuthorizedRoot $LayerRoot -Source $source -Destination $dest -Force:$CanOverwrite
     Add-Unique $Written $DestRel
   }
 }

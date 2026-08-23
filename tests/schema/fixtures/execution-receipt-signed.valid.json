@@ -1,0 +1,20 @@
+{
+  "schema_version": 2, "artifact_kind": "signed-evidence", "envelope_id": "11111111111111111111111111111111",
+  "payload_kind": "execution-receipt", "issuer_id": "example-org", "key_id": "runtime-key-01", "principal_id": "fixture/runtime-v1",
+  "issued_at": "2026-08-22T10:00:00Z", "expires_at": "2026-08-22T10:30:00Z", "purpose": "execution-attestation", "subject": "fixture-execution",
+  "nonce": "2222222222222222222222222222222222222222222222222222222222222222", "challenge_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+  "binding_sha256": "4444444444444444444444444444444444444444444444444444444444444444", "approval_ref": "approval-execution-01",
+  "payload_sha256": "5555555555555555555555555555555555555555555555555555555555555555", "signature_algorithm": "RS256",
+  "payload": {
+    "schema_version": 1, "artifact_kind": "execution-receipt", "receipt_id": "fixture-execution", "route_decision_id": "fixture-route",
+    "route_payload_sha256": "1111111111111111111111111111111111111111111111111111111111111111", "authenticated_router_id": "fixture-router",
+    "route_approval_ref": "approval-route-01", "trust_binding_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+    "created_at": "2026-07-19T12:02:00Z", "started_at": "2026-07-19T12:00:00Z", "completed_at": "2026-07-19T12:01:00Z",
+    "executor_id": "fixture/runtime-v1", "configuration_fingerprint": "fixture-runtime-config-v1", "harness": "codex",
+    "actual_model": "future-model/arbitrary-id@1", "actual_provider": "example-provider", "reasoning_setting": "normal", "attestation": "observed", "attestation_source": "fixture-runtime-api",
+    "outcome": "succeeded", "sensitivity": "metadata-only", "purpose": "execution-attestation-audit", "audience": ["operators", "auditors"],
+    "retention_class": "organization-policy-required", "content_policy": "identifiers-only", "evidence_ref": "fixture-run-123", "raw_prompt_stored": false,
+    "redaction": { "status": "not-required", "fields": [] }
+  },
+  "signature": "AQID"
+}

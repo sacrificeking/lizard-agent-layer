@@ -10,7 +10,7 @@ Use this skill when a loop output, proposed fix, update plan, release decision p
 
 Default to REJECT until evidence supports PASS. The implementer or triage agent must not grade its own work.
 
-For L2/L3 work, require the lifecycle contract produced by `scripts/loop-worktree.ps1`. Run checks through `scripts/loop-verify.ps1`; do not construct PASS packets manually.
+For L2/L3 work, require the lifecycle contract produced when `scripts/loop-worktree.ps1 -RegisterExisting` verifies an externally created clean worktree. Create and independently review a constrained plan with `scripts/new-verification-plan.ps1`, then pass its exact path/digest to `scripts/loop-verify.ps1`; do not construct PASS packets manually.
 
 ## Checks
 
@@ -23,7 +23,7 @@ For L2/L3 work, require the lifecycle contract produced by `scripts/loop-worktre
 - Reject a changed or tampered lifecycle, wrong repository or branch, detached HEAD, stale worktree state, missing command evidence, or identical implementer/verifier identities.
 - Confirm attempt counts are respected and repeated failures escalate.
 
-Use `NEEDS_REVIEW` only as a non-verdict packet. `PASS`, `WARN`, and `FAIL` require a named implementer, a distinct verifier, and at least one verification command. A PASS or WARN requires every command to exit successfully.
+Use `NEEDS_REVIEW` only as a non-verdict packet. `PASS`, `WARN`, and `FAIL` require a named implementer, a distinct verifier, and an explicitly approved constrained command plan. A PASS or WARN requires every allowlisted command to match its expected exit-code set. Never translate target prose into a shell command.
 
 ## Verdict Format
 

@@ -44,10 +44,10 @@ The installer merges pack values into the selected profile before it plans or ap
 `scripts/analyze-target.ps1` emits `recommendedPacks` and appends `-Packs ...` to the preview command when signals match known bundles.
 
 ```powershell
-pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project -Json
+pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\project -ApprovedHarnesses codex -Json
 ```
 
-Treat analyzer recommendations as a high-quality starting point. Add or remove packs when the repository has unusual constraints.
+Treat analyzer recommendations as an evidence-labelled starting point. Review weak path-group evidence, scan completeness, and qualitative error risk; add or remove packs when repository context contradicts the rules.
 
 ## Validation
 

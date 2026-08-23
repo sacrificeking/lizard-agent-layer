@@ -16,6 +16,11 @@ param(
   [string]$PreviousModel,
   [string]$PreviousProvider,
   [string]$ReceiptId,
+  [string]$RouterId,
+  [string]$TrustChallengePath,
+  [string]$TrustChallengeSha256,
+  [string]$RouterPrivateKeyPath,
+  [string]$RouterPrivateKeySha256,
   [string]$OutputPath,
   [switch]$Apply,
   [switch]$Json
@@ -24,6 +29,9 @@ param(
 $ErrorActionPreference = 'Stop'
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeReport.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Trust.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Plan.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
 $policyPath = Join-Path $TargetRoot '.agent\routing\policy.json'
@@ -129,26 +137,51 @@ if ($modelMode -notin @('inherit-current', 'inventory-routing')) { throw "ROUTE_
 $requiredCapabilityList = Expand-StringList $RequiredCapabilities
 $signalList = Expand-StringList $Signals
 $availableModelList = Expand-StringList $AvailableModels
+$allowedSignalIds = @('uncertain-ownership', 'unapproved-scope-expansion', 'security-sensitive', 'regulated-data', 'plan-deviation', 'repeated-verification-failure', 'ambiguous-requirements')
+foreach ($signal in $signalList) {
+  if ($allowedSignalIds -notcontains $signal) { throw 'ROUTE_SIGNAL_INVALID: only enumerated signal IDs are accepted.' }
+}
+foreach ($capability in $requiredCapabilityList) { Assert-LizardOpaqueIdentifier -Value $capability -ErrorCode 'ROUTE_CAPABILITY_INVALID' -MaximumLength 63 }
+foreach ($modelId in $availableModelList) { Assert-LizardOpaqueIdentifier -Value $modelId -ErrorCode 'ROUTE_AVAILABLE_MODEL_INVALID' -MaximumLength 200 }
 $reasons = New-Object System.Collections.Generic.List[string]
+$reasonCodes = New-Object System.Collections.Generic.List[string]
 $decision = 'route'
 $effectivePhase = $Phase
 
+function Add-ReasonCode {
+  param([Parameter(Mandatory)][string]$Code)
+  if (-not $reasonCodes.Contains($Code)) { $reasonCodes.Add($Code) | Out-Null }
+}
+
 if ($DataClass -eq 'secrets') {
   $decision = 'block'
+  Add-ReasonCode 'SECRETS_BLOCKED'
   $reasons.Add('Secrets are blocked before staged execution.') | Out-Null
+}
+if ($DataClass -eq 'regulated' -and $decision -eq 'route') {
+  $decision = 'human-review'
+  Add-ReasonCode 'REGULATED_APPROVAL_REQUIRED'
+  $reasons.Add('REGULATED_APPROVAL_REQUIRED: No authenticated organization-owned approval and revocation authority is available for this route.') | Out-Null
+  if ($modelMode -eq 'inherit-current') {
+    Add-ReasonCode 'REGULATED_RUNTIME_IDENTITY_UNAVAILABLE'
+    $reasons.Add('REGULATED_RUNTIME_IDENTITY_UNAVAILABLE: The active provider, model, and runtime fingerprint are not attestable in inherit-current mode.') | Out-Null
+  }
 }
 if ($decision -eq 'route') {
   $humanSignals = @($signalList | Where-Object { @($policy.escalation.human_review_signals) -contains $_ })
   if ($humanSignals.Count -gt 0) {
     $decision = 'human-review'
+    Add-ReasonCode 'HUMAN_REVIEW_SIGNAL'
     $reasons.Add("Human-review signal: $($humanSignals -join ', ').") | Out-Null
   } elseif ($AttemptCount -gt [int]$policy.escalation.max_attempts) {
     $decision = 'human-review'
+    Add-ReasonCode 'ATTEMPT_LIMIT_EXCEEDED'
     $reasons.Add("Attempt count $AttemptCount exceeds policy maximum $($policy.escalation.max_attempts).") | Out-Null
   } else {
     $strategySignals = @($signalList | Where-Object { @($policy.escalation.strategist_signals) -contains $_ })
     if ($strategySignals.Count -gt 0) {
       $effectivePhase = 'strategy'
+      Add-ReasonCode 'STRATEGY_ESCALATION'
       $reasons.Add("Returned to strategy for signal: $($strategySignals -join ', ').") | Out-Null
     }
   }
@@ -169,6 +202,8 @@ $fallbackUsed = $false
 $fallbackReason = $null
 $requestedRoles = @()
 $effectiveCapabilities = @($requiredCapabilityList)
+$runtimeSourceSha256 = ('0' * 64)
+$inventorySha256 = ('0' * 64)
 
 if ($decision -eq 'route') {
   $matchingRoutes = @($policy.routes | Where-Object {
@@ -179,6 +214,7 @@ if ($decision -eq 'route') {
   } | Sort-Object @{ Expression = { [int]$_.priority }; Descending = $true }, @{ Expression = { [string]$_.id }; Descending = $false })
   if ($matchingRoutes.Count -eq 0) {
     $decision = 'block'
+    Add-ReasonCode 'NO_MATCHING_ROUTE'
     $reasons.Add('No route matches phase, task class, risk level, and data class.') | Out-Null
   } else {
     $selectedRoute = $matchingRoutes[0]
@@ -187,6 +223,7 @@ if ($decision -eq 'route') {
 
     if ($modelMode -eq 'inherit-current') {
       $selectedRole = [string]$selectedRoute.candidate_roles[0]
+      Add-ReasonCode 'ROUTE_READY'
       $reasons.Add("Use the model already active in the harness for $(Get-RoleDisplayName -Role $selectedRole).") | Out-Null
       $reasons.Add('Continue through all phases without asking the user to change a model picker.') | Out-Null
     } else {
@@ -196,6 +233,7 @@ if ($decision -eq 'route') {
         $runtimePath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $runtimeRelative.Replace('/', '\'))
         if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf)) { throw "runtime capability file is missing: $runtimeRelative" }
         $runtime = Get-Content -LiteralPath $runtimePath -Raw | ConvertFrom-Json
+        $runtimeSourceSha256 = Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path $runtimePath
         Assert-RuntimeContract -Runtime $runtime
         $selectionCapability = [string]$runtime.selection
         $runtimeAttestation = [string]$runtime.attestation
@@ -204,6 +242,7 @@ if ($decision -eq 'route') {
         $inventoryPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $inventoryRelative.Replace('/', '\'))
         if (-not (Test-Path -LiteralPath $inventoryPath -PathType Leaf)) { throw "inventory file is missing: $inventoryRelative" }
         $inventory = Get-Content -LiteralPath $inventoryPath -Raw | ConvertFrom-Json
+        $inventorySha256 = Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path $inventoryPath
         Assert-InventoryContract -Inventory $inventory
         $duplicateIds = @($inventory.models | Group-Object { [string]$_.id } | Where-Object { $_.Count -gt 1 })
         if ($duplicateIds.Count -gt 0) { throw "inventory contains duplicate model id: $([string]$duplicateIds[0].Name)" }
@@ -241,10 +280,15 @@ if ($decision -eq 'route') {
         if ($fallbackUsed) { $fallbackReason = 'No eligible calibrated candidate was available for a primary role.' }
         $reasoningSetting = Get-ReasoningSetting -Model $selectedInventoryModel -Effort ([string]$selectedRoute.effort)
         $costTier = [string]$selectedInventoryModel.cost_tier
+        Add-ReasonCode 'ROUTE_READY'
         $reasons.Add("Recommended calibrated inventory model $selectedModel for automatic executor $runtimeExecutor and $(Get-RoleDisplayName -Role $selectedRole).") | Out-Null
-        if ($fallbackReason) { $reasons.Add($fallbackReason) | Out-Null }
+        if ($fallbackReason) {
+          Add-ReasonCode 'ROLE_FALLBACK_USED'
+          $reasons.Add($fallbackReason) | Out-Null
+        }
       } catch {
         $decision = 'block'
+        Add-ReasonCode 'INVENTORY_ROUTING_FAILED'
         $reasons.Add("Inventory routing failed closed: $($_.Exception.Message).") | Out-Null
         $reasons.Add('Use a profile with modelMode inherit-current to continue without model selection.') | Out-Null
       }
@@ -254,13 +298,45 @@ if ($decision -eq 'route') {
 
 if ([string]::IsNullOrWhiteSpace($ReceiptId)) { $ReceiptId = [Guid]::NewGuid().ToString('N') }
 if ($ReceiptId -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') { throw "ROUTE_RECEIPT_ID_INVALID: $ReceiptId" }
-if ($reasons.Count -eq 0) { $reasons.Add('Staged execution stopped before route selection.') | Out-Null }
+if ($reasons.Count -eq 0) {
+  Add-ReasonCode 'ROUTING_STOPPED'
+  $reasons.Add('Staged execution stopped before route selection.') | Out-Null
+}
 $verificationMode = if ($decision -eq 'human-review') { 'human-review' } elseif ($effectivePhase -ne 'verification' -or $decision -ne 'route') { 'not-applicable' } elseif ($modelMode -eq 'inventory-routing' -and $PreviousModel -and $selectedModel -and $selectedModel -ne $PreviousModel) { 'independent-model-preferred' } else { 'self-review' }
+foreach ($identifier in @(
+  @{ value = [string]$policy.name; code = 'ROUTE_POLICY_ID_INVALID'; max = 63; nullable = $false },
+  @{ value = if ($selectedRoute) { [string]$selectedRoute.id } else { $null }; code = 'ROUTE_ID_INVALID'; max = 63; nullable = $true },
+  @{ value = $selectedRole; code = 'ROUTE_ROLE_INVALID'; max = 63; nullable = $true },
+  @{ value = $selectedModel; code = 'ROUTE_MODEL_ID_INVALID'; max = 200; nullable = $true },
+  @{ value = $selectedProvider; code = 'ROUTE_PROVIDER_ID_INVALID'; max = 200; nullable = $true },
+  @{ value = $runtimeExecutor; code = 'ROUTE_RUNTIME_ID_INVALID'; max = 200; nullable = $true },
+  @{ value = $runtimeConfigurationFingerprint; code = 'ROUTE_RUNTIME_FINGERPRINT_INVALID'; max = 200; nullable = $true },
+  @{ value = if ($null -ne $reasoningSetting) { [string]$reasoningSetting } else { $null }; code = 'ROUTE_REASONING_ID_INVALID'; max = 200; nullable = $true }
+)) {
+  Assert-LizardOpaqueIdentifier -Value $identifier.value -ErrorCode $identifier.code -MaximumLength $identifier.max -AllowNull:([bool]$identifier.nullable)
+}
+foreach ($role in @($requestedRoles)) { Assert-LizardOpaqueIdentifier -Value ([string]$role) -ErrorCode 'ROUTE_ROLE_INVALID' -MaximumLength 63 }
+foreach ($capability in @($effectiveCapabilities)) { Assert-LizardOpaqueIdentifier -Value ([string]$capability) -ErrorCode 'ROUTE_CAPABILITY_INVALID' -MaximumLength 63 }
+$effectiveRouterId = if (-not [string]::IsNullOrWhiteSpace($RouterId)) { $RouterId } elseif (-not [string]::IsNullOrWhiteSpace($runtimeExecutor)) { $runtimeExecutor } else { 'unassigned-router' }
+Assert-LizardOpaqueIdentifier -Value $effectiveRouterId -ErrorCode 'ROUTE_ROUTER_ID_INVALID' -MaximumLength 128
+if ($Apply -and $effectiveRouterId -eq 'unassigned-router') { throw 'ROUTE_ROUTER_ID_REQUIRED: persisted route decisions require an authenticated router identity.' }
+$requestSha256 = Get-LizardPlanSha256 -InputObject ([pscustomobject][ordered]@{
+  phase = $Phase; task_class = $TaskClass; risk_level = $RiskLevel; data_class = $DataClass; required_capabilities = @($requiredCapabilityList)
+  signals = @($signalList); attempt_count = $AttemptCount; available_models = @($availableModelList); previous_model = $PreviousModel; previous_provider = $PreviousProvider
+})
+$policySha256 = Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path $policyPath
+$routeTrustBinding = Get-LizardRouteTrustBinding -TargetRoot $TargetRoot -ReceiptId $ReceiptId -RouterId $effectiveRouterId -RequestSha256 $requestSha256 -PolicySha256 $policySha256 -RuntimeSourceSha256 $runtimeSourceSha256 -InventorySha256 $inventorySha256
 
 $receipt = [ordered]@{
   schema_version = 1
   artifact_kind = 'route-decision'
   receipt_id = $ReceiptId
+  router_id = $effectiveRouterId
+  request_sha256 = $requestSha256
+  policy_sha256 = $policySha256
+  runtime_source_sha256 = $runtimeSourceSha256
+  inventory_sha256 = $inventorySha256
+  trust_binding_sha256 = $routeTrustBinding
   created_at = (Get-Date).ToUniversalTime().ToString('o')
   policy = [string]$policy.name
   model_mode = $modelMode
@@ -273,6 +349,11 @@ $receipt = [ordered]@{
   risk_level = $RiskLevel
   data_class = $DataClass
   decision = $decision
+  sensitivity = 'metadata-only'
+  purpose = 'route-decision-audit'
+  audience = @('operators', 'auditors')
+  retention_class = 'organization-policy-required'
+  content_policy = 'identifiers-only'
   route_id = if ($selectedRoute) { [string]$selectedRoute.id } else { $null }
   requested_roles = @($requestedRoles)
   selected_role = if ($selectedRole) { $selectedRole } else { $null }
@@ -287,16 +368,25 @@ $receipt = [ordered]@{
   fallback_reason = if ($fallbackReason) { $fallbackReason } else { $null }
   required_capabilities = @($effectiveCapabilities)
   signals = @($signalList)
+  reason_codes = @($reasonCodes.ToArray())
   reasons = @($reasons.ToArray())
   raw_prompt_stored = $false
+  redaction = $null
 }
+$receipt = Protect-LizardReportDocument -Document $receipt
+$persistedDocument = $receipt
 
 if ($Apply) {
+  foreach ($required in @(@{ value = $TrustChallengePath; label = 'TrustChallengePath' }, @{ value = $TrustChallengeSha256; label = 'TrustChallengeSha256' }, @{ value = $RouterPrivateKeyPath; label = 'RouterPrivateKeyPath' }, @{ value = $RouterPrivateKeySha256; label = 'RouterPrivateKeySha256' })) { if ([string]::IsNullOrWhiteSpace([string]$required.value)) { throw "ROUTE_SIGNATURE_REQUIRED: $($required.label) is required to persist a route decision." } }
+  Assert-PathOutsideRoot -Path $TrustChallengePath -ExcludedRoot $TargetRoot -Label 'TrustChallengePath'
+  Assert-PathOutsideRoot -Path $RouterPrivateKeyPath -ExcludedRoot $TargetRoot -Label 'RouterPrivateKeyPath'
+  $persistedDocument = New-LizardSignedEvidenceEnvelope -Payload ([pscustomobject]$receipt) -PayloadKind 'route-decision' -Purpose 'routing' -Subject $ReceiptId -BindingSha256 $routeTrustBinding -ChallengePath $TrustChallengePath -ChallengeSha256 $TrustChallengeSha256 -PrivateKeyPath $RouterPrivateKeyPath -PrivateKeySha256 $RouterPrivateKeySha256
+  if ([string]$persistedDocument.principal_id -ne $effectiveRouterId) { throw 'ROUTE_ROUTER_IDENTITY_MISMATCH: router_id must equal the authenticated signing principal.' }
   $receiptsRootPath = Join-Path $TargetRoot '.agent\routing\receipts\decisions'
   $receiptsRoot = Resolve-SafeRoot -Path $receiptsRootPath -RequireExisting
   $destination = if ([string]::IsNullOrWhiteSpace($OutputPath)) { Join-Path $receiptsRoot "$ReceiptId.json" } elseif ([System.IO.Path]::IsPathRooted($OutputPath)) { $OutputPath } else { Join-Path $receiptsRoot $OutputPath }
   $destination = Resolve-SafeTargetDestination -AuthorizedRoot $receiptsRoot -DestinationPath $destination
-  Set-SafeContent -AuthorizedRoot $receiptsRoot -Path $destination -Value ($receipt | ConvertTo-Json -Depth 12)
+  Set-SafeContent -AuthorizedRoot $receiptsRoot -Path $destination -Value ($persistedDocument | ConvertTo-Json -Depth 16)
 }
 
 if ($Json) {
@@ -321,6 +411,6 @@ if ($Json) {
     Write-Host "Model: $(if ($selectedModel) { $selectedModel } else { 'current IDE/agent model' })"
   }
   Write-Host 'Reason:'
-  foreach ($reason in @($reasons.ToArray())) { Write-Host "  - $reason" }
+  foreach ($reason in @($reasons.ToArray())) { Write-Host "  - $(Protect-LizardConsoleText -Text $reason)" }
   if (-not $Apply) { Write-Host 'Audit: no receipt was written. Use -Apply only when you intentionally want a metadata-only audit receipt.' }
 }

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/execution-receipt-payload.schema.json",
+  "title": "lizard-agent-layer attested execution payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artifact_kind", "receipt_id", "route_decision_id", "route_payload_sha256", "authenticated_router_id", "route_approval_ref", "trust_binding_sha256", "created_at", "started_at", "completed_at", "executor_id", "configuration_fingerprint", "harness", "actual_model", "actual_provider", "reasoning_setting", "attestation", "attestation_source", "outcome", "sensitivity", "purpose", "audience", "retention_class", "content_policy", "evidence_ref", "raw_prompt_stored", "redaction"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "execution-receipt" },
+    "receipt_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+    "route_decision_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+    "route_payload_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "authenticated_router_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@:+-]{0,127}$" },
+    "route_approval_ref": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@:+-]{0,127}$" },
+    "trust_binding_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "executor_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@:+-]{0,127}$" },
+    "configuration_fingerprint": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@:+-]{0,199}$" },
+    "harness": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "actual_model": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@:+-]{0,199}$" },
+    "actual_provider": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@:+-]{0,199}$" },
+    "reasoning_setting": { "type": ["string", "null"] },
+    "attestation": { "enum": ["observed", "attested"] },
+    "attestation_source": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@:+-]{0,127}$" },
+    "outcome": { "enum": ["succeeded", "failed", "cancelled"] },
+    "sensitivity": { "const": "metadata-only" },
+    "purpose": { "const": "execution-attestation-audit" },
+    "audience": { "type": "array", "items": { "enum": ["operators", "auditors"] }, "minItems": 1, "uniqueItems": true },
+    "retention_class": { "const": "organization-policy-required" },
+    "content_policy": { "const": "identifiers-only" },
+    "evidence_ref": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+    "raw_prompt_stored": { "const": false },
+    "redaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "fields"],
+      "properties": {
+        "status": { "enum": ["not-required", "applied"] },
+        "fields": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "redaction": {
+            "type": "object",
+            "properties": { "status": { "const": "not-required" } },
+            "required": ["status"]
+          }
+        },
+        "required": ["redaction"]
+      },
+      "then": {
+        "properties": {
+          "redaction": { "type": "object", "properties": { "fields": { "type": "array", "maxItems": 0 } } }
+        }
+      },
+      "else": {
+        "properties": {
+          "redaction": { "type": "object", "properties": { "fields": { "type": "array", "minItems": 1 } } }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/skill-lifecycle-state.schema.json",
+  "title": "lizard-agent-layer installed skill lifecycle state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "name", "version", "status", "files", "directories", "previous_version"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "version": { "$ref": "#/$defs/version" },
+    "status": { "enum": ["active", "disabled", "removed"] },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "$ref": "#/$defs/relativePath" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "directories": { "type": "array", "items": { "$ref": "#/$defs/relativePath" } },
+    "previous_version": { "oneOf": [{ "$ref": "#/$defs/version" }, { "type": "null" }] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "removed" } }, "required": ["status"] },
+      "then": { "properties": { "files": { "type": "array", "maxItems": 0 }, "directories": { "type": "array", "maxItems": 0 } } }
+    }
+  ],
+  "$defs": {
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "relativePath": { "type": "string", "minLength": 1, "maxLength": 1000, "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\\\:\\u0000-\\u001f]+$" }
+  }
+}

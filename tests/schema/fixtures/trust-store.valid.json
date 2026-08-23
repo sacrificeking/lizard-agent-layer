@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "organization_id": "example-org",
+  "keys": [
+    {
+      "issuer_id": "example-org",
+      "key_id": "verifier-key-01",
+      "principal_id": "verifier-01",
+      "roles": ["verifier"],
+      "algorithm": "RS256",
+      "status": "active",
+      "not_before": "2026-08-22T00:00:00Z",
+      "not_after": "2027-08-22T00:00:00Z",
+      "public_jwk": { "kty": "RSA", "n": "AQID", "e": "AQAB" }
+    }
+  ],
+  "revoked_key_ids": [],
+  "revoked_envelope_ids": [],
+  "revoked_nonces": []
+}

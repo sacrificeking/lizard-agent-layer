@@ -23,9 +23,11 @@ The guard is intentionally conservative: a target root or destination ancestry c
 
 The sole host-alias normalization is for an internally selected temporary root on macOS: `/var` and its descendants are converted to their canonical `/private/var` spelling before SafeFs validation. The resulting root still passes the normal linked-ancestor and mount checks. This does not permit `/var`, `/tmp`, or any other linked spelling for user-selected targets, sources, plans, reports, or arbitrary paths.
 
-Protected read consumers use the same authorized-root boundary. `Get-SafeContent`, `Get-SafeFileMetadata`, and `Get-SafeFileHash` require an existing ordinary file, reject linked terminal objects and linked ancestors, and revalidate observable file metadata after content or hash access. Loop verifier evidence and Git-reported untracked-file evidence use these primitives instead of direct `Get-Content`, `Get-Item`, or `Get-FileHash` access.
+Protected read consumers use the same authorized-root boundary. `Get-SafeContent`, `Get-SafeFileMetadata`, and `Get-SafeFileHash` open the source relative to held ancestor handles/descriptors, require an existing ordinary file, and reject linked or hard-linked terminal objects. Loop verifier evidence and Git-reported untracked-file evidence use these primitives instead of direct `Get-Content`, `Get-Item`, or `Get-FileHash` access.
 
-This is a link- and mount-aware boundary in the current process mount namespace, but it remains name-based rather than handle-bound. It does not hold an operating-system file handle across validation and access. Pre/post metadata comparison detects some changes but cannot exclude a synchronized link, mount, or ancestor swap after validation. Race-resistant mutation remains WP-01C scope.
+SafeFs exposes an executable, root-specific capability document. Full assurance requires held ancestor handles/descriptors, terminal no-follow, physical file and volume/mount identity, atomic create-new and replacement, and relative deletion. Windows NTFS/ReFS uses parent-relative `NtCreateFile` and `NtSetInformationFile`. Linux uses `openat`, `statx`, `linkat`, `renameat`, and `unlinkat`; macOS uses the corresponding `*at` operations with `fstat`/`fstatfs`. Content is committed through a unique stage created relative to the held destination parent. Unsupported backends fail with `SAFEFS_HANDLE_MUTATION_UNAVAILABLE`; no SafeFs mutation helper falls back to the older name-based path.
+
+This is not yet an H-03 closure. Windows PowerShell 5.1 behavior is locally verified for protected reads, writes, copies, initialization, transactions, plans, deletion, hard-link rejection, and synchronized ancestor swaps. The Unix interop source compiles and its ABI offsets were checked against the operating-system headers, but Ubuntu/macOS runtime evidence and executable schema validation remain pending. Built-in Git worktree creation, removal, and branch deletion fail closed with `SAFEFS_EXTERNAL_MUTATOR_UNBOUND`; a reviewed externally created clean worktree can be registered without repository mutation for the verifier lifecycle.
 
 ## Ownership and integrity
 
@@ -56,7 +58,7 @@ Interrupted operations remain locked and recoverable through `scripts/transactio
 - Project-local instructions remain authoritative.
 - Pre-existing project files remain user-owned. Files created by the layer remain layer-owned until explicitly adopted or locally modified.
 - Raw logs and generated dashboards are private by default.
-- L2 worktrees must be outside the target root; creation, verification, and cleanup share one hashed lifecycle identity.
+- L2 worktrees must be outside the target root. External creation is registered read-only; verification and cleanup preview share one hashed lifecycle identity, while built-in Git mutation remains disabled.
 - L2 verdicts bind reviewer role, HEAD, final Git state, command exits, command-output hashes, and evidence-file hashes. Changed or tampered evidence fails closed.
 - L2 remains assisted: verifier PASS is a decision packet for human merge review, never merge permission.
 

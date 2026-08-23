@@ -8,7 +8,7 @@
   "properties": {
     "schema_version": { "const": 1 },
     "plan_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
-    "operation_kind": { "enum": ["install", "update"] },
+    "operation_kind": { "enum": ["install", "update", "uninstall", "skill-lifecycle", "records-lifecycle"] },
     "created_at": { "type": "string", "format": "date-time" },
     "expires_at": { "type": "string", "format": "date-time" },
     "intent_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
@@ -49,9 +49,10 @@
       "properties": {
         "path": { "$ref": "#/$defs/relativePath" },
         "kind": { "enum": ["file", "directory"] },
-        "action": { "enum": ["create", "replace", "preserve"] },
+        "action": { "enum": ["create", "replace", "preserve", "remove"] },
         "precondition_kind": { "enum": ["absent", "file", "directory", "other"] },
         "precondition_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "precondition_identity_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
         "ownership": { "enum": ["unmanaged", "layer-owned", "user-owned", "adopted"] },
         "intended_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }
       },
@@ -64,6 +65,19 @@
         {
           "if": { "properties": { "kind": { "const": "directory" } }, "required": ["kind"] },
           "then": { "properties": { "intended_sha256": { "type": "null" } } }
+        },
+        {
+          "if": { "properties": { "action": { "const": "remove" } }, "required": ["action"] },
+          "then": {
+            "required": ["precondition_identity_sha256"],
+            "properties": {
+              "precondition_kind": { "enum": ["file", "directory"] },
+              "precondition_identity_sha256": { "$ref": "#/$defs/sha256" },
+              "ownership": { "const": "layer-owned" },
+              "intended_sha256": { "type": "null" }
+            }
+          },
+          "else": { "properties": { "precondition_identity_sha256": { "type": "null" } } }
         }
       ]
     },
@@ -73,7 +87,7 @@
       "required": ["plan_id", "operation_kind", "sha256", "intent_sha256"],
       "properties": {
         "plan_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
-        "operation_kind": { "enum": ["install", "update"] },
+        "operation_kind": { "enum": ["install", "update", "uninstall", "skill-lifecycle", "records-lifecycle"] },
         "sha256": { "$ref": "#/$defs/sha256" },
         "intent_sha256": { "$ref": "#/$defs/sha256" }
       }

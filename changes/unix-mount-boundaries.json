@@ -27,7 +27,8 @@
     "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
     "docs/adr/0002-filesystem-and-report-containment.md",
     "docs/adr/0005-schema-and-manifest-evolution.md",
-    "docs/adr/0012-unix-mount-boundary-enforcement.md"
+    "docs/adr/0012-unix-mount-boundary-enforcement.md",
+    "docs/adr/0013-handle-bound-filesystem-access.md"
   ],
   "migration": {
     "disposition": "migration-required",

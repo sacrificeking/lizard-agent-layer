@@ -2,6 +2,11 @@ param(
   [string]$TargetPath = (Get-Location).Path,
   [Parameter(Mandatory = $true)]
   [string]$EvaluationPath,
+  [string]$TrustStorePath,
+  [string]$TrustStoreSha256,
+  [string]$TrustChallengePath,
+  [string]$TrustChallengeSha256,
+  [string]$ReplayLedgerPath,
   [int]$MinimumCasesPerRole = 2,
   [switch]$Apply,
   [switch]$Json
@@ -10,6 +15,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Trust.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 if ($MinimumCasesPerRole -lt 1) { throw 'CALIBRATION_MINIMUM_CASES_INVALID: MinimumCasesPerRole must be at least 1.' }
 
@@ -20,7 +26,8 @@ function Set-DocProperty {
 }
 
 $evaluationFile = (Resolve-Path -LiteralPath $EvaluationPath).Path
-$evaluation = Get-Content -LiteralPath $evaluationFile -Raw | ConvertFrom-Json
+$evaluationEnvelope = Read-LizardSignedEvidenceFile -Path $evaluationFile
+$evaluation = $evaluationEnvelope.payload
 if ($evaluation.raw_prompts_stored -ne $false) { throw 'CALIBRATION_RAW_PROMPTS_FORBIDDEN: evaluation must not store raw prompts.' }
 if ([string]$evaluation.evaluation_id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') { throw 'CALIBRATION_EVALUATION_ID_INVALID: evaluation_id is not a safe identifier.' }
 if ([string]::IsNullOrWhiteSpace([string]$evaluation.model_id) -or [string]::IsNullOrWhiteSpace([string]$evaluation.provider) -or [string]::IsNullOrWhiteSpace([string]$evaluation.suite)) { throw 'CALIBRATION_EVALUATION_INVALID: model_id, provider, and suite are required.' }
@@ -31,6 +38,14 @@ foreach ($case in @($evaluation.cases)) {
   if ([double]$case.score -lt 0 -or [double]$case.score -gt 1) { throw "CALIBRATION_CASE_INVALID: score for '$($case.id)' is outside 0..1." }
   if ([string]$case.evidence_hash -notmatch '^[a-f0-9]{64}$') { throw "CALIBRATION_CASE_INVALID: evidence hash for '$($case.id)' is invalid." }
 }
+foreach ($required in @(@{ value = $TrustStorePath; label = 'TrustStorePath' }, @{ value = $TrustStoreSha256; label = 'TrustStoreSha256' }, @{ value = $TrustChallengePath; label = 'TrustChallengePath' }, @{ value = $TrustChallengeSha256; label = 'TrustChallengeSha256' })) { if ([string]::IsNullOrWhiteSpace([string]$required.value)) { throw "CALIBRATION_TRUST_REQUIRED: $($required.label) is required." } }
+foreach ($externalPath in @($evaluationFile, $TrustStorePath, $TrustChallengePath)) { Assert-PathOutsideRoot -Path $externalPath -ExcludedRoot $TargetRoot -Label 'Calibration trust input' }
+$evaluationTime = [DateTimeOffset]$evaluationEnvelope.issued_at
+$calibrationBinding = Get-LizardCalibrationTrustBinding -TargetRoot $TargetRoot -EvaluationId ([string]$evaluation.evaluation_id) -ModelId ([string]$evaluation.model_id) -Provider ([string]$evaluation.provider) -ExecutorId ([string]$evaluation.executor_id) -ConfigurationFingerprint ([string]$evaluation.configuration_fingerprint) -Cases @($evaluation.cases)
+$calibrationTrust = Read-LizardTrustStore -Path $TrustStorePath -ExpectedSha256 $TrustStoreSha256
+$calibrationChallenge = Read-LizardTrustChallenge -Path $TrustChallengePath -ExpectedSha256 $TrustChallengeSha256 -Now $evaluationTime
+$verifiedEvaluation = Test-LizardSignedEvidenceEnvelope -Envelope $evaluationEnvelope -TrustStoreRead $calibrationTrust -ChallengeRead $calibrationChallenge -ExpectedPayloadKind 'model-evaluation' -ExpectedPurpose 'model-calibration' -ExpectedSubject ([string]$evaluation.evaluation_id) -ExpectedBindingSha256 $calibrationBinding -RequiredRole 'evaluator' -Now $evaluationTime
+if ([string]$verifiedEvaluation.principal_id -eq [string]$evaluation.executor_id) { throw 'CALIBRATION_ROLE_SEPARATION_REQUIRED: evaluator and runtime executor identities must differ.' }
 
 $profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
 if (-not (Test-Path -LiteralPath $profilePath -PathType Leaf)) { throw 'CALIBRATION_PROFILE_MISSING: install the layer first.' }
@@ -83,6 +98,10 @@ $summary = [ordered]@{
   evaluated_at = $evaluatedAt.ToUniversalTime().ToString('o')
   expires_at = $expiresAt.ToUniversalTime().ToString('o')
   attestation = [string]$evaluation.attestation
+  authenticated_evaluator_id = [string]$verifiedEvaluation.principal_id
+  approval_ref = [string]$verifiedEvaluation.approval_ref
+  evaluation_payload_sha256 = [string]$evaluationEnvelope.payload_sha256
+  trust_binding_sha256 = $calibrationBinding
   case_count = @($evaluation.cases).Count
   role_scores = $roleScores
   applied = $Apply.IsPresent
@@ -90,6 +109,9 @@ $summary = [ordered]@{
 }
 
 if ($Apply) {
+  if ([string]::IsNullOrWhiteSpace($ReplayLedgerPath)) { throw 'CALIBRATION_REPLAY_LEDGER_REQUIRED: ReplayLedgerPath is required to consume signed evaluation evidence.' }
+  Assert-PathOutsideRoot -Path $ReplayLedgerPath -ExcludedRoot $TargetRoot -Label 'ReplayLedgerPath'
+  Use-LizardReplayLedger -LedgerPath $ReplayLedgerPath -EnvelopeId $verifiedEvaluation.envelope_id -Nonce $verifiedEvaluation.nonce -Purpose 'model-calibration' | Out-Null
   Set-DocProperty -Doc $model.evidence -Name 'state' -Value 'calibrated'
   Set-DocProperty -Doc $model.evidence -Name 'suite' -Value ([string]$evaluation.suite)
   Set-DocProperty -Doc $model.evidence -Name 'evaluated_at' -Value ($evaluatedAt.ToUniversalTime().ToString('o'))

@@ -1,8 +1,10 @@
-﻿param(
+param(
   [string]$TargetPath = (Get-Location).Path,
   [string]$Profile = "standard",
   [string[]]$Harnesses,
   [string[]]$Packs,
+  [ValidateSet('curated', 'private-episodic', 'off')]
+  [string]$MemoryMode,
   [string]$RoutingPolicy,
   [ValidateSet('inherit-current', 'inventory-routing')]
   [string]$ModelMode,
@@ -36,10 +38,14 @@ Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Manifest.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Plan.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Host.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.SkillPackage.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $ProfilePath = Join-Path $LayerRoot "profiles\$Profile.json"
 $VersionPath = Join-Path $LayerRoot "VERSION"
 $LayerVersion = if (Test-Path -LiteralPath $VersionPath) { (Get-Content -LiteralPath $VersionPath -Raw).Trim() } else { "0.0.0-dev" }
+$SkillPackageCatalog = @{}
+foreach ($skillPackage in @(Assert-LizardSkillRepository -SkillsRoot (Join-Path $LayerRoot 'skills') -LayerVersion $LayerVersion)) { $SkillPackageCatalog[[string]$skillPackage.metadata.name] = $skillPackage }
 $ShouldWritePlan = $WritePlan.IsPresent -or -not [string]::IsNullOrWhiteSpace($PlanPath)
 $ShouldWriteCanonicalPlan = $ShouldWritePlan -or -not [string]::IsNullOrWhiteSpace($CanonicalPlanPath)
 $EffectivePlanPath = $null
@@ -188,10 +194,12 @@ foreach ($packName in @($SelectedPacks)) {
   $pack = Get-Pack $packName
   Assert-PackReferences $pack
   $PackDocs.Add($pack) | Out-Null
-  $PackSources.Add([ordered]@{ name = [string]$pack.name; source = [string]$pack._sourceKind; path = [string]$pack._sourcePath }) | Out-Null
+  $packInfo = Get-PackManifestInfo $packName
+  $packHash = Get-SafeFileHash -AuthorizedRoot $(if ([string]$pack._sourceKind -eq 'target-overlay') { $TargetRoot } else { $LayerRoot }) -Path ([string]$packInfo.path)
+  $PackSources.Add([ordered]@{ name = [string]$pack.name; source = [string]$pack._sourceKind; path = [string]$pack._sourcePath; sha256 = $packHash; prose_trust = $(if ([string]$pack._sourceKind -eq 'target-overlay') { 'quarantined' } else { 'layer-reviewed' }) }) | Out-Null
   Merge-ArrayProperty $ProfileDoc 'stack' @($pack.stack)
   Merge-ArrayProperty $ProfileDoc 'skills' @($pack.skills)
-  Merge-ArrayProperty $ProfileDoc 'verification' @($pack.verification)
+  if ([string]$pack._sourceKind -ne 'target-overlay') { Merge-ArrayProperty $ProfileDoc 'verification' @($pack.verification) }
   Set-DocProperty $ProfileDoc 'riskLevel' (Max-RiskLevel ([string]$ProfileDoc.riskLevel) ([string]$pack.riskLevel))
   Set-DocProperty $ProfileDoc 'projectSize' (Max-ProjectSize ([string]$ProfileDoc.projectSize) ([string]$pack.projectSize))
   if ($pack.modelProfiles) {
@@ -202,7 +210,7 @@ foreach ($packName in @($SelectedPacks)) {
       $ProfileDoc.modelProfiles | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
     }
   }
-  if (-not [string]::IsNullOrWhiteSpace([string]$pack.notes)) {
+  if ([string]$pack._sourceKind -ne 'target-overlay' -and -not [string]::IsNullOrWhiteSpace([string]$pack.notes)) {
     $currentNotes = if ($ProfileDoc.PSObject.Properties.Name -contains 'notes') { [string]$ProfileDoc.notes } else { '' }
     $suffix = "Pack $($pack.name): $($pack.notes)"
     if ($currentNotes -and $currentNotes -notmatch [regex]::Escape($suffix)) { Set-DocProperty $ProfileDoc 'notes' ($currentNotes.TrimEnd() + "`n" + $suffix) }
@@ -374,6 +382,7 @@ if ($BoundRoutingModelNames.Count -gt 0) { Write-Warning 'modelProfiles is depre
 $Mode = if ($Apply) { "APPLY" } else { "PREVIEW" }
 $Planned = New-Object System.Collections.Generic.List[string]
 $Created = New-Object System.Collections.Generic.List[string]
+$Removed = New-Object System.Collections.Generic.List[string]
 $Skipped = New-Object System.Collections.Generic.List[string]
 $MergeNeeded = New-Object System.Collections.Generic.List[string]
 $MergeSuggestions = New-Object System.Collections.Generic.List[object]
@@ -384,6 +393,8 @@ $Conflicts = New-Object System.Collections.Generic.List[string]
 $RetiredArtifacts = New-Object System.Collections.Generic.List[object]
 $ArtifactRecords = New-Object 'System.Collections.Generic.Dictionary[string,object]' (Get-LizardPathComparer)
 $PlanTargetEntries = New-Object 'System.Collections.Generic.Dictionary[string,object]' (Get-LizardPathComparer)
+$MemoryTransitionRemovals = New-Object System.Collections.Generic.List[object]
+$MemoryTransitionKeys = New-Object 'System.Collections.Generic.HashSet[string]' (Get-LizardPathComparer)
 
 function Add-UniqueListItem {
   param($List, [string]$Value)
@@ -413,6 +424,16 @@ function To-RelativeDisplay {
   return $Path
 }
 
+function Assert-MemoryModeTargetPathAllowed {
+  param([string]$Path)
+  if ($EffectiveMemoryMode -ne 'off') { return }
+  $full = [System.IO.Path]::GetFullPath($Path)
+  $memoryRoot = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot '.agent\memory')).TrimEnd([char[]]@('\', '/'))
+  if ((Get-LizardPathComparer).Equals($full.TrimEnd([char[]]@('\', '/')), $memoryRoot) -or $full.StartsWith($memoryRoot + [System.IO.Path]::DirectorySeparatorChar, (Get-LizardPathComparison))) {
+    throw 'MEMORY_MODE_OFF_WRITE_DENIED: Managed writes under .agent/memory are disabled.'
+  }
+}
+
 $ExistingInstallManifestPath = Join-Path $TargetRoot ".agent\lizard-agent-layer.install.json"
 $existingInstallManifest = $null
 $ExistingManifestSchema = $null
@@ -420,8 +441,41 @@ if (Test-Path -LiteralPath $ExistingInstallManifestPath) {
   $existingInstallManifest = Get-Content -LiteralPath $ExistingInstallManifestPath -Raw | ConvertFrom-Json
   $ExistingManifestSchema = if ($null -ne $existingInstallManifest.schema_version) { [int]$existingInstallManifest.schema_version } else { 1 }
   if ($ExistingManifestSchema -gt 4) { throw "MANIFEST_READER_TOO_OLD: Target schema $ExistingManifestSchema is newer than supported schema 4." }
+  if ($ExistingManifestSchema -ge 4 -and ($existingInstallManifest.PSObject.Properties.Name -notcontains 'memory_mode' -or [string]::IsNullOrWhiteSpace([string]$existingInstallManifest.memory_mode))) {
+    throw 'MEMORY_MODE_MANIFEST_INVALID: Schema-v4 manifest is missing memory_mode.'
+  }
 }
 $ExistingArtifactMap = Get-LizardArtifactMap -Manifest $existingInstallManifest -RequireLifecycle:($ExistingManifestSchema -ge 4)
+$PreviousMemoryMode = if ($null -ne $existingInstallManifest -and -not [string]::IsNullOrWhiteSpace([string]$existingInstallManifest.memory_mode)) { [string]$existingInstallManifest.memory_mode } else { $null }
+$EffectiveMemoryMode = if (-not [string]::IsNullOrWhiteSpace($MemoryMode)) { $MemoryMode } elseif (-not [string]::IsNullOrWhiteSpace($PreviousMemoryMode)) { $PreviousMemoryMode } else { [string]$ProfileDoc.memoryMode }
+if ($EffectiveMemoryMode -notin @('curated', 'private-episodic', 'off')) { throw "MEMORY_MODE_INVALID: Unsupported effective memory mode '$EffectiveMemoryMode'." }
+$MemoryModeTransition = -not [string]::IsNullOrWhiteSpace($PreviousMemoryMode) -and $PreviousMemoryMode -ne $EffectiveMemoryMode
+$MemoryTransitionName = if ($MemoryModeTransition) { "$PreviousMemoryMode->$EffectiveMemoryMode" } else { 'none' }
+Set-DocProperty $ProfileDoc 'memoryMode' $EffectiveMemoryMode
+
+$MemoryFileSpecs = New-Object System.Collections.Generic.List[object]
+if ($EffectiveMemoryMode -ne 'off') {
+  foreach ($spec in @(
+    [pscustomobject]@{ source = 'templates\memory\personal\PREFERENCES.md'; destination = '.agent\memory\personal\PREFERENCES.md' },
+    [pscustomobject]@{ source = 'templates\memory\semantic\DECISIONS.md'; destination = '.agent\memory\semantic\DECISIONS.md' },
+    [pscustomobject]@{ source = 'templates\memory\semantic\LESSONS.md'; destination = '.agent\memory\semantic\LESSONS.md' },
+    [pscustomobject]@{ source = 'templates\memory\working\WORKSPACE.md'; destination = '.agent\memory\working\WORKSPACE.md' }
+  )) { $MemoryFileSpecs.Add($spec) | Out-Null }
+}
+if ($EffectiveMemoryMode -eq 'private-episodic') {
+  $MemoryFileSpecs.Add([pscustomobject]@{ source = 'templates\memory\episodic\EPISODES.md'; destination = '.agent\memory\episodic\EPISODES.md' }) | Out-Null
+}
+$AgentGitignoreSource = if ($EffectiveMemoryMode -eq 'off') { 'templates\agent-gitignore-off' } else { 'templates\agent-gitignore' }
+$ProtocolSpecs = New-Object System.Collections.Generic.List[object]
+foreach ($protocol in @('prompt-trust.md', 'permissions.md', 'secret-handling.md', 'release-gates.md', 'handoff.md', 'staged-execution.md', 'context-hygiene.md')) {
+  $ProtocolSpecs.Add([pscustomobject]@{ source = "protocols\$protocol"; destination = ".agent\protocols\$protocol" }) | Out-Null
+}
+$ProtocolSpecs.Add([pscustomobject]@{ source = "templates\project-context\$EffectiveMemoryMode.md"; destination = '.agent\protocols\project-context.md' }) | Out-Null
+if ($EffectiveMemoryMode -eq 'curated') {
+  $ProtocolSpecs.Add([pscustomobject]@{ source = 'protocols\memory-policy.md'; destination = '.agent\protocols\memory-policy.md' }) | Out-Null
+} elseif ($EffectiveMemoryMode -eq 'private-episodic') {
+  $ProtocolSpecs.Add([pscustomobject]@{ source = 'protocols\memory-policy-private-episodic.md'; destination = '.agent\protocols\memory-policy.md' }) | Out-Null
+}
 
 function Get-ExistingArtifactRecord {
   param([string]$RelativePath)
@@ -434,7 +488,7 @@ function Set-PlanTargetEntry {
   param(
     [string]$Dest,
     [ValidateSet('file', 'directory')][string]$Kind,
-    [ValidateSet('create', 'replace', 'preserve')][string]$Action,
+    [ValidateSet('create', 'replace', 'preserve', 'remove')][string]$Action,
     [AllowNull()][string]$IntendedSha256
   )
   $relative = ConvertTo-LizardArtifactPath (To-RelativeDisplay $Dest)
@@ -450,7 +504,7 @@ function Set-PlanTargetEntry {
   }
   $existing = Get-ExistingArtifactRecord $relative
   $ownership = if ($null -ne $existing -and $existing.ownership) { [string]$existing.ownership } else { 'unmanaged' }
-  $PlanTargetEntries[$relative] = [pscustomobject][ordered]@{
+  $entry = [pscustomobject][ordered]@{
     path = $relative
     kind = $Kind
     action = $Action
@@ -458,6 +512,130 @@ function Set-PlanTargetEntry {
     precondition_sha256 = if ([string]::IsNullOrWhiteSpace($currentSha256)) { $null } else { $currentSha256 }
     ownership = $ownership
     intended_sha256 = if ([string]::IsNullOrWhiteSpace($IntendedSha256)) { $null } else { $IntendedSha256 }
+  }
+  if ($Action -eq 'remove') {
+    if ($existingKind -ne $Kind) { throw "MEMORY_TRANSITION_CONTRACT_CONFLICT: Removal target kind mismatch for $relative." }
+    if ($ownership -ne 'layer-owned') { throw "MEMORY_TRANSITION_CONTRACT_CONFLICT: Removal target is not layer-owned: $relative." }
+    $entry | Add-Member -NotePropertyName precondition_identity_sha256 -NotePropertyValue (Get-LizardPlanTargetIdentitySha256 -TargetRoot $TargetRoot -Path $Dest -Kind $Kind)
+  }
+  $PlanTargetEntries[$relative] = $entry
+}
+
+function Test-MemoryTransitionRetirementPath {
+  param([string]$RelativePath)
+  $relative = (ConvertTo-LizardArtifactPath $RelativePath).TrimEnd('/')
+  if ($EffectiveMemoryMode -eq 'off') {
+    return $relative -eq '.agent/memory' -or $relative.StartsWith('.agent/memory/', [System.StringComparison]::OrdinalIgnoreCase) -or $relative -eq '.agent/protocols/memory-policy.md'
+  }
+  if ($EffectiveMemoryMode -eq 'curated') {
+    return $relative -eq '.agent/memory/episodic' -or $relative.StartsWith('.agent/memory/episodic/', [System.StringComparison]::OrdinalIgnoreCase)
+  }
+  return $false
+}
+
+function Test-MemoryModeContractPath {
+  param([string]$RelativePath, $Record)
+  $relative = ConvertTo-LizardArtifactPath $RelativePath
+  if ($relative -in @(
+    '.agent/.gitignore', '.agent/project-profile.json', '.agent/protocols/project-context.md',
+    '.agent/protocols/memory-policy.md', '.agent/protocols/permissions.md', '.agent/protocols/secret-handling.md',
+    '.agent/protocols/handoff.md', '.agent/protocols/context-hygiene.md'
+  )) { return $true }
+  if ($null -ne $Record -and -not [string]::IsNullOrWhiteSpace([string]$Record.source_path)) {
+    return ([string]$Record.source_path).Replace('\', '/').StartsWith('adapters/', [System.StringComparison]::OrdinalIgnoreCase)
+  }
+  return $false
+}
+
+function Get-PhysicalMemoryTransitionItems {
+  $items = New-Object System.Collections.Generic.List[object]
+  $roots = New-Object System.Collections.Generic.List[string]
+  if ($EffectiveMemoryMode -eq 'off') {
+    $roots.Add('.agent/memory') | Out-Null
+    $roots.Add('.agent/protocols/memory-policy.md') | Out-Null
+  } elseif ($EffectiveMemoryMode -eq 'curated') {
+    $roots.Add('.agent/memory/episodic') | Out-Null
+  }
+  foreach ($relativeRoot in @($roots.ToArray())) {
+    $absoluteRoot = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relativeRoot.Replace('/', '\'))
+    if (-not (Test-Path -LiteralPath $absoluteRoot)) { continue }
+    $queue = New-Object 'System.Collections.Generic.Queue[string]'
+    $queue.Enqueue($absoluteRoot)
+    while ($queue.Count -gt 0) {
+      $absolute = $queue.Dequeue()
+      $item = Get-Item -LiteralPath $absolute -Force
+      if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw "MEMORY_TRANSITION_USER_CONTENT: Link or reparse-point residue blocks memory mode '$EffectiveMemoryMode': $(To-RelativeDisplay $absolute)"
+      }
+      $kind = if ($item.PSIsContainer) { 'directory' } else { 'file' }
+      $relative = ConvertTo-LizardArtifactPath (To-RelativeDisplay $absolute)
+      $items.Add([pscustomobject]@{ path = $relative; absolute = $absolute; kind = $kind }) | Out-Null
+      if ($kind -eq 'directory') {
+        foreach ($child in @(Get-ChildItem -LiteralPath $absolute -Force)) { $queue.Enqueue($child.FullName) }
+      }
+    }
+  }
+  return @($items.ToArray())
+}
+
+function Assert-MemoryTransitionPhysicalSetSafe {
+  param([switch]$RegisterPlan)
+  $physicalItems = @(Get-PhysicalMemoryTransitionItems)
+  if (-not $MemoryModeTransition -and $physicalItems.Count -gt 0) {
+    $code = if ($EffectiveMemoryMode -eq 'off') { 'MEMORY_MODE_OFF_RESIDUE' } else { 'MEMORY_MODE_CURATED_RESIDUE' }
+    throw "${code}: Existing content conflicts with memory mode '$EffectiveMemoryMode': $($physicalItems[0].path)"
+  }
+  foreach ($physical in $physicalItems) {
+    $key = ConvertTo-LizardArtifactPath ([string]$physical.path)
+    if (-not $ExistingArtifactMap.ContainsKey($key)) { throw "MEMORY_TRANSITION_USER_CONTENT: Unknown content blocks transition '$MemoryTransitionName': $key" }
+    $record = $ExistingArtifactMap[$key]
+    if ([string]$record.kind -ne [string]$physical.kind) { throw "MEMORY_TRANSITION_CONTRACT_CONFLICT: Manifest kind mismatch for $key." }
+    if ([string]$record.ownership -ne 'layer-owned' -or (Get-LizardArtifactLifecycle -Record $record) -eq 'removed') {
+      throw "MEMORY_TRANSITION_USER_CONTENT: Non-layer-owned or reappeared content blocks transition '$MemoryTransitionName': $key"
+    }
+    $state = Get-LizardArtifactState -Record $record -TargetPath ([string]$physical.absolute) -ExpectedSourceHash ([string]$record.source_hash) -Kind ([string]$physical.kind)
+    if ($state -ne 'layer-owned') { throw "MEMORY_TRANSITION_MODIFIED_CONTENT: State '$state' blocks transition '$MemoryTransitionName': $key" }
+    if ($RegisterPlan) {
+      Set-PlanTargetEntry -Dest ([string]$physical.absolute) -Kind ([string]$physical.kind) -Action remove -IntendedSha256 $null
+      $metadata = Get-SafeItemMetadata -AuthorizedRoot $TargetRoot -Path ([string]$physical.absolute) -Kind $(if ([string]$physical.kind -eq 'file') { 'File' } else { 'Directory' })
+      $MemoryTransitionRemovals.Add([pscustomobject]@{
+        path = $key
+        absolute = [string]$physical.absolute
+        kind = [string]$physical.kind
+        sha256 = if ([string]$physical.kind -eq 'file') { Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path ([string]$physical.absolute) } else { $null }
+        identity_sha256 = Get-LizardPlanTargetIdentitySha256 -Metadata $metadata
+      }) | Out-Null
+      $null = $MemoryTransitionKeys.Add($key)
+    }
+  }
+  if ($MemoryModeTransition -and $RegisterPlan) {
+    foreach ($key in @($ExistingArtifactMap.Keys)) {
+      if (-not (Test-MemoryTransitionRetirementPath $key)) { continue }
+      $null = $MemoryTransitionKeys.Add($key)
+    }
+  }
+}
+
+function Initialize-MemoryModeTransition {
+  if ($EffectiveMemoryMode -notin @('off', 'curated')) { return }
+  Assert-MemoryTransitionPhysicalSetSafe -RegisterPlan
+}
+
+function Invoke-MemoryModeTransitionRemovals {
+  if (-not $Apply -or $MemoryTransitionRemovals.Count -eq 0) { return }
+  Assert-MemoryTransitionPhysicalSetSafe
+  $ordered = @($MemoryTransitionRemovals.ToArray() | Sort-Object @{ Expression = { if ($_.kind -eq 'file') { 0 } else { 1 } } }, @{ Expression = { -([string]$_.path).Length } }, path)
+  foreach ($removal in $ordered) {
+    $metadataKind = if ([string]$removal.kind -eq 'file') { 'File' } else { 'Directory' }
+    $metadata = Get-SafeItemMetadata -AuthorizedRoot $TargetRoot -Path ([string]$removal.absolute) -Kind $metadataKind
+    $identitySha256 = Get-LizardPlanTargetIdentitySha256 -Metadata $metadata
+    if ($identitySha256 -ne [string]$removal.identity_sha256) { throw "PLAN_BINDING_TARGET_IDENTITY_MISMATCH: Removal target was replaced: $($removal.path)" }
+    if ([string]$removal.kind -eq 'file') {
+      $currentHash = Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path ([string]$removal.absolute)
+      if ($currentHash -ne [string]$removal.sha256) { throw "PLAN_BINDING_TARGET_MISMATCH: Removal target bytes changed: $($removal.path)" }
+    }
+    Remove-LizardTransactionalItem -Path ([string]$removal.absolute) -Kind $(if ([string]$removal.kind -eq 'file') { 'File' } else { 'EmptyDirectory' }) -ExpectedIdentity $metadata
+    Add-UniqueListItem $Removed ([string]$removal.path)
   }
 }
 
@@ -513,6 +691,17 @@ function Register-Artifact {
 function Register-RetiredArtifacts {
   foreach ($key in @($ExistingArtifactMap.Keys | Sort-Object)) {
     if ($ArtifactRecords.ContainsKey($key)) { continue }
+    if ($MemoryTransitionKeys.Contains($key)) {
+      $existing = $ExistingArtifactMap[$key]
+      $record = New-LizardArtifactRecord -Path $key -Kind ([string]$existing.kind) -Lifecycle removed -Ownership ([string]$existing.ownership) -State missing `
+        -SourcePath ([string]$existing.source_path) -SourceVersion ([string]$existing.source_version) -SourceHash ([string]$existing.source_hash) `
+        -InstalledHash ([string]$existing.installed_hash) -CurrentHash $null -AdapterId ([string]$existing.adapter_id) `
+        -AdapterAliases @($existing.adapter_aliases) -MirrorGroup ([string]$existing.mirror_group)
+      Set-ArtifactRecord $record
+      $RetiredArtifacts.Add([pscustomobject][ordered]@{ path = $key; lifecycle = 'removed' }) | Out-Null
+      continue
+    }
+    if ($PlanTargetEntries.ContainsKey($key) -and [string]$PlanTargetEntries[$key].action -in @('create', 'replace')) { continue }
     $existing = $ExistingArtifactMap[$key]
     $relative = ConvertTo-LizardArtifactPath ([string]$existing.path)
     $kind = [string]$existing.kind
@@ -544,13 +733,47 @@ function Register-RetiredArtifacts {
 function Should-ReplacePath {
   param([string]$Dest, [AllowNull()][string]$ExpectedSourceHash)
   if ($Force) { return $true }
-  if (-not $ForceManaged) { return $false }
   $relative = ConvertTo-LizardArtifactPath (To-RelativeDisplay $Dest)
   $record = Get-ExistingArtifactRecord $relative
   $state = Get-LizardArtifactState -Record $record -TargetPath $Dest -ExpectedSourceHash $ExpectedSourceHash -Kind 'file'
+  if ($MemoryModeTransition -and (Test-MemoryModeContractPath -RelativePath $relative -Record $record)) {
+    if ($null -ne $record -and [string]$record.ownership -eq 'layer-owned' -and $state -in @('layer-owned', 'stale-unmodified')) { return $true }
+    throw "MEMORY_TRANSITION_MODIFIED_CONTENT: Contract path state '$state' blocks transition '$MemoryTransitionName': $relative"
+  }
+  if ($relative -in @('.agent/skills/_manifest.jsonl', '.agent/skills/_index.md', '.agent/project-profile.json') -and $null -ne $record -and [string]$record.ownership -eq 'layer-owned' -and $state -in @('layer-owned', 'stale-unmodified')) {
+    return $true
+  }
+  if (-not $ForceManaged) { return $false }
   if ($null -ne $record -and [string]$record.ownership -eq 'layer-owned' -and $state -in @('layer-owned', 'stale-unmodified')) { return $true }
   Add-UniqueListItem $Conflicts ("{0}: ForceManaged refused state '{1}' without unchanged layer-owned provenance." -f $relative, $state)
   return $false
+}
+
+function Assert-MemoryModePostcondition {
+  if (-not $Apply) { return }
+  if ($EffectiveMemoryMode -eq 'off') {
+    foreach ($relative in @('.agent/memory', '.agent/protocols/memory-policy.md')) {
+      $absolute = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', '\'))
+      if (Test-Path -LiteralPath $absolute) { throw "MEMORY_MODE_OFF_RESIDUE: Physical artifact remains after transition: $relative" }
+    }
+    foreach ($record in @($ArtifactRecords.Values)) {
+      $relative = ConvertTo-LizardArtifactPath ([string]$record.path)
+      if (($relative -eq '.agent/memory' -or $relative.StartsWith('.agent/memory/', [System.StringComparison]::OrdinalIgnoreCase) -or $relative -eq '.agent/protocols/memory-policy.md') -and [string]$record.lifecycle -ne 'removed') {
+        throw "MEMORY_MODE_OFF_RESIDUE: Non-removed manifest artifact remains after transition: $relative"
+      }
+      if ([string]$record.kind -ne 'file' -or [string]$record.lifecycle -ne 'active') { continue }
+      if (-not $record.adapter_id -and -not $relative.StartsWith('.agent/protocols/', [System.StringComparison]::OrdinalIgnoreCase)) { continue }
+      $absolute = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', '\'))
+      if (-not (Test-Path -LiteralPath $absolute -PathType Leaf)) { continue }
+      $content = Get-SafeContent -AuthorizedRoot $TargetRoot -Path $absolute
+      if ($content -match '(?i)\.agent[/\\]memory|memory[/\\](?:personal|semantic|working|episodic)') {
+        throw "MEMORY_MODE_OFF_REFERENCE: Installed instruction contains an operational memory path: $relative"
+      }
+    }
+  } elseif ($EffectiveMemoryMode -eq 'curated') {
+    $episodic = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot '.agent\memory\episodic')
+    if (Test-Path -LiteralPath $episodic) { throw 'MEMORY_MODE_CURATED_RESIDUE: Episodic content remains after transition.' }
+  }
 }
 function New-MergeSuggestion {
   param([string]$Harness, [string]$InstructionPath, [string]$SidecarPath)
@@ -622,14 +845,17 @@ function New-InstallPlanMarkdown {
   $lines.Add('') | Out-Null
   $lines.Add('## Commands') | Out-Null
   $lines.Add('') | Out-Null
-  $previewCommand = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -TargetPath "{0}" -Profile {1} -Harnesses {2}' -f $TargetRoot, $Profile, ($SelectedHarnesses -join ',')
-  if ($RequestedPacks.Count -gt 0) { $previewCommand += (' -Packs {0}' -f ($RequestedPacks -join ',')) }
-  $previewCommand += (' -RoutingPolicy {0}' -f $EffectiveRoutingPolicy)
-  $previewCommand += (' -ModelMode {0}' -f $EffectiveModelMode)
-  if ($EffectiveModelInventory) { $previewCommand += (' -ModelInventory "{0}"' -f $EffectiveModelInventory) }
-  if ($EffectiveModelRuntime) { $previewCommand += (' -ModelRuntime "{0}"' -f $EffectiveModelRuntime) }
+  $previewArguments = New-Object System.Collections.Generic.List[string]
+  foreach ($argument in @('-TargetPath', $TargetRoot, '-Profile', $Profile, '-Harnesses', ($SelectedHarnesses -join ','))) { $previewArguments.Add([string]$argument) | Out-Null }
+  if ($RequestedPacks.Count -gt 0) { $previewArguments.Add('-Packs') | Out-Null; $previewArguments.Add(($RequestedPacks -join ',')) | Out-Null }
+  $previewArguments.Add('-RoutingPolicy') | Out-Null; $previewArguments.Add($EffectiveRoutingPolicy) | Out-Null
+  $previewArguments.Add('-ModelMode') | Out-Null; $previewArguments.Add($EffectiveModelMode) | Out-Null
+  if ($EffectiveModelInventory) { $previewArguments.Add('-ModelInventory') | Out-Null; $previewArguments.Add($EffectiveModelInventory) | Out-Null }
+  if ($EffectiveModelRuntime) { $previewArguments.Add('-ModelRuntime') | Out-Null; $previewArguments.Add($EffectiveModelRuntime) | Out-Null }
+  $previewCommand = [string](New-LizardPowerShellFileInvocation -ScriptPath $InstallScriptPath -ArgumentList $previewArguments.ToArray() -ResolveCurrent).display
   $canonicalDisplay = if ($EffectiveCanonicalPlanPath) { $EffectiveCanonicalPlanPath } else { '<canonical-plan.json>' }
-  $applyCommand = "$previewCommand -Apply -ApprovedPlanPath `"$canonicalDisplay`" -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved"
+  $applyArguments = @($previewArguments.ToArray()) + @('-Apply', '-ApprovedPlanPath', $canonicalDisplay, '-ApprovedPlanSha256', '<independently-reviewed-sha256>', '-HumanApproved')
+  $applyCommand = [string](New-LizardPowerShellFileInvocation -ScriptPath $InstallScriptPath -ArgumentList $applyArguments -ResolveCurrent).display
   $lines.Add('Preview:') | Out-Null
   $lines.Add('') | Out-Null
   $lines.Add('```powershell') | Out-Null
@@ -725,17 +951,12 @@ function Get-InstallPlanInputs {
   }
   foreach ($adapterName in @($SelectedHarnesses)) { Add-LayerTree -RelativeRoot ("adapters\{0}" -f $adapterName) }
   foreach ($skillName in @($ProfileDoc.skills)) { Add-LayerTree -RelativeRoot ("skills\{0}" -f $skillName) }
-  foreach ($relative in @(
-    'templates\agent-gitignore',
-    'templates\memory\personal\PREFERENCES.md',
-    'templates\memory\semantic\DECISIONS.md',
-    'templates\memory\semantic\LESSONS.md',
-    'templates\memory\working\WORKSPACE.md'
-  )) {
-    Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot $relative) -DisplayPath $relative
+  Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot $AgentGitignoreSource) -DisplayPath $AgentGitignoreSource
+  foreach ($spec in @($MemoryFileSpecs.ToArray())) {
+    Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot ([string]$spec.source)) -DisplayPath ([string]$spec.source)
   }
-  foreach ($protocol in @('permissions.md', 'memory-policy.md', 'secret-handling.md', 'release-gates.md', 'handoff.md', 'staged-execution.md', 'context-hygiene.md')) {
-    Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot "protocols\$protocol") -DisplayPath "protocols/$protocol"
+  foreach ($spec in @($ProtocolSpecs.ToArray())) {
+    Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot ([string]$spec.source)) -DisplayPath ([string]$spec.source)
   }
   Add-InputFile -Scope layer -Root $LayerRoot -Path $RoutingPolicyPath -DisplayPath ("routing-policies/{0}.json" -f $EffectiveRoutingPolicy)
   foreach ($modelName in @($BoundRoutingModelNames)) {
@@ -756,6 +977,9 @@ function Get-InstallInvocationOptions {
     harnesses = @($SelectedHarnesses | Sort-Object -Unique)
     requested_packs = @($RequestedPacks | Sort-Object -Unique)
     expanded_packs = @($SelectedPacks)
+    memory_mode = $EffectiveMemoryMode
+    previous_memory_mode = $PreviousMemoryMode
+    memory_transition = $MemoryTransitionName
     routing_policy = $EffectiveRoutingPolicy
     model_mode = $EffectiveModelMode
     model_inventory = $EffectiveModelInventory
@@ -775,6 +999,7 @@ function Get-InstallPlanOptions {
   $options['retired_artifacts'] = @($RetiredArtifacts.ToArray() | Sort-Object path | ForEach-Object {
     [ordered]@{ path = [string]$_.path; lifecycle = [string]$_.lifecycle }
   })
+  $options['removed_memory_artifacts'] = @($MemoryTransitionRemovals.ToArray() | Sort-Object path | ForEach-Object { [string]$_.path })
   return $options
 }
 
@@ -795,8 +1020,17 @@ function Write-CanonicalInstallPlan {
 
 function Ensure-Dir {
   param([string]$Path, [AllowNull()][string]$AdapterId, [string[]]$AdapterAliases = @(), [AllowNull()][string]$MirrorGroup)
+  Assert-MemoryModeTargetPathAllowed -Path $Path
+  $candidatePath = [System.IO.Path]::GetFullPath($Path).TrimEnd([char[]]@('\', '/'))
+  if ((Get-LizardPathComparer).Equals($candidatePath, $TargetRoot.TrimEnd([char[]]@('\', '/')))) { return }
   $Path = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $Path
+  $parent = Split-Path -Parent $Path
+  if (-not (Get-LizardPathComparer).Equals($parent, $TargetRoot)) {
+    Ensure-Dir -Path $parent -AdapterId $null -AdapterAliases @() -MirrorGroup $null
+  }
   $label = To-RelativeDisplay $Path
+  $artifactKey = ConvertTo-LizardArtifactPath $label
+  if ($ArtifactRecords.ContainsKey($artifactKey)) { return }
   Add-UniqueListItem $ManagedPaths $label
   if (Test-Path -LiteralPath $Path) {
     if (-not (Test-Path -LiteralPath $Path -PathType Container)) { throw "DESTINATION_TYPE_CONFLICT: Expected directory but found file: $label" }
@@ -817,15 +1051,14 @@ function Ensure-Dir {
 function Copy-IfMissing {
   param([string]$Source, [string]$Dest, [AllowNull()][string]$AdapterId, [string[]]$AdapterAliases = @(), [AllowNull()][string]$MirrorGroup)
   if (-not (Test-Path -LiteralPath $Source)) { throw "Missing source file: $Source" }
+  Assert-MemoryModeTargetPathAllowed -Path $Dest
   $Dest = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $Dest
   $sourceHash = Get-LizardSha256 $Source
   $sourcePath = Get-LayerSourcePath $Source
   $label = To-RelativeDisplay $Dest
   Add-UniqueListItem $ManagedPaths $label
   $parent = Split-Path -Parent $Dest
-  if (-not (Test-Path -LiteralPath $parent)) {
-    if ($Apply) { New-LizardTransactionalDirectory -Path $parent | Out-Null }
-  }
+  Ensure-Dir -Path $parent -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup
   $destExists = Test-Path -LiteralPath $Dest
   $shouldReplace = if ($destExists) { Should-ReplacePath -Dest $Dest -ExpectedSourceHash $sourceHash } else { $false }
   if ($destExists -and -not $shouldReplace) {
@@ -837,7 +1070,7 @@ function Copy-IfMissing {
   Set-PlanTargetEntry -Dest $Dest -Kind file -Action $(if ($destExists) { 'replace' } else { 'create' }) -IntendedSha256 $sourceHash
   Add-UniqueListItem $Planned $label
   if ($Apply) {
-    Copy-LizardTransactionalFile -Source $Source -Destination $Dest -Force:$shouldReplace
+    Copy-LizardTransactionalFile -SourceAuthorizedRoot $LayerRoot -Source $Source -Destination $Dest -Force:$shouldReplace
     Add-UniqueListItem $Created $label
     Register-Artifact -Dest $Dest -Kind file -SourcePath $sourcePath -SourceHash $sourceHash -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup -LayerWritten
   }
@@ -846,11 +1079,17 @@ function Copy-IfMissing {
 function Copy-SkillPackage {
   param([string]$SkillName, [string]$DestRoot, [AllowNull()][string]$AdapterId, [string[]]$AdapterAliases = @())
   if ($SkillName -notmatch '^[a-z0-9][a-z0-9-]{0,62}$') { throw "Invalid skill name '$SkillName'." }
+  if (-not $SkillPackageCatalog.ContainsKey($SkillName)) { throw "Missing validated skill package metadata: $SkillName" }
   $sourceDir = Join-Path $LayerRoot "skills\$SkillName"
   $sourceSkill = Join-Path $sourceDir 'SKILL.md'
   if (-not (Test-Path -LiteralPath $sourceSkill)) { throw "Missing skill package: $SkillName" }
   $destSkillDir = Join-Path $DestRoot $SkillName
   Ensure-Dir -Path $destSkillDir -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup ("skill:{0}:directory" -f $SkillName)
+  Get-ChildItem -LiteralPath $sourceDir -Recurse -Directory | Sort-Object @{ Expression = { $_.FullName.Length } }, FullName | ForEach-Object {
+    $relative = $_.FullName.Substring($sourceDir.Length).TrimStart([char[]]@('\', '/'))
+    $mirrorGroup = "skill:{0}:directory:{1}" -f $SkillName, $relative.Replace('\', '/')
+    Ensure-Dir -Path (Join-Path $destSkillDir $relative) -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $mirrorGroup
+  }
   Get-ChildItem -LiteralPath $sourceDir -Recurse -File | Sort-Object FullName | ForEach-Object {
     $relative = $_.FullName.Substring($sourceDir.Length).TrimStart([char[]]@('\', '/'))
     $mirrorGroup = "skill:{0}:{1}" -f $SkillName, $relative.Replace('\', '/')
@@ -859,14 +1098,13 @@ function Copy-SkillPackage {
 }
 function Write-IfMissing {
   param([string]$Dest, [string]$Content, [string]$SourcePath = 'generated:content', [AllowNull()][string]$AdapterId, [string[]]$AdapterAliases = @(), [AllowNull()][string]$MirrorGroup)
+  Assert-MemoryModeTargetPathAllowed -Path $Dest
   $Dest = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath $Dest
   $sourceHash = Get-LizardStringSha256 $Content
   $label = To-RelativeDisplay $Dest
   Add-UniqueListItem $ManagedPaths $label
   $parent = Split-Path -Parent $Dest
-  if (-not (Test-Path -LiteralPath $parent)) {
-    if ($Apply) { New-LizardTransactionalDirectory -Path $parent | Out-Null }
-  }
+  Ensure-Dir -Path $parent -AdapterId $AdapterId -AdapterAliases $AdapterAliases -MirrorGroup $MirrorGroup
   $destExists = Test-Path -LiteralPath $Dest
   $shouldReplace = if ($destExists) { Should-ReplacePath -Dest $Dest -ExpectedSourceHash $sourceHash } else { $false }
   if ($destExists -and -not $shouldReplace) {
@@ -1047,17 +1285,12 @@ function Assert-ApprovedInstallPlanCurrent {
 }
 
 function Get-CurrentInstallProbePlan {
-  $probeRoot = Resolve-LizardSafeTemporaryRoot
+  $probeRoot = Initialize-SafeDirectory -Path (Join-Path $LayerRoot '.tmp\plan-probes')
   $probePath = Join-Path $probeRoot ("lizard-install-plan-probe-{0}.json" -f ([Guid]::NewGuid().ToString('N')))
   $probeDigestPath = "$probePath.sha256"
-  $hostPath = (Get-Process -Id $PID).Path
-  if ([string]::IsNullOrWhiteSpace($hostPath)) {
-    $hostPath = if ($PSVersionTable.PSEdition -eq 'Desktop') { Join-Path $PSHOME 'powershell.exe' } else { Join-Path $PSHOME 'pwsh' }
-  }
-  $invokeArgs = @('-NoProfile')
-  if ($PSVersionTable.PSEdition -eq 'Desktop') { $invokeArgs += @('-ExecutionPolicy', 'Bypass') }
-  $invokeArgs += @(
-    '-File', $InstallScriptPath,
+  $hostPath = Get-LizardPowerShellHostPath
+  $invokeArgs = @((Get-LizardPowerShellFilePrefix) + @(
+    $InstallScriptPath,
     '-TargetPath', $TargetRoot,
     '-Profile', $Profile,
     '-Harnesses', ($SelectedHarnesses -join ','),
@@ -1066,7 +1299,8 @@ function Get-CurrentInstallProbePlan {
     '-TestFailAfterMutation', [string]$TestFailAfterMutation,
     '-InternalPlanProbe',
     '-SuppressPlanReport'
-  )
+  ))
+  if (-not [string]::IsNullOrWhiteSpace($MemoryMode)) { $invokeArgs += @('-MemoryMode', $EffectiveMemoryMode) }
   if ($RequestedPacks.Count -gt 0) { $invokeArgs += @('-Packs', ($RequestedPacks -join ',')) }
   if (-not [string]::IsNullOrWhiteSpace($RoutingPolicy)) { $invokeArgs += @('-RoutingPolicy', $RoutingPolicy) }
   if (-not [string]::IsNullOrWhiteSpace($ModelMode)) { $invokeArgs += @('-ModelMode', $ModelMode) }
@@ -1091,11 +1325,11 @@ function Get-CurrentInstallProbePlan {
     }
     if ($probeExitCode -ne 0) { throw "PLAN_BINDING_PROBE_FAILED: Candidate plan probe failed: $probeOutput" }
     if (-not (Test-Path -LiteralPath $probePath -PathType Leaf)) { throw 'PLAN_BINDING_PROBE_FAILED: Candidate plan probe produced no plan.' }
-    $probeSha256 = (Get-FileHash -LiteralPath $probePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $probeSha256 = Get-SafeFileHash -AuthorizedRoot $probeRoot -Path $probePath
     return Read-LizardApprovedPlan -Path $probePath -ExpectedSha256 $probeSha256 -ExpectedOperationKind install
   } finally {
-    if (Test-Path -LiteralPath $probePath -PathType Leaf) { [System.IO.File]::Delete($probePath) }
-    if (Test-Path -LiteralPath $probeDigestPath -PathType Leaf) { [System.IO.File]::Delete($probeDigestPath) }
+    if (Test-Path -LiteralPath $probePath -PathType Leaf) { Remove-SafeItem -AuthorizedRoot $probeRoot -Path $probePath -Kind File }
+    if (Test-Path -LiteralPath $probeDigestPath -PathType Leaf) { Remove-SafeItem -AuthorizedRoot $probeRoot -Path $probeDigestPath -Kind File }
   }
 }
 
@@ -1116,9 +1350,14 @@ function Assert-ApprovedInstallCriticalBindingsCurrent {
       $currentHash = Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path $path
       if ($currentHash -ne [string]$entry.precondition_sha256) { throw "PLAN_BINDING_TARGET_MISMATCH: Target bytes changed: $($entry.path)" }
     }
+    if ([string]$entry.action -eq 'remove') {
+      $currentIdentity = Get-LizardPlanTargetIdentitySha256 -TargetRoot $TargetRoot -Path $path -Kind ([string]$entry.kind)
+      if ($currentIdentity -ne [string]$entry.precondition_identity_sha256) { throw "PLAN_BINDING_TARGET_IDENTITY_MISMATCH: Target identity changed: $($entry.path)" }
+    }
   }
 }
 
+Initialize-MemoryModeTransition
 if ($Apply) { Assert-ApprovedInstallPlanCurrent }
 if ($ValidateApprovedPlanOnly) {
   Write-Host "Approved install plan is current: $($ApprovedPlan.plan_id)"
@@ -1149,6 +1388,7 @@ Write-Host "Packs: $packDisplay"
 $requestedPackDisplay = if ($RequestedPacks.Count -gt 0) { $RequestedPacks -join ', ' } else { 'none' }
 Write-Host "Requested packs: $requestedPackDisplay"
 Write-Host "Harnesses: $($SelectedHarnesses -join ', ')"
+Write-Host "Memory mode: $EffectiveMemoryMode"
 Write-Host "Routing policy: $EffectiveRoutingPolicy"
 Write-Host "Model mode: $EffectiveModelMode"
 Write-Host "Daily use: $(if ($EffectiveModelMode -eq 'inherit-current') { 'Submit normal task prompts; keep the current IDE model.' } else { 'Submit normal task prompts; the configured runtime selects models automatically.' })"
@@ -1157,10 +1397,8 @@ Write-Host "Version: $LayerVersion"
 if ($ShouldWritePlan) { Write-Host "Plan report: $EffectivePlanPath" }
 Write-Host ""
 
+Invoke-MemoryModeTransitionRemovals
 Ensure-Dir (Join-Path $TargetRoot ".agent")
-Ensure-Dir (Join-Path $TargetRoot ".agent\memory\personal")
-Ensure-Dir (Join-Path $TargetRoot ".agent\memory\semantic")
-Ensure-Dir (Join-Path $TargetRoot ".agent\memory\working")
 Ensure-Dir (Join-Path $TargetRoot ".agent\protocols")
 Ensure-Dir (Join-Path $TargetRoot ".agent\skills")
 Ensure-Dir (Join-Path $TargetRoot ".agent\routing")
@@ -1168,19 +1406,18 @@ Ensure-Dir (Join-Path $TargetRoot ".agent\routing\receipts")
 Ensure-Dir (Join-Path $TargetRoot ".agent\routing\receipts\decisions")
 Ensure-Dir (Join-Path $TargetRoot ".agent\routing\receipts\executions")
 
-Copy-IfMissing (Join-Path $LayerRoot "templates\agent-gitignore") (Join-Path $TargetRoot ".agent\.gitignore")
-if ($SelectedPacks.Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($RoutingPolicy) -or -not [string]::IsNullOrWhiteSpace($ModelMode) -or -not [string]::IsNullOrWhiteSpace($ModelInventory) -or -not [string]::IsNullOrWhiteSpace($ModelRuntime)) {
+Copy-IfMissing (Join-Path $LayerRoot $AgentGitignoreSource) (Join-Path $TargetRoot ".agent\.gitignore")
+if ($SelectedPacks.Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($MemoryMode) -or $null -ne $existingInstallManifest -or -not [string]::IsNullOrWhiteSpace($RoutingPolicy) -or -not [string]::IsNullOrWhiteSpace($ModelMode) -or -not [string]::IsNullOrWhiteSpace($ModelInventory) -or -not [string]::IsNullOrWhiteSpace($ModelRuntime)) {
   Write-IfMissing -Dest (Join-Path $TargetRoot ".agent\project-profile.json") -Content ($ProfileDoc | ConvertTo-Json -Depth 10) -SourcePath 'generated:project-profile'
 } else {
   Copy-IfMissing $ProfilePath (Join-Path $TargetRoot ".agent\project-profile.json")
 }
-Copy-IfMissing (Join-Path $LayerRoot "templates\memory\personal\PREFERENCES.md") (Join-Path $TargetRoot ".agent\memory\personal\PREFERENCES.md")
-Copy-IfMissing (Join-Path $LayerRoot "templates\memory\semantic\DECISIONS.md") (Join-Path $TargetRoot ".agent\memory\semantic\DECISIONS.md")
-Copy-IfMissing (Join-Path $LayerRoot "templates\memory\semantic\LESSONS.md") (Join-Path $TargetRoot ".agent\memory\semantic\LESSONS.md")
-Copy-IfMissing (Join-Path $LayerRoot "templates\memory\working\WORKSPACE.md") (Join-Path $TargetRoot ".agent\memory\working\WORKSPACE.md")
+foreach ($spec in @($MemoryFileSpecs.ToArray())) {
+  Copy-IfMissing (Join-Path $LayerRoot ([string]$spec.source)) (Join-Path $TargetRoot ([string]$spec.destination))
+}
 
-foreach ($protocol in @("permissions.md", "memory-policy.md", "secret-handling.md", "release-gates.md", "handoff.md", "staged-execution.md", "context-hygiene.md")) {
-  Copy-IfMissing (Join-Path $LayerRoot "protocols\$protocol") (Join-Path $TargetRoot ".agent\protocols\$protocol")
+foreach ($spec in @($ProtocolSpecs.ToArray())) {
+  Copy-IfMissing (Join-Path $LayerRoot ([string]$spec.source)) (Join-Path $TargetRoot ([string]$spec.destination))
 }
 
 Copy-IfMissing $RoutingPolicyPath (Join-Path $TargetRoot ".agent\routing\policy.json")
@@ -1208,7 +1445,18 @@ foreach ($skill in $ProfileDoc.skills) {
   $indexLines.Add("## $skill") | Out-Null
   $indexLines.Add(('Source: `.agent/skills/{0}/SKILL.md`' -f $skill)) | Out-Null
   $indexLines.Add("") | Out-Null
-  $manifest = [ordered]@{ name = $skill; source = ".agent/skills/$skill/SKILL.md" }
+  $skillPackage = $SkillPackageCatalog[[string]$skill]
+  $manifest = [ordered]@{
+    schema_version = 1
+    name = $skill
+    version = [string]$skillPackage.metadata.version
+    status = 'active'
+    source = ".agent/skills/$skill/SKILL.md"
+    metadata = ".agent/skills/$skill/skill.json"
+    metadata_sha256 = (Get-LizardSha256 $skillPackage.metadata_path)
+    dependencies = @($skillPackage.metadata.dependencies)
+    permissions = $skillPackage.metadata.permissions
+  }
   $manifestLines.Add(($manifest | ConvertTo-Json -Compress)) | Out-Null
 }
 
@@ -1220,6 +1468,7 @@ foreach ($adapterName in $SelectedHarnesses) {
 }
 
 Register-RetiredArtifacts
+Assert-MemoryModePostcondition
 Write-InstallManifest
 Write-PlanReport
 if (-not $Apply) { $null = Write-CanonicalInstallPlan }
@@ -1234,6 +1483,8 @@ Write-Host "Planned: $($Planned.Count)"
 foreach ($item in $Planned) { Write-Host "  + $item" }
 Write-Host "Created: $($Created.Count)"
 foreach ($item in $Created) { Write-Host "  + $item" }
+Write-Host "Removed: $($Removed.Count)"
+foreach ($item in $Removed) { Write-Host "  - $item" }
 Write-Host "Skipped existing: $($Skipped.Count)"
 foreach ($item in $Skipped) { Write-Host "  ~ $item" }
 if ($MergeNeeded.Count -gt 0) {

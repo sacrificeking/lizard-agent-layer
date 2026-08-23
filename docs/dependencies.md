@@ -1,6 +1,6 @@
 # Dependency And Toolchain Snapshot
 
-Toolchain baseline reviewed: 2026-07-12. npm release verification refreshed: 2026-07-19. This is a release-readiness record, not an automated update policy for target projects.
+Toolchain baseline reviewed: 2026-08-23. npm release verification refreshed: 2026-08-23. This is a release-readiness record, not an automated update policy for target projects.
 
 `lizard-agent-layer` has no runtime package dependency, application framework, telemetry SDK, database driver, cloud SDK, or production service. PowerShell and Git run the repository tooling. Node.js and the npm development packages are required only for executable JSON Schema validation and repository CI.
 

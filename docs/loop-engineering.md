@@ -117,21 +117,24 @@ L2 is not autonomy. It is a controlled assisted workflow for one human-approved 
 
 1. Install the `loop-engineering` pack.
 2. Initialize the L2 pattern with `minimal-fix-assist` and review the plan.
-3. Preview worktree creation with `loop-worktree.ps1`.
-4. Create the worktree only with `-Apply -HumanApproved`.
-5. Make the smallest approved change in the assisted worktree.
-6. Generate an evidence-bound verifier packet with `loop-verify.ps1` and the lifecycle file produced during creation.
-7. Let a human decide whether to merge, revise, discard, or pause.
-8. Clean up the isolated worktree only with `loop-worktree-cleanup.ps1 -Apply -HumanApproved`.
+3. Preview the intended worktree with `loop-worktree.ps1`.
+4. After human review, create the worktree directly with Git outside the layer.
+5. Register the clean external worktree with `-RegisterExisting -Apply -HumanApproved`.
+6. Make the smallest approved change in the assisted worktree.
+7. Generate an evidence-bound verifier packet with `loop-verify.ps1` and the registered lifecycle file.
+8. Let a human decide whether to merge, revise, discard, or pause, then preview cleanup and perform the reviewed Git removal externally.
 
 ```powershell
 pwsh -NoProfile -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern minimal-fix-assist -WritePlan
 pwsh -NoProfile -File .\scripts\loop-init.ps1 -TargetPath D:\path\to\project -Pattern minimal-fix-assist -Apply
 pwsh -NoProfile -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123
-pwsh -NoProfile -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123 -Apply -HumanApproved
-pwsh -NoProfile -File .\scripts\loop-verify.ps1 -TargetPath D:\path\to\project -LifecyclePath D:\path\to\reports\loop-worktree-lifecycle.json -Implementer implementer-name -Verifier reviewer-name -Status PASS -VerificationCommand "npm test" -Apply
+git -C D:\path\to\project worktree add -b lizard/l2/fix-123 D:\path\to\worktrees\fix-123 HEAD
+pwsh -NoProfile -File .\scripts\loop-worktree.ps1 -TargetPath D:\path\to\project -ItemId fix-123 -Branch lizard/l2/fix-123 -WorktreePath D:\path\to\worktrees\fix-123 -RegisterExisting -Apply -HumanApproved
+pwsh -NoProfile -File .\scripts\new-verification-plan.ps1 -WorktreePath D:\path\to\worktree -CommandId git-head -OutputPath D:\path\to\reports\verification-plan.json -WritePlan
+pwsh -NoProfile -File .\scripts\loop-verify.ps1 -TargetPath D:\path\to\project -LifecyclePath D:\path\to\reports\loop-worktree-lifecycle.json -Implementer implementer-name -Verifier reviewer-name -Status PASS -VerificationPlanPath D:\path\to\reports\verification-plan.json -VerificationPlanSha256 <independently-reviewed-sha256> -HumanApprovedVerificationPlan -Apply
 pwsh -NoProfile -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -LifecyclePath D:\path\to\reports\loop-worktree-lifecycle.json -RemoveBranch
-pwsh -NoProfile -File .\scripts\loop-worktree-cleanup.ps1 -TargetPath D:\path\to\project -LifecyclePath D:\path\to\reports\loop-worktree-lifecycle.json -RemoveBranch -Apply -HumanApproved
+git -C D:\path\to\project worktree remove D:\path\to\worktrees\fix-123
+git -C D:\path\to\project branch -d lizard/l2/fix-123
 ```
 
 L2 never auto-merges, pushes, releases, deploys, changes dependencies, edits migrations, or touches secrets without separate explicit approval. The verifier rejects unsafe report paths, wrong repositories, non-root worktree paths, branch mismatches, self-review, failed commands, tampered lifecycle data, and stale Git state before it can write the target verifier report. See [L2 Lifecycle And Verifier Evidence](loop-evidence.md).

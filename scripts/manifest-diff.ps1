@@ -126,6 +126,17 @@ function Compare-List {
 $currentLayerVersion = if (Test-Path -LiteralPath (Join-Path $LayerRoot 'VERSION')) { (Get-Content -LiteralPath (Join-Path $LayerRoot 'VERSION') -Raw).Trim() } else { '0.0.0-dev' }
 if ([string]$manifest.layer_version -ne $currentLayerVersion) { Add-Diff 'layer-version' ([string]$manifest.layer_version) "Current layer version is $currentLayerVersion." }
 if ([string]$manifest.risk_level -ne [string]$expectedProfile.riskLevel) { Add-Diff 'risk-level' ([string]$manifest.risk_level) "Expected $($expectedProfile.riskLevel)." }
+$manifestMemoryMode = [string]$manifest.memory_mode
+$profileMemoryMode = [string]$installedProfile.memoryMode
+if ($manifestMemoryMode -notin @('curated', 'private-episodic', 'off')) { Add-Diff 'memory-mode-invalid' $manifestMemoryMode 'Manifest memory_mode is missing or unsupported.' }
+elseif ($profileMemoryMode -ne $manifestMemoryMode) { Add-Diff 'memory-mode-mismatch' $profileMemoryMode "Installed project profile must match manifest mode $manifestMemoryMode." }
+if ($manifestMemoryMode -eq 'off') {
+  foreach ($relative in @('.agent/memory', '.agent/protocols/memory-policy.md')) {
+    if (Test-Path -LiteralPath (Join-Path $TargetRoot $relative.Replace('/', '\'))) { Add-Diff 'memory-mode-off-residue' $relative 'Physical memory artifact is forbidden while memory mode is off.' }
+  }
+} elseif ($manifestMemoryMode -eq 'curated' -and (Test-Path -LiteralPath (Join-Path $TargetRoot '.agent\memory\episodic'))) {
+  Add-Diff 'memory-mode-curated-residue' '.agent/memory/episodic' 'Episodic content is not part of curated mode.'
+}
 
 Compare-List -Kind 'pack' -Expected @($expectedPacks) -Actual @($manifest.packs)
 Compare-List -Kind 'skill' -Expected @($expectedProfile.skills) -Actual @($manifest.skills)
@@ -256,8 +267,8 @@ $report = [ordered]@{
   status = $status
   strict = $Strict.IsPresent
   manifest_schema_version = $manifestSchema
-  installed = [ordered]@{ layer_version = [string]$manifest.layer_version; profile = $profileName; packs = @($manifest.packs); requested_packs = @($requestedPacks); risk_level = [string]$manifest.risk_level; skills = @($manifest.skills); harnesses = @($manifest.harnesses) }
-  expected = [ordered]@{ layer_version = $currentLayerVersion; profile = $profileName; packs = @($expectedPacks); requested_packs = @($requestedPacks); risk_level = [string]$expectedProfile.riskLevel; skills = @($expectedProfile.skills); harnesses = @($manifest.harnesses); pack_sources = @($packSources.ToArray()) }
+  installed = [ordered]@{ layer_version = [string]$manifest.layer_version; profile = $profileName; memory_mode = $manifestMemoryMode; packs = @($manifest.packs); requested_packs = @($requestedPacks); risk_level = [string]$manifest.risk_level; skills = @($manifest.skills); harnesses = @($manifest.harnesses) }
+  expected = [ordered]@{ layer_version = $currentLayerVersion; profile = $profileName; memory_mode = $manifestMemoryMode; packs = @($expectedPacks); requested_packs = @($requestedPacks); risk_level = [string]$expectedProfile.riskLevel; skills = @($expectedProfile.skills); harnesses = @($manifest.harnesses); pack_sources = @($packSources.ToArray()) }
   summary = [ordered]@{ differences = $differences.Count }
   differences = @($differences.ToArray())
 }

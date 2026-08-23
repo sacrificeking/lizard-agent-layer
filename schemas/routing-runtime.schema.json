@@ -15,8 +15,8 @@
     "selection": { "enum": ["subagent", "per-call"] },
     "actual_model_reporting": { "const": true },
     "attestation": { "enum": ["observed", "attested"] },
-    "capability_source": { "type": "string", "minLength": 1, "maxLength": 300 },
-    "configuration_fingerprint": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "capability_source": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@:+-]{0,127}$" },
+    "configuration_fingerprint": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@:+-]{0,199}$" },
     "verified_at": { "type": "string", "format": "date-time" },
     "expires_at": { "type": "string", "format": "date-time" }
   }
