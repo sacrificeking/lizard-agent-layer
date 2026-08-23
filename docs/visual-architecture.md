@@ -6,196 +6,204 @@
 
 ## 1. High-Level System Topology
 
-The system maintains a strict boundary between the **Reusable Source Layer** and the **Target Projects**:
-
-```mermaid
-flowchart TB
-    subgraph SOURCE["lizard-agent-layer (Source Framework)"]
-        PROFILES["Profiles\n(minimal, standard, supabase-react-finance)"]
-        PACKS["Packs\n(frontend, security, supabase, loops, etc.)"]
-        SKILLS["Skills & Contracts\n(21 Versioned Packages)"]
-        PROTOCOLS["Protocols\n(Permissions, Secret Handling, Release Gates)"]
-        ADAPTERS["Harness Adapters\n(Cursor, Copilot, Claude, Gemini, Codex)"]
-        SAFEFS_CORE["SafeFS & Trust Engine\n(Handle-bound I/O, Cryptographic Envelopes)"]
-    end
-
-    subgraph INSTALLER["Transactional Install & Update Engine"]
-        ANALYZER["Target Analyzer\n(Read-only inspection)"]
-        PLANNER["Canonical Plan Generator\n(JSON + SHA-256 binding)"]
-        TX_ENGINE["Write-Ahead Transaction Engine\n(Locks, Journals, Rollback)"]
-    end
-
-    subgraph TARGET["Target Project (Your Repository)"]
-        subgraph AGENT_CORE[".agent/ Core"]
-            PROFILE_CFG["project-profile.json"]
-            MEM[".agent/memory/\n(Preferences, Decisions, Lessons)"]
-            PROT[".agent/protocols/\n(Security, Governance Rules)"]
-            SKL[".agent/skills/\n(Installed Packages & Manifest)"]
-            ROUTING[".agent/routing/\n(Policies & Audit Receipts)"]
-        end
-
-        subgraph HARNESS_WIRING["IDE Harness Files (Translated Guidance)"]
-            CURSOR[".cursor/rules/lizard-agent-layer.mdc"]
-            COPILOT[".github/copilot-instructions.md"]
-            CLAUDE["CLAUDE.md"]
-            GEMINI["GEMINI.md"]
-            CODEX["AGENTS.md"]
-        end
-
-        APP_CODE["Application Source Code\n(src/, tests/, package.json - 100% Preserved)"]
-    end
-
-    SOURCE --> INSTALLER
-    INSTALLER -->|Deterministic Projection| TARGET
-    AGENT_CORE -.->|Feeds Context To| HARNESS_WIRING
-    HARNESS_WIRING -->|Guides AI Assistance Over| APP_CODE
-
-    classDef sourceStyle fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
-    classDef installerStyle fill:#334155,stroke:#f59e0b,stroke-width:2px,color:#f8fafc;
-    classDef targetStyle fill:#0f172a,stroke:#10b981,stroke-width:2px,color:#f8fafc;
-    class SOURCE sourceStyle;
-    class INSTALLER installerStyle;
-    class TARGET targetStyle;
+```text
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                      LIZARD-AGENT-LAYER (Source Framework)                       │
+│                                                                                  │
+│  📁 profiles/        --> (minimal, standard, supabase-react-finance)             │
+│  📁 packs/           --> (frontend, security, supabase, loop-engineering, etc.)  │
+│  📁 skills/          --> (21 Reusable packages with versioned skill.json)        │
+│  📁 protocols/       --> (Permissions, Secret-Handling, Release-Gates, Handoff)  │
+│  📁 adapters/        --> (Cursor, GitHub Copilot, Claude Code, Gemini, Codex)    │
+│  📁 schemas/         --> (25+ Draft 2020-12 Validation Contracts)                │
+│  📁 scripts/         --> (SafeFS Handle Engine, Zero-Trust Signatures, Recovery) │
+└────────────────────────────────────────┬─────────────────────────────────────────┘
+                                         │
+                                         │  Preview / Apply Plan
+                                         ▼
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                    TRANSACTIONAL INSTALL & UPDATE ENGINE                         │
+│                                                                                  │
+│   [ Target Analyzer ] ──► [ Canonical Plan (SHA-256) ] ──► [ Write-Ahead Journal] │
+└────────────────────────────────────────┬─────────────────────────────────────────┘
+                                         │
+                                         │  Deterministic Projection
+                                         ▼
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                        TARGET PROJECT (Your Repository)                          │
+│                                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────────────┐  │
+│  │ 📁 .agent/ Core (Shared Across All AI Tools)                               │  │
+│  │                                                                            │  │
+│  │  ├── project-profile.json   --> Active profile & pack configuration        │  │
+│  │  ├── 📁 memory/             --> Structured semantic decisions & lessons    │  │
+│  │  ├── 📁 protocols/          --> Security rules & staged execution policy   │  │
+│  │  ├── 📁 skills/             --> Installed skill packages & manifest        │  │
+│  │  └── 📁 routing/            --> Execution receipts & policy controls       │  │
+│  └─────────────────────────────────────┬──────────────────────────────────────┘  │
+│                                        │                                         │
+│                                        │ Translates rules into IDE configs       │
+│                                        ▼                                         │
+│  ┌────────────────────────────────────────────────────────────────────────────┐  │
+│  │ 📁 IDE Harness Wiring (Native IDE Instructions)                            │  │
+│  │                                                                            │  │
+│  │  • .cursor/rules/lizard-agent-layer.mdc  (Cursor IDE)                      │  │
+│  │  • .github/copilot-instructions.md       (GitHub Copilot)                  │  │
+│  │  • CLAUDE.md                             (Claude Code)                     │  │
+│  │  • GEMINI.md                             (Gemini CLI)                      │  │
+│  │  • AGENTS.md                             (Codex / Generic Agents)          │  │
+│  └─────────────────────────────────────┬──────────────────────────────────────┘  │
+│                                        │                                         │
+│                                        │ Enforces safety & quality over          │
+│                                        ▼                                         │
+│  ┌────────────────────────────────────────────────────────────────────────────┐  │
+│  │ 📁 Your Application Source Code (100% Preserved)                           │  │
+│  │                                                                            │  │
+│  │  • src/        • package.json    • tests/       • docs/                    │  │
+│  └────────────────────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## 2. The 4 Security & Governance Pillars
 
-```mermaid
-graph LR
-    subgraph P1["1. Handle-Bound SafeFS"]
-        A1["Windows: NtCreateFile\nUnix: openat/renameat"]
-        A2["Descriptor-relative operations"]
-        A3["Prevents Symlink/Junction swaps & Race Conditions"]
-        A1 --> A2 --> A3
-    end
-
-    subgraph P2["2. Zero-Trust Signatures"]
-        B1["Asymmetric Keys (RS256 / Ed25519)"]
-        B2["Challenge Nonce & Replay Protection"]
-        B3["Implementer vs. Verifier Role Separation"]
-        B1 --> B2 --> B3
-    end
-
-    subgraph P3["3. Transactional Engine"]
-        C1["Write-Ahead Journals (.tmp/tx-*)"]
-        C2["Target-Level Process Locking"]
-        C3["Automatic Rollback on Interruption"]
-        C1 --> C2 --> C3
-    end
-
-    subgraph P4["4. Records & Retention"]
-        D1["3 Memory Modes: curated / episodic / off"]
-        D2["Cryptographic Legal Holds"]
-        D3["Verifiable Deletion Receipts (ADR-0023)"]
-        D1 --> D2 --> D3
-    end
-
-    classDef pillar fill:#1e1e2e,stroke:#cba6f7,stroke-width:2px,color:#cdd6f4;
-    class P1,P2,P3,P4 pillar;
+```text
+┌──────────────────────────────────────┐  ┌──────────────────────────────────────┐
+│       1. HANDLE-BOUND SAFEFs         │  │     2. ZERO-TRUST SIGNATURES         │
+├──────────────────────────────────────┤  ├──────────────────────────────────────┤
+│ • Windows: NtCreateFile / Native     │  │ • RS256 / Ed25519 Asymmetric Keys    │
+│ • Unix: openat / renameat / unlinkat │  │ • Nonce Challenges & Replay Ledgers  │
+│ • Descriptor-relative mutations      │  │ • Strict Implementer vs. Verifier    │
+│ • Immune to Junction / Symlink Swaps │  │   role separation                    │
+│ • Prevents race conditions & escape  │  │ • Rejects synthetic PASS evidence    │
+└──────────────────────────────────────┘  └──────────────────────────────────────┘
+                   ▲                                         ▲
+                   │                                         │
+                   ▼                                         ▼
+┌──────────────────────────────────────┐  ┌──────────────────────────────────────┐
+│       3. TRANSACTIONAL ENGINE        │  │      4. RECORDS & RETENTION          │
+├──────────────────────────────────────┤  ├──────────────────────────────────────┤
+│ • Write-Ahead Journals (.tmp/tx-*)   │  │ • 3 Modes: curated, episodic, off    │
+│ • Target-level process locks         │  │ • Cryptographic Active Legal Holds   │
+│ • Automatic rollback on error        │  │ • Export Archive verification        │
+│ • Reversible recovery tooling        │  │ • Deletion Receipts (ADR-0023)       │
+│ • 0 Leftover residue on abort        │  │ • GDPR / Compliance deletion proof   │
+└──────────────────────────────────────┘  └──────────────────────────────────────┘
 ```
 
 ---
 
-## 3. Staged Execution & Anti-Hallucination Pipeline
+## 3. Staged Execution & Anti-Hallucination Pipeline (10-80-10)
 
-Every AI interaction in a project configured with `lizard-agent-layer` follows the **10-80-10 Staged Execution Pipeline** to prevent impulsive or unsafe code changes:
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Dev as Developer / User
-    participant AI as AI Coding Agent (Cursor / Copilot / Claude)
-    participant Core as .agent/ Governance Core
-    participant Guard as Secret & Path Guard
-    participant Verifier as Constrained Verifier
-    participant Memory as .agent/memory/
-
-    Dev->>AI: "Implement feature / Fix bug"
-    AI->>Core: Read project-profile, protocols & skills
-    AI->>Memory: Consult DECISIONS.md & LESSONS.md
-    
-    rect rgb(30, 41, 59)
-        note over AI,Guard: STAGE 1: Clarify & Plan (10% Token Budget)
-        AI->>AI: Analyze existing architecture & types
-        AI->>Dev: Propose structured, reviewable plan
-    end
-    
-    Dev-->>AI: Plan Approved
-    
-    rect rgb(15, 23, 42)
-        note over AI,Guard: STAGE 2: Execute with Constraints (80% Token Budget)
-        AI->>Guard: Validate file paths & secret boundaries
-        Guard-->>AI: Access authorized (Handle-bound SafeFS)
-        AI->>AI: Make modular code edits
-    end
-
-    rect rgb(30, 41, 59)
-        note over AI,Verifier: STAGE 3: Independent Verification (10% Token Budget)
-        AI->>Verifier: Run test suites & linter
-        Verifier-->>AI: Verification Evidence (PASS / FAIL)
-        AI->>Memory: Record new lessons / decisions (if applicable)
-        AI->>Dev: Present verified results with proof
-    end
+```text
+DEVELOPER                  AI CODING AGENT               .agent/ GOVERNANCE          CONSTRAINED VERIFIER
+    │                             │                              │                            │
+    │ 1. "Implement feature"      │                              │                            │
+    ├────────────────────────────►│                              │                            │
+    │                             │ 2. Load Profile & Memory     │                            │
+    │                             ├─────────────────────────────►│                            │
+    │                             │ 3. Check DECISIONS & LESSONS │                            │
+    │                             │◄─────────────────────────────┤                            │
+    │                             │                              │                            │
+    │   ┌─────────────────────────┴────────────────────────────┐ │                            │
+    │   │ STAGE 1: PLAN & CLARIFY (10% Token Budget)           │ │                            │
+    │   │ • Inspect existing code & types                      │ │                            │
+    │   │ • Formulate structured, testable plan                │ │                            │
+    │   └─────────────────────────┬────────────────────────────┘ │                            │
+    │                             │                              │                            │
+    │ 4. Review Plan Proposal     │                              │                            │
+    │◄────────────────────────────┤                              │                            │
+    │ 5. Plan Approved            │                              │                            │
+    ├────────────────────────────►│                              │                            │
+    │                             │                              │                            │
+    │   ┌─────────────────────────┴────────────────────────────┐ │                            │
+    │   │ STAGE 2: CONSTRAINED EXECUTION (80% Token Budget)    │ │                            │
+    │   │ • Guard against secret leaks (.env, credentials)     │ │                            │
+    │   │ • Perform atomic, handle-bound file edits            │ │                            │
+    │   │ • Maintain modular architecture discipline           │ │                            │
+    │   └─────────────────────────┬────────────────────────────┘ │                            │
+    │                             │                              │                            │
+    │                             │ 6. Request Test Execution    │                            │
+    │                             ├──────────────────────────────┼───────────────────────────►│
+    │                             │                              │ 7. Run Test & Lint Suite   │
+    │                             │                              │    (No inherited shell)    │
+    │                             │ 8. Verified PASS / Evidence  │                            │
+    │                             │◄─────────────────────────────┼────────────────────────────┤
+    │                             │                              │                            │
+    │   ┌─────────────────────────┴────────────────────────────┐ │                            │
+    │   │ STAGE 3: INDEPENDENT VERIFICATION (10% Token Budget) │ │                            │
+    │   │ • Record lessons in .agent/memory/ (if applicable)   │ │                            │
+    │   │ • Assemble signed verification proof                 │ │                            │
+    │   └─────────────────────────┬────────────────────────────┘ │                            │
+    │                             │                              │                            │
+    │ 9. Present Verified Result  │                              │                            │
+    │◄────────────────────────────┤                              │                            │
 ```
 
 ---
 
-## 4. Multi-Harness Adapter & Non-Clobbering Sidecar Architecture
+## 4. Multi-Harness Adapter & Non-Clobbering Sidecar Flowchart
 
-When `lizard-agent-layer` is installed in a repository with existing configuration files, it **never overwrites** developer files without explicit force. It deploys sidecars and merge guidance:
-
-```mermaid
-flowchart TD
-    INSTALL[Installer evaluates target directory]
-    
-    CHECK_EXISTS{Target file exists?}
-    INSTALL --> CHECK_EXISTS
-
-    CHECK_EXISTS -->|No| WRITE_NATIVE[Write primary harness file\ne.g., .github/copilot-instructions.md]
-    CHECK_EXISTS -->|Yes| CHECK_OWNERSHIP{Layer-Owned & Unmodified?}
-    
-    CHECK_OWNERSHIP -->|Yes| REFRESH[Deterministically Refresh Metadata]
-    CHECK_OWNERSHIP -->|No| WRITE_SIDECAR[Create isolated sidecar\ne.g., .github/copilot-instructions.lizard-agent-layer.md]
-    
-    WRITE_SIDECAR --> GEN_MERGE[Generate metadata-only merge suggestion\nscripts/merge-suggestions.ps1]
-    GEN_MERGE --> HUMAN_DECIDE[Human reviews and decides merge]
-
-    classDef safe fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#ecfdf5;
-    classDef warn fill:#78350f,stroke:#fbbf24,stroke-width:2px,color:#fffbeb;
-    class WRITE_NATIVE,REFRESH safe;
-    class WRITE_SIDECAR,GEN_MERGE,HUMAN_DECIDE warn;
+```text
+                 [ Installer Evaluates Target File ]
+                                  │
+                                  ▼
+                     /─────────────────────────\
+                    <   Target File Exists?     >
+                     \─────────────────────────/
+                                  │
+                 ┌────────────────┴────────────────┐
+                 │ NO                              │ YES
+                 ▼                                 ▼
+    ┌───────────────────────────┐     /─────────────────────────\
+    │ Write Primary Native File │    <  Layer-Owned & Unmodified?>
+    │ (e.g. AGENTS.md / CLAUDE) │     \─────────────────────────/
+    └───────────────────────────┘                  │
+                                   ┌───────────────┴───────────────┐
+                                   │ YES                           │ NO
+                                   ▼                               ▼
+                      ┌───────────────────────────┐   ┌───────────────────────────┐
+                      │ Deterministically Refresh │   │ Write Isolated Sidecar    │
+                      │ Layer Metadata Files      │   │ (e.g. .github/copilot-    │
+                      └───────────────────────────┘   │ instructions.lizard.md)   │
+                                                      └─────────────┬─────────────┘
+                                                                    │
+                                                                    ▼
+                                                      ┌───────────────────────────┐
+                                                      │ Generate Merge Suggestion │
+                                                      │ (scripts/merge-           │
+                                                      │  suggestions.ps1)         │
+                                                      └─────────────┬─────────────┘
+                                                                    │
+                                                                    ▼
+                                                      ┌───────────────────────────┐
+                                                      │ 🧑 Human Reviews & Merges │
+                                                      └───────────────────────────┘
 ```
 
 ---
 
-## 5. Lifecycle State Machine: Install, Update & Uninstall
+## 5. Lifecycle State Machine
 
-```mermaid
-stateDiagram-v2
-    [*] --> Unmanaged: Target Repository
-
-    state "Preview Mode (Safe Inspection)" as Preview {
-        Unmanaged --> PlanGenerated: analyze-target.ps1\ninstall.ps1 -WritePlan
-        PlanGenerated --> PlanApproved: Human reviews JSON & SHA-256
-    }
-
-    state "Active Management" as Active {
-        PlanApproved --> Installed: install.ps1 -Apply -HumanApproved
-        Installed --> Healthy: doctor.ps1 -Strict (PASS)
-        Healthy --> Updating: update-target.ps1 -WritePlan
-        Updating --> Healthy: update-target.ps1 -Apply
-    }
-
-    state "Decommissioning" as Decom {
-        Healthy --> UninstallPlan: uninstall.ps1 -WritePlan
-        UninstallPlan --> ExportArchive: Mode: export-then-complete
-        ExportArchive --> Removed: uninstall.ps1 -Apply
-        UninstallPlan --> Removed: Mode: complete / managed-only
-    }
-
-    Removed --> Unmanaged: Deletion Receipt Generated (0 Residue)
+```text
+┌─────────────┐       install.ps1 (dry-run)        ┌───────────────────┐
+│  UNMANAGED  │ ─────────────────────────────────► │  PLAN GENERATED   │
+│  REPOSITORY │                                    │  (.tmp/plan.json) │
+└─────────────┘                                    └─────────┬─────────┘
+       ▲                                                     │
+       │                                                     │ Human Approval (SHA-256)
+       │                                                     ▼
+       │  uninstall.ps1                            ┌───────────────────┐
+       │  -Mode complete                           │   LAYER ACTIVE    │
+       │  (0 Residue Proof)                        │   & INSTALLED     │
+       │                                           └─────────┬─────────┘
+       │                                                     │
+       │                                                     ▼
+       │      update-target.ps1                    ┌───────────────────┐
+       └────────────────────────────────────────── │  HEALTHY / AUDITED│
+              (Preserves user edits)               │  (doctor.ps1 OK)  │
+                                                   └───────────────────┘
 ```
 
 ---
@@ -204,14 +212,14 @@ stateDiagram-v2
 
 ```text
 lizard-agent-layer/
-├── adapters/                  # Harness shims (Cursor, Copilot, Claude, Gemini, Codex)
+├── adapters/                  # Harness translation shims (Cursor, Copilot, Claude, Gemini, Codex)
 ├── changes/                   # Versioned change records linking ADRs to path impacts
 ├── docs/
 │   ├── adr/                   # 23 Architecture Decision Records (ADR-0001 to ADR-0023)
 │   ├── audits/                # Static security audits & remediation ledgers
 │   ├── getting-started.md     # Comprehensive 6-section operations guide
-│   └── visual-architecture.md # This visual architecture document
-├── packages/ / packs/         # Reusable feature packs (frontend, supabase, security, etc.)
+│   └── visual-architecture.md # This visual architecture blueprint
+├── packs/                     # Reusable feature packs (frontend, supabase, security, loops)
 ├── profiles/                  # Pre-configured project shapes (minimal, standard, finance)
 ├── protocols/                 # Shared governance rules (secrets, release gates, handoff)
 ├── registry/                  # Contracts, quality rubrics, and drift baselines
