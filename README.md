@@ -201,6 +201,7 @@ Dependency and toolchain versions are recorded in [Dependency And Toolchain Snap
 - [Enterprise Usage](docs/enterprise-usage.md)
 - [Security Policy](SECURITY.md)
 - [Architecture](docs/architecture.md)
+- [Visual Architecture Blueprint](docs/visual-architecture.md)
 - [Architecture Decisions](docs/adr/README.md)
 - [Profiles](docs/profiles.md)
 - [Provider-Neutral Staged Execution](docs/staged-execution.md)

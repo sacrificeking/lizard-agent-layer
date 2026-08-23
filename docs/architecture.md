@@ -1,4 +1,6 @@
-﻿# Architecture
+# Architecture
+
+> For a complete visual blueprint with Mermaid diagrams, sequence flows, and system topologies, see [Visual Architecture](visual-architecture.md).
 
 `lizard-agent-layer` separates reusable agent infrastructure from project-local knowledge and harness-specific wiring.
 
