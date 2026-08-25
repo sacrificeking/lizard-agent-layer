@@ -11,7 +11,7 @@ pwsh -NoProfile -File .\scripts\matrix.ps1
 ## Focused matrix
 
 ```powershell
-pwsh -NoProfile -File .\scripts\matrix.ps1 -Profiles standard,supabase-react-finance -Harnesses codex,claude-code,gemini,github-copilot
+pwsh -NoProfile -File .\scripts\matrix.ps1 -Profiles standard,enterprise-fullstack -Harnesses codex,claude-code,gemini,github-copilot
 ```
 
 ## Output

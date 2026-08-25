@@ -1,0 +1,12 @@
+{
+  "name": "precision-domain",
+  "description": "High-stakes precision calculation, source fidelity, financial/scientific data provenance, stale-data checks, and auditability pack.",
+  "riskLevel": "high",
+  "projectSize": "large",
+  "stack": ["precision", "data-quality", "calculations", "provenance"],
+  "harnesses": ["codex", "claude-code", "gemini", "cursor", "github-copilot"],
+  "skills": ["precision-domain", "data-quality", "security-hardening", "git-safety", "release", "dependency-upgrade", "research-audit"],
+  "verification": ["validate data source provenance and timestamps", "run precision calculation unit assertions", "verify stale-data and null-handling semantics", "run regression suite before release"],
+  "recommendedForSignals": ["precision", "finance", "crypto", "defi", "stock", "market", "dca", "accounting", "scientific", "medical", "calculations"],
+  "notes": "Use when calculation fidelity, financial provenance, or critical numeric logic requires strict safeguards."
+}

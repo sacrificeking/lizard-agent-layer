@@ -18,6 +18,8 @@ param(
   [string]$LifecycleChallengePath,
   [string]$LifecycleChallengeSha256,
   [string[]]$EvidenceFile,
+  [string]$CriteriaPath,
+  [string]$CriteriaSha256,
   [ValidateSet('NEEDS_REVIEW', 'PASS', 'WARN', 'FAIL')]
   [string]$Status = 'NEEDS_REVIEW',
   [string]$Summary = 'Verifier review pending.',
@@ -244,6 +246,67 @@ if (-not (Is-SafeRelativePath $verifierRel) -or -not $normalizedVerifierRel.Star
   } catch { $failures = Add-ResultItem $failures "Verifier file path rejected: $($_.Exception.Message)" }
 }
 
+$evaluatedCriteria = New-Object System.Collections.Generic.List[object]
+if ($Status -in @('PASS', 'WARN') -and $failures.Count -eq 0) {
+  if (-not $manifest -or -not ($manifest.PSObject.Properties.Name -contains 'pattern') -or [string]::IsNullOrWhiteSpace([string]$manifest.pattern)) {
+    $failures = Add-ResultItem $failures "DOD_PATTERN_REQUIRED: Lifecycle manifest must define a pattern for PASS/WARN verification."
+  } else {
+    $patternName = [string]$manifest.pattern
+    $patternFile = Join-Path $LayerRoot "loops\$patternName.json"
+    if (-not (Test-Path -LiteralPath $patternFile -PathType Leaf)) {
+      $failures = Add-ResultItem $failures "DOD_PATTERN_NOT_FOUND: Pattern '$patternName' was not found in layer loops catalog."
+    } else {
+      try {
+        $patternJson = Get-Content -LiteralPath $patternFile -Raw | ConvertFrom-Json
+        $requiredDoD = @()
+        if ($patternJson.PSObject.Properties.Name -contains 'definitionOfDone') {
+          $requiredDoD = @($patternJson.definitionOfDone | Where-Object { $_.required -eq $true })
+        }
+        if ($requiredDoD.Count -eq 0) {
+          $failures = Add-ResultItem $failures "DOD_DEFINITION_EMPTY: Pattern '$patternName' has no required definitionOfDone criteria."
+        } elseif ([string]::IsNullOrWhiteSpace($CriteriaPath)) {
+          $failures = Add-ResultItem $failures "DOD_CRITERIA_REQUIRED: Pattern '$patternName' defines required definition of done criteria that must be verified via -CriteriaPath."
+        } else {
+          $effectiveCriteriaPath = Resolve-UserPath -Path $CriteriaPath -Fallback $CriteriaPath
+          if (-not (Test-Path -LiteralPath $effectiveCriteriaPath -PathType Leaf)) {
+            $failures = Add-ResultItem $failures "Criteria file not found: $CriteriaPath"
+          } else {
+            try {
+              Assert-PathOutsideRoot -Path $effectiveCriteriaPath -ExcludedRoot $TargetRoot -Label 'CriteriaPath'
+              if ($EffectiveWorktreePath -and (Test-Path -LiteralPath $EffectiveWorktreePath)) {
+                Assert-PathOutsideRoot -Path $effectiveCriteriaPath -ExcludedRoot $EffectiveWorktreePath -Label 'CriteriaPath'
+              }
+            } catch {
+              $failures = Add-ResultItem $failures "Criteria file path rejected: $($_.Exception.Message)"
+            }
+            if ($failures.Count -eq 0) {
+              $criteriaDoc = Get-Content -LiteralPath $effectiveCriteriaPath -Raw | ConvertFrom-Json
+              $submitted = @($criteriaDoc.criteria)
+              foreach ($sub in $submitted) {
+                $evaluatedCriteria.Add([pscustomobject][ordered]@{
+                  id = [string]$sub.id
+                  verdict = [string]$sub.verdict
+                  ground_truth_ref = if ($sub.PSObject.Properties.Name -contains 'ground_truth_ref') { [string]$sub.ground_truth_ref } else { $null }
+                }) | Out-Null
+              }
+              foreach ($req in $requiredDoD) {
+                $match = @($submitted | Where-Object { [string]$_.id -eq [string]$req.id })
+                if ($match.Count -eq 0) {
+                  $failures = Add-ResultItem $failures ("DOD_REQUIRED_CRITERION_UNMET: {0} is missing from criteria packet." -f $req.id)
+                } elseif ([string]$match[0].verdict -ne 'PASS') {
+                  $failures = Add-ResultItem $failures ("DOD_REQUIRED_CRITERION_UNMET: {0} has verdict '{1}', must be PASS." -f $req.id, $match[0].verdict)
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        $failures = Add-ResultItem $failures "Unable to evaluate definitionOfDone criteria: $($_.Exception.Message)"
+      }
+    }
+  }
+}
+
 $effectiveStatus = if ($failures.Count -gt 0) { 'INVALID' } else { $Status }
 $verifiedAt = (Get-Date).ToUniversalTime().ToString('o')
 $packetPayload = [pscustomobject][ordered]@{
@@ -271,6 +334,7 @@ $packetPayload = [pscustomobject][ordered]@{
   verification_runner_id = if ($approvedVerificationPlan) { [string]$approvedVerificationPlan.plan.runner_id } else { $null }
   commands = @($commandResults.ToArray())
   evidence_files = @($evidenceFiles.ToArray())
+  criteria = @($evaluatedCriteria.ToArray())
   auto_merge = $false
   human_merge_review_required = $true
 }

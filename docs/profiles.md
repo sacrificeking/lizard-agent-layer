@@ -1,25 +1,32 @@
 # Profiles
 
+> [!NOTE]
+> **⚡ Ultra High-Dense Quick Check:**
+> - `minimal`: Low risk; light overlay for scripts, libraries, and small tools.
+> - `standard`: Medium risk (recommended default); team overlay; requires explicit `-Harnesses`.
+> - `enterprise-fullstack`: High risk label; **same six core skills as `standard`**. Domain stacks come from `-Packs`, not from the profile skill list.
+
 Profiles describe how much agent infrastructure a target project should receive.
 
 ## minimal
 
-For small scripts, libraries, or experiments. Installs generic instructions by default plus git safety and research audit skills.
+For small scripts, libraries, or experiments. Default skills: `git-safety`, `research-audit`, `staged-execution`. Default harness is `generic-agents-md` unless `-Harnesses` is passed.
 
 ## standard
 
-For normal product repositories. Installs Codex, Claude Code, Gemini, and GitHub Copilot adapters by default, plus release, dependency upgrade, git safety, and research audit workflows.
+For normal product repositories. Requires explicit `-Harnesses` at install time (fails closed without it). Default skills (matching, not always-on): `git-safety`, `staged-execution`, `research-audit`, `project-decision-harvest`, `repo-grounded-change`, `premortem`. Release, dependency-upgrade, and domain packs are **not** included unless you pass `-Packs` or extra skills.
 
-## supabase-react-finance
+## enterprise-fullstack
 
-For high-risk React/Vite/Supabase finance applications. Installs Codex, Claude Code, Gemini, and GitHub Copilot adapters by default, plus frontend, design system, Supabase, edge functions, data quality, release, git safety, dependency, and research audit skills.
+For high-risk fullstack repositories (databases, APIs, UI, precision). Requires explicit `-Harnesses`. **Skill list matches `standard`.** Oracle/PostgreSQL/MSSQL, frontend frameworks, and API stacks are **not** implied by the profile name. Add them with `-Packs` (for example `database-backend`, `frontend-engineering`, `backend-api`, `security-hardening`, `precision-domain`). Risk level is `high`; that does not install slogan skills.
+
 
 ## Harness override
 
 Use `-Harnesses` with `scripts/install.ps1` to override profile defaults:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot,cursor
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot
 ```
 
 Available adapters:

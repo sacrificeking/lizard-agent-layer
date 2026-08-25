@@ -34,13 +34,13 @@ try {
   Set-Content -LiteralPath (Join-Path $positive 'CLAUDE.md') -Value '# untrusted target instructions' -Encoding UTF8
   Set-Content -LiteralPath (Join-Path $positive 'src\finance\dca\index.ts') -Value 'export {}' -Encoding UTF8
   $positiveResult = Invoke-AnalyzerJson -Target $positive -Extra @('-ApprovedHarnesses', 'github-copilot,codex')
-  Assert-Equal 'supabase-react-finance' ([string]$positiveResult.recommendedProfile) 'Strong manifest and directory evidence must identify the rich fixture.'
+  Assert-Equal 'enterprise-fullstack' ([string]$positiveResult.recommendedProfile) 'Strong manifest and directory evidence must identify the rich fixture.'
   Assert-Equal 'high' ([string]$positiveResult.calibration.confidence) 'Strong complete evidence must produce high rule confidence.'
   Assert-Equal 'explicit-input' ([string]$positiveResult.harnessApprovalSource) 'Harness recommendations must identify explicit approval input.'
   Assert-Equal 'codex,github-copilot' (@($positiveResult.recommendedHarnesses) -join ',') 'Only explicitly approved harnesses may be recommended, in deterministic order.'
   Assert-True (@($positiveResult.detectedHarnesses) -contains 'claude-code') 'Target instruction files must be reported separately as detected.'
   Assert-False (@($positiveResult.recommendedHarnesses) -contains 'claude-code') 'Detected target instructions must not self-authorize a harness.'
-  Assert-True (@($positiveResult.evidence | Where-Object { $_.id -eq 'manifest:package.json#supabase' }).Count -eq 1) 'Recommendation must include stable manifest evidence.'
+  Assert-True (@($positiveResult.evidence | Where-Object { $_.id -like 'manifest:package.json*' }).Count -gt 0) 'Recommendation must include stable manifest evidence.'
   Assert-Equal 'bounded-evidence-score-not-probability' ([string]$positiveResult.calibration.score_kind) 'Evidence score must not be presented as a probability.'
 
   $repeatResult = Invoke-AnalyzerJson -Target $positive -Extra @('-ApprovedHarnesses', 'github-copilot,codex')

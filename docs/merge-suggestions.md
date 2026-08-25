@@ -23,7 +23,7 @@ pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\pro
 Harness override:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini
+pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot
 ```
 
 Machine-readable output:

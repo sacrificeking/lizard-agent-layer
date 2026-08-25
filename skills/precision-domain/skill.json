@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "name": "edge-functions",
+  "name": "precision-domain",
   "version": "1.0.0",
   "lifecycle_state": "active",
   "compatibility": {
@@ -20,23 +20,17 @@
       "github-copilot"
     ]
   },
-  "dependencies": [
-    {
-      "name": "supabase",
-      "version": ">=1.0.0",
-      "optional": false
-    }
-  ],
+  "dependencies": [],
   "permissions": {
     "filesystem": "workspace-scoped",
-    "network": "approval-required",
+    "network": "denied",
     "process": "bounded",
     "secrets": "denied"
   },
   "provenance": {
     "owner": "lizard-agent-layer",
-    "source_path": "skills/edge-functions",
-    "reviewed_at": "2026-08-22",
+    "source_path": "skills/precision-domain",
+    "reviewed_at": "2026-08-23",
     "review_record": "WP13"
   },
   "conflicts": [],

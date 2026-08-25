@@ -43,6 +43,26 @@ function New-TestVerificationPlanArguments {
   @('-VerificationPlanPath', $planPath, '-VerificationPlanSha256', $sha256, '-HumanApprovedVerificationPlan')
 }
 
+function New-TestCriteriaPacket {
+  param([string]$Name = 'criteria.json', [hashtable]$Overrides = @{})
+  $critDir = Join-Path $fixtureRoot 'criteria'
+  New-Item -ItemType Directory -Path $critDir -Force | Out-Null
+  $critPath = Join-Path $critDir $Name
+  $defaults = [ordered]@{
+    'worktree-isolation' = 'PASS'
+    'scoped-diff' = 'PASS'
+    'verifier-pass' = 'PASS'
+    'human-approval-gate' = 'PASS'
+  }
+  foreach ($k in $Overrides.Keys) { $defaults[$k] = $Overrides[$k] }
+  $items = @()
+  foreach ($id in $defaults.Keys) {
+    $items += [ordered]@{ id = $id; verdict = $defaults[$id]; ground_truth_ref = "$id-truth" }
+  }
+  Set-Content -LiteralPath $critPath -Value ([ordered]@{ criteria = $items } | ConvertTo-Json -Depth 5)
+  @('-CriteriaPath', $critPath)
+}
+
 function Assert-GitSuccess {
   param([string[]]$Arguments, [string]$Message)
   $output = & git @Arguments 2>&1
@@ -58,7 +78,7 @@ try {
   Assert-GitSuccess @('-C', $target, 'add', 'README.md') 'git add failed'
   Assert-GitSuccess @('-C', $target, 'commit', '--quiet', '-m', 'fixture') 'git commit failed'
 
-  $installApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Profile', 'minimal', '-Packs', 'loop-engineering')
+  $installApproval = New-TestInstallApprovalArguments -LayerRoot $RepoRoot -BaseArguments @('-TargetPath', $target, '-Profile', 'minimal', '-Packs', 'loop-engineering')
   $install = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $installApproval.arguments
   Assert-Equal 0 $install.exit_code "Loop pack install failed: $($install.output)"
   $loopInit = Invoke-TestPowerShell -ScriptPath $loopInitScript -Arguments @('-TargetPath', $target, '-Pattern', 'minimal-fix-assist', '-OutputDir', (Join-Path $fixtureRoot 'init-output'), '-Apply')
@@ -98,8 +118,9 @@ try {
   $verifierTrustArgs = @('-TrustChallengePath', $verifierTrust.challenge_path, '-TrustChallengeSha256', $verifierTrust.challenge_sha256, '-VerifierPrivateKeyPath', $verifierTrust.private_key_path, '-VerifierPrivateKeySha256', $verifierTrust.private_key_sha256)
   $auditTrustArgs = @('-TrustStorePath', $verifierTrust.trust_store_path, '-TrustStoreSha256', $verifierTrust.trust_store_sha256, '-TrustChallengePath', $verifierTrust.challenge_path, '-TrustChallengeSha256', $verifierTrust.challenge_sha256) + $lifecycleTrustArgs
 
+  $criteriaArgs = New-TestCriteriaPacket -Name 'pass-criteria.json'
   $passOutput = Join-Path $fixtureRoot 'verify-pass'
-  $pass = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'Evidence checks passed.', '-EvidenceFile', 'README.md', '-OutputDir', $passOutput, '-Apply') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs)
+  $pass = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'Evidence checks passed.', '-EvidenceFile', 'README.md', '-OutputDir', $passOutput, '-Apply') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs + $criteriaArgs)
   Assert-Equal 0 $pass.exit_code "Evidence-bound PASS failed: $($pass.output)"
   $passReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $passOutput 'loop-verify-report.json') -Raw)
   Assert-Equal 'PASS' $passReport.status 'Verifier effective status must be PASS.'
@@ -115,6 +136,27 @@ try {
   $targetVerifierMarkdown = Join-Path $target '.agent\loops\loop-verifier-report.md'
   $sealedMarkdownHashBeforeFailures = (Get-FileHash -LiteralPath $targetVerifierMarkdown -Algorithm SHA256).Hash
 
+  # Adversarial DoD Tests
+  $missingDoD = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'Missing DoD packet.', '-OutputDir', (Join-Path $fixtureRoot 'verify-missing-dod'), '-Apply') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs)
+  Assert-False ($missingDoD.exit_code -eq 0) 'PASS without required DoD criteria packet must fail closed.'
+  $missingDoDReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-missing-dod\loop-verify-report.json') -Raw)
+  Assert-True ((@($missingDoDReport.failures) -join ' ') -match 'DOD_CRITERIA_REQUIRED') 'Missing criteria must expose DOD_CRITERIA_REQUIRED failure.'
+
+  $failingDoDArgs = New-TestCriteriaPacket -Name 'fail-criteria.json' -Overrides @{ 'verifier-pass' = 'FAIL' }
+  $failingDoD = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'Failing DoD criterion.', '-OutputDir', (Join-Path $fixtureRoot 'verify-failing-dod'), '-Apply') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs + $failingDoDArgs)
+  Assert-False ($failingDoD.exit_code -eq 0) 'PASS with failing required DoD criterion must fail closed.'
+  $failingDoDReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-failing-dod\loop-verify-report.json') -Raw)
+  Assert-True ((@($failingDoDReport.failures) -join ' ') -match 'DOD_REQUIRED_CRITERION_UNMET') 'Failing criterion must expose DOD_REQUIRED_CRITERION_UNMET failure.'
+
+  $inTargetCriteriaDir = Join-Path $target '.agent\criteria'
+  New-Item -ItemType Directory -Path $inTargetCriteriaDir -Force | Out-Null
+  $inTargetCriteriaPath = Join-Path $inTargetCriteriaDir 'in-target-criteria.json'
+  Set-Content -LiteralPath $inTargetCriteriaPath -Value (Get-Content -LiteralPath (Join-Path $fixtureRoot 'criteria\pass-criteria.json') -Raw)
+  $inTargetDoD = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'In-target DoD packet must fail.', '-OutputDir', (Join-Path $fixtureRoot 'verify-in-target-dod'), '-Apply', '-CriteriaPath', $inTargetCriteriaPath) + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs)
+  Assert-False ($inTargetDoD.exit_code -eq 0) 'PASS with in-target CriteriaPath must fail closed.'
+  $inTargetDoDReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-in-target-dod\loop-verify-report.json') -Raw)
+  Assert-True ((@($inTargetDoDReport.failures) -join ' ') -match 'Criteria file path rejected|SAFEFS_FORBIDDEN_ROOT') 'In-target criteria must expose path rejection failure.'
+
   $outsideEvidence = Join-Path $fixtureRoot 'outside-evidence'
   $linkedEvidence = Join-Path $worktree 'linked-evidence'
   $outsideCanary = Join-Path $outsideEvidence 'canary.txt'
@@ -124,7 +166,7 @@ try {
   New-DirectoryLink -Path $linkedEvidence -Target $outsideEvidence
   try {
     $linkedOutput = Join-Path $fixtureRoot 'verify-linked-evidence'
-    $linkedEvidenceResult = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'Linked evidence must fail.', '-EvidenceFile', 'linked-evidence/canary.txt', '-OutputDir', $linkedOutput, '-Apply') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs)
+    $linkedEvidenceResult = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'Linked evidence must fail.', '-EvidenceFile', 'linked-evidence/canary.txt', '-OutputDir', $linkedOutput, '-Apply') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs + $criteriaArgs)
   } finally {
     Remove-DirectoryLink -Path $linkedEvidence
   }
@@ -134,7 +176,7 @@ try {
   Assert-Equal $outsideCanaryHash (Get-FileHash -LiteralPath $outsideCanary -Algorithm SHA256).Hash 'Rejected linked evidence must not modify the outside canary.'
   Assert-Equal $sealedHashBeforeFailures (Get-FileHash -LiteralPath $targetEvidence -Algorithm SHA256).Hash 'Rejected linked evidence must not replace sealed target evidence.'
 
-  $faultedWrite = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'This packet must roll back.', '-OutputDir', (Join-Path $fixtureRoot 'verify-write-fault'), '-Apply', '-TestFailAfterMutation', '1') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs)
+  $faultedWrite = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'This packet must roll back.', '-OutputDir', (Join-Path $fixtureRoot 'verify-write-fault'), '-Apply', '-TestFailAfterMutation', '1') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs + $criteriaArgs)
   Assert-False ($faultedWrite.exit_code -eq 0) 'Fault-injected verifier target write must fail.'
   Assert-Equal $sealedHashBeforeFailures (Get-FileHash -LiteralPath $targetEvidence -Algorithm SHA256).Hash 'Verifier evidence write must roll back atomically.'
   Assert-Equal $sealedMarkdownHashBeforeFailures (Get-FileHash -LiteralPath $targetVerifierMarkdown -Algorithm SHA256).Hash 'Verifier Markdown write must roll back atomically.'
@@ -168,12 +210,12 @@ try {
   $tamperedReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-tampered\loop-verify-report.json') -Raw)
   Assert-True ((@($tamperedReport.failures) -join ' ') -match 'TRUST_(PAYLOAD_HASH_MISMATCH|ENVELOPE_CONTEXT_MISMATCH)') 'Tampered lifecycle must expose signed evidence mismatch.'
 
-  $selfVerify = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'same-agent', '-Implementer', 'same-agent', '-Status', 'PASS', '-OutputDir', (Join-Path $fixtureRoot 'verify-self'), '-Apply') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs)
+  $selfVerify = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'same-agent', '-Implementer', 'same-agent', '-Status', 'PASS', '-OutputDir', (Join-Path $fixtureRoot 'verify-self'), '-Apply') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs + $criteriaArgs)
   Assert-False ($selfVerify.exit_code -eq 0) 'Self-verification must fail.'
   $selfReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-self\loop-verify-report.json') -Raw)
   Assert-True ((@($selfReport.failures) -join ' ') -match 'SELF_VERIFICATION_FORBIDDEN') 'Self-verification must expose stable code.'
 
-  $failedCommand = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-OutputDir', (Join-Path $fixtureRoot 'verify-command-failure'), '-Apply') + $failedPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs)
+  $failedCommand = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-OutputDir', (Join-Path $fixtureRoot 'verify-command-failure'), '-Apply') + $failedPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs + $criteriaArgs)
   Assert-False ($failedCommand.exit_code -eq 0) 'PASS with a failed command must fail.'
   Assert-Equal $sealedHashBeforeFailures (Get-FileHash -LiteralPath $targetEvidence -Algorithm SHA256).Hash 'Rejected verdict must not replace sealed target evidence.'
 

@@ -1,17 +1,24 @@
 # Packs
 
+> [!NOTE]
+> **⚡ Ultra High-Dense Quick Check:**
+> - **Modular Extensions:** Packs overlay profiles with specialized skills and verification steps without changing profile definitions.
+> - **100% Generic:** Stack-agnostic packs (`database-backend`, `frontend-engineering`, `backend-api`, `precision-domain`) adapt dynamically to your repository's technology choices.
+> - **Overlay Support:** Target repositories can declare local overlays (`.lizard-agent-layer/packs/`) extending built-in packs.
+
 Packs are reusable bundle manifests for common project shapes. A profile sets the base posture; packs add stack-specific skills, harnesses, verification notes, model preferences, risk level, project size, and install-plan context.
 
-Use packs when a project needs more precision than `minimal`, `standard`, or `supabase-react-finance` alone. Multiple packs can be combined in one install command.
+Use packs when a project needs more precision than `minimal`, `standard`, or `enterprise-fullstack` alone. Multiple packs can be combined in one install command.
 
 ## Available Packs
 
 | Pack | Use For | Risk | Main Additions |
 | --- | --- | --- | --- |
-| `frontend-product` | React, Vite, TypeScript product frontends | medium | Frontend, design, dependency, git safety, research audit |
-| `design-system` | DESIGN.md, UI consistency, accessibility-sensitive work | medium | Design-system and frontend review discipline |
-| `supabase-react` | React plus Supabase database, auth, edge functions, generated types | high | Supabase, edge functions, data quality, security hardening |
-| `finance-app` | Finance, crypto, DeFi, stocks, market data, DCA, portfolio workflows | high | Data provenance, stale-data checks, release and dependency discipline |
+| `frontend-engineering` | Universal frontend UI engineering across React, Angular, Vue, Svelte, Next.js, and Nuxt | medium | Frontend UI architecture, design contracts, dependency discipline, git safety, research audit |
+| `database-backend` | Enterprise database engineering across Oracle, PostgreSQL, MSSQL, MySQL, MongoDB | high | Database migrations, transactional DDL, query safety, data quality, security hardening, release |
+| `backend-api` | Backend API services across Node/Nest, Java/Spring, Python/FastAPI, Go, .NET, Serverless | high | API contracts, DTO validation, middleware, error envelopes, security hardening, dependency discipline |
+| `design-system` | DESIGN.md, design tokens, UI consistency, accessibility-sensitive work | medium | Design-system and frontend engineering review discipline |
+| `precision-domain` | High-stakes precision calculations, financial/scientific data provenance, stale-data checks | high | Data provenance, precision calculation assertions, release and dependency discipline |
 | `agent-runtime` | Applications that run agents, model routing, tools, memory, evals | high | Runtime-agent boundaries, fallback, permission and evaluation checks |
 | `loop-engineering` | Report-only and assisted agent workflows, update watches, release readiness loops | medium | Loop triage, verifier, state sync, constraints, worktree isolation, cost and CI triage skills |
 | `security-hardening` | Secrets, auth, permissions, CI, dependencies, production risk | high | Security hardening, git safety, dependency upgrade, research audit |
@@ -21,13 +28,13 @@ Use packs when a project needs more precision than `minimal`, `standard`, or `su
 Preview a profile with one pack:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs frontend-product
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs frontend-engineering
 ```
 
-Preview a high-risk Supabase finance app with multiple packs:
+Preview an enterprise fullstack app with multiple packs:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile supabase-react-finance -Packs frontend-product,supabase-react,finance-app,security-hardening -WritePlan
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile enterprise-fullstack -Packs frontend-engineering,database-backend,backend-api,security-hardening -WritePlan
 ```
 
 The installer merges pack values into the selected profile before it plans or applies:
@@ -95,13 +102,13 @@ Overlay packs can extend built-in packs:
 ```json
 {
   "name": "project-overlay",
-  "extends": "finance-app",
-  "description": "Project-specific finance additions.",
+  "extends": "precision-domain",
+  "description": "Project-specific calculation additions.",
   "riskLevel": "high",
   "projectSize": "large",
-  "skills": ["frontend-react"],
+  "skills": ["frontend-engineering"],
   "harnesses": ["codex"],
-  "verification": ["verify project-specific finance workflows"]
+  "verification": ["verify project-specific calculation workflows"]
 }
 ```
 

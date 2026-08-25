@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "wp07-prompts-hygiene-and-diet",
+  "date": "2026-08-24",
+  "summary": "Implemented session-level paste stop (0014), enterprise profile diet & conditional protocol installation (0015), and ask-only USING.md pointers with dynamic diff review questions (0016).",
+  "changed_paths": [
+    "protocols/permissions.md",
+    "protocols/secret-handling.md",
+    "profiles/enterprise-fullstack.json",
+    "scripts/analyze-target.ps1",
+    "scripts/install.ps1",
+    "docs/target-analysis.md",
+    "QUICKSTART.md",
+    "adapters/codex/AGENTS.lizard.md",
+    "adapters/claude-code/CLAUDE.lizard.md",
+    "adapters/cursor/lizard-agent-layer.mdc",
+    "adapters/github-copilot/copilot-instructions.lizard.md",
+    "adapters/gemini/GEMINI.lizard.md",
+    "adapters/generic-agents-md/AGENTS.generic.lizard.md",
+    "skills/repo-grounded-change/SKILL.md",
+    "tests/unit/overlay-calorie-budget.tests.ps1"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0004-adapter-composition-and-precedence.md",
+    "docs/adr/0008-manifest-schema-v3.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0020-organization-harness-approvals.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Refines prompt hygiene, enterprise default skills, and conditional protocol installation."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Enhances prompt boundaries and minimizes installed overlay footprint."
+  }
+}

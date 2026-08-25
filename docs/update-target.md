@@ -1,5 +1,11 @@
 # Update Targets
 
+> [!NOTE]
+> **⚡ Ultra High-Dense Quick Check:**
+> - **Preserves Local State:** Updating updates shared skills, protocols, and adapters while preserving `.agent/memory/` and custom target files.
+> - **Canonical Plan First:** Generates an external Markdown and JSON update plan with SHA-256 integrity binding before touching the target.
+> - **1-Liner:** `pwsh -File .\scripts\update-target.ps1 -TargetPath "." -Apply -HumanApproved`
+
 For interrupted transactions, unsupported manifests, integrity-unknown files, and downgrade gates, follow [Troubleshooting and recovery](troubleshooting.md).
 
 `update-target.ps1` is the plan-first workflow for keeping an installed target project aligned with the current `lizard-agent-layer` repo.
@@ -76,7 +82,7 @@ Applied update history records the old and new manifest schemas plus downgrade a
 You can intentionally adjust the installed contract during an update:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Profile supabase-react-finance -Packs frontend-product,supabase-react,finance-app,security-hardening -Harnesses codex,claude-code,gemini
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -Profile enterprise-fullstack -Packs frontend-engineering,database-backend,backend-api,security-hardening -Harnesses github-copilot
 ```
 
 Run that as preview first, review the plan, then add `-Apply` when the contract is correct.

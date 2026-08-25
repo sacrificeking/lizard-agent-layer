@@ -1,0 +1,12 @@
+{
+  "name": "frontend-engineering",
+  "description": "Universal frontend UI engineering pack for component architecture, state management, bundle discipline, and accessibility across React, Angular, Vue, Svelte, Next.js, and Nuxt.",
+  "riskLevel": "medium",
+  "projectSize": "medium",
+  "stack": ["frontend", "ui", "typescript", "javascript", "web"],
+  "harnesses": ["codex", "claude-code", "gemini", "cursor", "github-copilot"],
+  "skills": ["frontend-engineering", "design-system", "dependency-upgrade", "git-safety", "research-audit"],
+  "verification": ["run frontend typecheck", "run component and unit tests", "verify bundle discipline and build before release", "check accessibility and responsive behavior"],
+  "recommendedForSignals": ["frontend", "ui", "react", "angular", "vue", "svelte", "next", "nuxt", "vite", "webpack", "typescript", "design-system"],
+  "notes": "Use for any web frontend or UI component application."
+}

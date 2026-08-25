@@ -233,7 +233,11 @@ if (-not ($Harnesses -and $Harnesses.Count -gt 0)) {
   }
 }
 $SelectedHarnesses = if ($Harnesses -and $Harnesses.Count -gt 0) { Expand-HarnessList $Harnesses } else { @($DefaultHarnesses.ToArray()) }
+if (($Profile -eq "standard" -or $Profile -eq "enterprise-fullstack") -and ($null -eq $Harnesses -or $Harnesses.Count -eq 0)) {
+  throw "INSTALL_HARNESSES_REQUIRED: Profile '$Profile' requires the -Harnesses parameter to be explicitly specified."
+}
 if ($SelectedHarnesses.Count -eq 0) { throw "No harnesses selected. Set profile.harnesses or pass -Harnesses." }
+
 
 function Resolve-PlanReportPath {
   if (-not [string]::IsNullOrWhiteSpace($PlanPath)) {
@@ -467,7 +471,24 @@ if ($EffectiveMemoryMode -eq 'private-episodic') {
 }
 $AgentGitignoreSource = if ($EffectiveMemoryMode -eq 'off') { 'templates\agent-gitignore-off' } else { 'templates\agent-gitignore' }
 $ProtocolSpecs = New-Object System.Collections.Generic.List[object]
-foreach ($protocol in @('prompt-trust.md', 'permissions.md', 'secret-handling.md', 'release-gates.md', 'handoff.md', 'staged-execution.md', 'context-hygiene.md')) {
+$activeProtocols = New-Object System.Collections.Generic.List[string]
+$activeProtocols.Add('prompt-trust.md')
+$activeProtocols.Add('permissions.md')
+$activeProtocols.Add('secret-handling.md')
+
+$effectiveSkills = @($ProfileDoc.skills)
+if ($effectiveSkills -contains 'staged-execution') {
+  $activeProtocols.Add('staged-execution.md')
+  $activeProtocols.Add('context-hygiene.md')
+}
+if ($effectiveSkills -contains 'release') {
+  $activeProtocols.Add('release-gates.md')
+}
+if ($SelectedHarnesses.Count -ge 2) {
+  $activeProtocols.Add('handoff.md')
+}
+
+foreach ($protocol in $activeProtocols) {
   $ProtocolSpecs.Add([pscustomobject]@{ source = "protocols\$protocol"; destination = ".agent\protocols\$protocol" }) | Out-Null
 }
 $ProtocolSpecs.Add([pscustomobject]@{ source = "templates\project-context\$EffectiveMemoryMode.md"; destination = '.agent\protocols\project-context.md' }) | Out-Null
@@ -782,6 +803,7 @@ function New-MergeSuggestion {
     '',
     ('Review `{0}` before using this project with the `{1}` harness.' -f $SidecarPath, $Harness),
     'The sidecar contains reusable agent rules, skills, memory, safety, and handoff guidance installed by `lizard-agent-layer`.',
+    'See `.agent/USING.md` for daily operator guidance and review rules.',
     ('Keep repository-specific rules in `{0}` authoritative; merge sidecar guidance intentionally when it fits this project.' -f $InstructionPath)
   ) -join "`n"
   return [ordered]@{
@@ -952,6 +974,7 @@ function Get-InstallPlanInputs {
   foreach ($adapterName in @($SelectedHarnesses)) { Add-LayerTree -RelativeRoot ("adapters\{0}" -f $adapterName) }
   foreach ($skillName in @($ProfileDoc.skills)) { Add-LayerTree -RelativeRoot ("skills\{0}" -f $skillName) }
   Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot $AgentGitignoreSource) -DisplayPath $AgentGitignoreSource
+  Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot 'templates\operator-card.md') -DisplayPath 'templates/operator-card.md'
   foreach ($spec in @($MemoryFileSpecs.ToArray())) {
     Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot ([string]$spec.source)) -DisplayPath ([string]$spec.source)
   }
@@ -1407,6 +1430,7 @@ Ensure-Dir (Join-Path $TargetRoot ".agent\routing\receipts\decisions")
 Ensure-Dir (Join-Path $TargetRoot ".agent\routing\receipts\executions")
 
 Copy-IfMissing (Join-Path $LayerRoot $AgentGitignoreSource) (Join-Path $TargetRoot ".agent\.gitignore")
+Copy-IfMissing (Join-Path $LayerRoot 'templates\operator-card.md') (Join-Path $TargetRoot ".agent\USING.md")
 if ($SelectedPacks.Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($MemoryMode) -or $null -ne $existingInstallManifest -or -not [string]::IsNullOrWhiteSpace($RoutingPolicy) -or -not [string]::IsNullOrWhiteSpace($ModelMode) -or -not [string]::IsNullOrWhiteSpace($ModelInventory) -or -not [string]::IsNullOrWhiteSpace($ModelRuntime)) {
   Write-IfMissing -Dest (Join-Path $TargetRoot ".agent\project-profile.json") -Content ($ProfileDoc | ConvertTo-Json -Depth 10) -SourcePath 'generated:project-profile'
 } else {

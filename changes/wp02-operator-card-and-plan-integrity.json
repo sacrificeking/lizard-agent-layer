@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "wp02-operator-card-and-plan-integrity",
+  "date": "2026-08-24",
+  "summary": "Installed operator card .agent/USING.md, memory guideline placeholders, and complete SHA-256 plan binding in docs and merge suggestions.",
+  "changed_paths": [
+    "templates/operator-card.md",
+    "templates/memory/semantic/DECISIONS.md",
+    "templates/memory/semantic/LESSONS.md",
+    "scripts/install.ps1",
+    "scripts/merge-suggestions.ps1",
+    "QUICKSTART.md",
+    "INSTALL.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0004-adapter-composition-and-precedence.md",
+    "docs/adr/0007-report-boundaries-and-privacy.md",
+    "docs/adr/0010-exact-plan-approval-binding.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0013-handle-bound-filesystem-access.md",
+    "docs/adr/0015-effective-memory-modes.md",
+    "docs/adr/0021-host-invocations-and-git-ref-validation.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Installs .agent/USING.md as a layer-owned guide. Targets may edit or customize it freely."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Adds .agent/USING.md template and updates memory seed templates with guideline headers."
+  }
+}

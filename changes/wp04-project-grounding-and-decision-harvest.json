@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "wp04-project-grounding-and-decision-harvest",
+  "date": "2026-08-24",
+  "summary": "Added project-decision-harvest and repo-grounded-change skills, updated staged-execution grounding, and linked to standard profiles.",
+  "changed_paths": [
+    "skills/project-decision-harvest/SKILL.md",
+    "skills/project-decision-harvest/skill.json",
+    "skills/repo-grounded-change/SKILL.md",
+    "skills/repo-grounded-change/skill.json",
+    "skills/staged-execution/SKILL.md",
+    "profiles/standard.json",
+    "profiles/enterprise-fullstack.json",
+    "tests/unit/overlay-calorie-budget.tests.ps1"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0015-effective-memory-modes.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Adds matching skills for repository decision harvesting and grounded diff reviews."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Introduces project-decision-harvest and repo-grounded-change as matching skills."
+  }
+}

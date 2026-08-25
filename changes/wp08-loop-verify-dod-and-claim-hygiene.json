@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "wp08-loop-verify-dod-and-claim-hygiene",
+  "date": "2026-08-24",
+  "summary": "Enforced Definition of Done (DoD) verification gate in loop-verify.ps1 via criteria packets (0013), and synchronized all documentation, changelog, and implementation ideas (0017).",
+  "changed_paths": [
+    "schemas/verifier-evidence.schema.json",
+    "scripts/loop-verify.ps1",
+    "docs/implementation-ideas/README.md",
+    "docs/implementation-ideas/0013-loop-verify-enforces-dod.md",
+    "docs/implementation-ideas/0017-claim-hygiene-after-peak-gaps.md",
+    "CHANGELOG.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0008-loop-lifecycle-and-no-auto-merge.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0019-authenticated-evidence-trust.md",
+    "docs/adr/0021-host-invocations-and-git-ref-validation.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Enhances verifier evidence with DoD criteria payload."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Adds criteria array to verifier evidence payload schema and loop verification CLI."
+  }
+}

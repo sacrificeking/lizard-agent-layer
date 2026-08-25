@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "wp09-verification-hardening-and-safe-examples",
+  "date": "2026-08-25",
+  "summary": "Enforced fail-closed Definition of Done (DoD) validation and path quarantine in loop-verify.ps1 (0020), cleaned up Quickstart and Install single-harness snippets with regression test (0018), and synchronized backlog and execution plan (0019).",
+  "changed_paths": [
+    "scripts/loop-verify.ps1",
+    "tests/adversarial/loop-evidence.tests.ps1",
+    "tests/adversarial/constrained-verifier.tests.ps1",
+    "QUICKSTART.md",
+    "INSTALL.md",
+    "tests/unit/overlay-calorie-budget.tests.ps1",
+    "docs/implementation-ideas/0018-one-harness-examples-and-quickstart-splice.md",
+    "docs/implementation-ideas/0019-close-stale-gap-work-order.md",
+    "docs/implementation-ideas/0020-dod-fail-closed-missing-pattern-and-criteria-root.md",
+    "docs/implementation-ideas/README.md",
+    "docs/implementation-ideas/MASTER-EXECUTION-PLAN.md",
+    "CHANGELOG.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0008-loop-lifecycle-and-no-auto-merge.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0019-authenticated-evidence-trust.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Hardens loop DoD verification against missing patterns and in-target criteria."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Rejects missing DoD patterns or criteria files inside target roots on PASS/WARN verdicts."
+  }
+}

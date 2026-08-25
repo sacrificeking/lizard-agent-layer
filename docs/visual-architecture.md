@@ -1,6 +1,11 @@
 # Visual Architecture & Systems Blueprint
 
-> **lizard-agent-layer** is a vendor-neutral, portable governance and execution infrastructure for AI coding agents. It overlays standard development environments with strict security, deterministic workflows, long-term memory, and cryptographic verification.
+> [!NOTE]
+> **⚡ Ultra High-Dense Quick Check:**
+> - **Source vs. Target:** The layer lives externally and projects a structured `.agent/` core into target repositories without altering application code.
+> - **4 Security Pillars:** Handle-Bound SafeFS (I/O isolation), Zero-Trust RSA/Ed25519 Signatures, Transactional Rollback Engine, and Records Retention (ADR-0023).
+> - **10-80-10 Execution:** 10% Plan & Clarify $\to$ 80% Constrained Implementation $\to$ 10% Independent Test Verification.
+> - **Non-Clobbering Wiring:** Native IDE files (Cursor, Copilot, Claude, Gemini) receive safe sidecars with merge suggestions if pre-existing.
 
 ---
 
@@ -10,9 +15,9 @@
 ┌──────────────────────────────────────────────────────────────────────────────────┐
 │                      LIZARD-AGENT-LAYER (Source Framework)                       │
 │                                                                                  │
-│  📁 profiles/        --> (minimal, standard, supabase-react-finance)             │
-│  📁 packs/           --> (frontend, security, supabase, loop-engineering, etc.)  │
-│  📁 skills/          --> (21 Reusable packages with versioned skill.json)        │
+│  📁 profiles/        --> (minimal, standard, enterprise-fullstack)               │
+│  📁 packs/           --> (frontend, database, api, security, precision, loops)   │
+│  📁 skills/          --> (22 Reusable packages with versioned skill.json)        │
 │  📁 protocols/       --> (Permissions, Secret-Handling, Release-Gates, Handoff)  │
 │  📁 adapters/        --> (Cursor, GitHub Copilot, Claude Code, Gemini, Codex)    │
 │  📁 schemas/         --> (25+ Draft 2020-12 Validation Contracts)                │
@@ -218,8 +223,8 @@ lizard-agent-layer/
 │   ├── adr/                   # 23 Architecture Decision Records (ADR-0001 to ADR-0023)
 │   ├── getting-started.md     # Comprehensive 6-section operations guide
 │   └── visual-architecture.md # This visual architecture blueprint
-├── packs/                     # Reusable feature packs (frontend, supabase, security, loops)
-├── profiles/                  # Pre-configured project shapes (minimal, standard, finance)
+├── packs/                     # Reusable feature packs (frontend, database, api, security, precision, loops)
+├── profiles/                  # Pre-configured project shapes (minimal, standard, enterprise-fullstack)
 ├── protocols/                 # Shared governance rules (secrets, release gates, handoff)
 ├── registry/                  # Contracts, quality rubrics, and drift baselines
 ├── retention-policies/        # Records retention and legal hold policies
@@ -232,7 +237,7 @@ lizard-agent-layer/
 │   ├── update-target.ps1      # Drift-aware target updater
 │   ├── uninstall.ps1          # Cryptographically verified uninstaller
 │   └── doctor.ps1             # Strict health & integrity validator
-├── skills/                    # 21 Reusable skill packages with skill.json metadata
+├── skills/                    # 22 Reusable skill packages with skill.json metadata
 ├── templates/                 # Target project seeds & memory structures
 └── tests/
     ├── adversarial/           # 14 Adversarial attack & tamper tests

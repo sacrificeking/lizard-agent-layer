@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
+  [string]$LayerRoot = "",
   [ValidateRange(1, 64)][int]$ShardIndex = 1,
   [ValidateRange(1, 64)][int]$ShardCount = 1,
   [switch]$ListOnly
@@ -8,6 +8,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 if ($ShardIndex -gt $ShardCount) { throw "FOCUSED_SHARD_INVALID: ShardIndex $ShardIndex exceeds ShardCount $ShardCount." }
+if (-not $LayerRoot) { $LayerRoot = Split-Path -Parent $PSScriptRoot }
+if (-not $LayerRoot) { $LayerRoot = (Get-Location).Path }
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
 Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
@@ -19,6 +21,7 @@ $tests = @(
   'tests\unit\mount-boundary.tests.ps1',
   'tests\unit\host.tests.ps1',
   'tests\unit\plan.tests.ps1',
+  'tests\unit\overlay-calorie-budget.tests.ps1',
   'tests\unit\focused-sharding.tests.ps1',
   'tests\adversarial\install-plan-tamper.tests.ps1',
   'tests\adversarial\install-containment.tests.ps1',
@@ -42,17 +45,17 @@ $tests = @(
   'tests\unit\manifest-version-consistency.tests.ps1',
   'tests\integration\uninstall.tests.ps1',
   'tests\adversarial\uninstall-tamper.tests.ps1',
-  'tests\integration\uninstall-install-roundtrip.tests.ps1'
-  'tests\integration\memory-modes.tests.ps1'
-  'tests\integration\memory-mode-update.tests.ps1'
-  'tests\adversarial\memory-mode-transitions.tests.ps1'
-  'tests\adversarial\regulated-approval.tests.ps1'
-  'tests\adversarial\routing-receipt-privacy.tests.ps1'
-  'tests\adversarial\prompt-trust.tests.ps1'
-  'tests\adversarial\constrained-verifier.tests.ps1'
-  'tests\adversarial\signed-evidence.tests.ps1'
-  'tests\adversarial\signed-loop-completion.tests.ps1'
-  'tests\adversarial\signed-calibration.tests.ps1'
+  'tests\integration\uninstall-install-roundtrip.tests.ps1',
+  'tests\integration\memory-modes.tests.ps1',
+  'tests\integration\memory-mode-update.tests.ps1',
+  'tests\adversarial\memory-mode-transitions.tests.ps1',
+  'tests\adversarial\regulated-approval.tests.ps1',
+  'tests\adversarial\routing-receipt-privacy.tests.ps1',
+  'tests\adversarial\prompt-trust.tests.ps1',
+  'tests\adversarial\constrained-verifier.tests.ps1',
+  'tests\adversarial\signed-evidence.tests.ps1',
+  'tests\adversarial\signed-loop-completion.tests.ps1',
+  'tests\adversarial\signed-calibration.tests.ps1',
   'tests\adversarial\analyzer-hardening.tests.ps1',
   'tests\adversarial\git-ref-validation.tests.ps1',
   'tests\integration\skill-lifecycle.tests.ps1',

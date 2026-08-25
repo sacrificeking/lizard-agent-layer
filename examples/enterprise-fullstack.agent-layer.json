@@ -1,0 +1,25 @@
+{
+  "projectName": "sample-enterprise-app",
+  "profile": "enterprise-fullstack",
+  "stack": ["frontend", "backend", "database", "api", "security", "precision"],
+  "projectSize": "large",
+  "riskLevel": "high",
+  "memoryMode": "curated",
+  "harnesses": ["codex", "claude-code", "gemini", "cursor", "github-copilot"],
+  "routingPolicy": "staged-balanced",
+  "modelMode": "inherit-current",
+  "skills": [
+    "git-safety",
+    "release",
+    "dependency-upgrade",
+    "design-system",
+    "frontend-engineering",
+    "database-engineering",
+    "backend-api",
+    "data-quality",
+    "precision-domain",
+    "security-hardening",
+    "research-audit",
+    "staged-execution"
+  ]
+}

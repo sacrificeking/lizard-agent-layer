@@ -61,6 +61,19 @@
           }
         },
         "evidence_files": { "type": "array" },
+        "criteria": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "verdict"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+              "verdict": { "enum": ["PASS", "FAIL", "NOT_EVALUATED"] },
+              "ground_truth_ref": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
         "auto_merge": { "const": false },
         "human_merge_review_required": { "const": true }
       }

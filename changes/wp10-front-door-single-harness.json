@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "wp10-front-door-single-harness",
+  "date": "2026-08-25",
+  "summary": "Standardized all public front-door documentation install/apply/update snippets to single-harness defaults and added allowlist regex regression tests in overlay-calorie-budget.tests.ps1 (0021).",
+  "changed_paths": [
+    "README.md",
+    "docs/getting-started.md",
+    "docs/profiles.md",
+    "docs/update-target.md",
+    "docs/merge-suggestions.md",
+    "tests/unit/overlay-calorie-budget.tests.ps1",
+    "docs/implementation-ideas/0021-front-door-single-harness-and-grep.md",
+    "docs/implementation-ideas/README.md",
+    "docs/implementation-ideas/MASTER-EXECUTION-PLAN.md",
+    "CHANGELOG.md",
+    "VERSION",
+    "package.json",
+    "package-lock.json",
+    ".gitignore"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Public documentation examples use single-harness defaults. Multi-harness CLI syntax remains functional."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Hardens documentation test assertions against multi-harness copy-paste regressions."
+  }
+}

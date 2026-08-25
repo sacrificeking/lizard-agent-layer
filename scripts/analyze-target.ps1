@@ -116,11 +116,12 @@ if ($null -ne $package) {
   if ($package.PSObject.Properties.Name -contains 'workspaces') { Add-Signal 'monorepo' 'manifest:package.json#workspaces' 'manifest' 'strong' 'package.json declares workspaces.' }
   foreach ($dep in @(Sort-OrdinalStrings $depNames)) {
     switch -Regex ($dep) {
-      '^react$' { Add-Signal 'react' 'manifest:package.json#react' 'manifest' 'strong' 'package.json depends on React.' }
-      '^vite$' { Add-Signal 'vite' 'manifest:package.json#vite' 'manifest' 'strong' 'package.json uses Vite.' }
+      '^react$|^vue$|^@angular/core$|^svelte$|^solid-js$' { Add-Signal 'frontend-ui' ("manifest:package.json#dependency:{0}" -f $dep) 'manifest' 'strong' 'package.json depends on a frontend UI framework.' }
+      '^vite$|^webpack$|^rollup$|^esbuild$' { Add-Signal 'bundler' ("manifest:package.json#dependency:{0}" -f $dep) 'manifest' 'strong' 'package.json uses a frontend bundler/build tool.' }
       '^typescript$' { Add-Signal 'typescript' 'manifest:package.json#typescript' 'manifest' 'strong' 'package.json uses TypeScript.' }
-      '^@supabase/supabase-js$|^supabase$' { Add-Signal 'supabase' 'manifest:package.json#supabase' 'manifest' 'strong' 'package.json references Supabase packages.' }
-      '^next$' { Add-Signal 'nextjs' 'manifest:package.json#next' 'manifest' 'strong' 'package.json uses Next.js.' }
+      '^@supabase/supabase-js$|^supabase$|^pg$|^mysql$|^mysql2$|^oracledb$|^mssql$|^tedious$|^sqlite3$|^better-sqlite3$|^mongodb$|^mongoose$|^prisma$|^@prisma/client$|^typeorm$|^sequelize$|^knex$|^drizzle-orm$' { Add-Signal 'database' ("manifest:package.json#dependency:{0}" -f $dep) 'manifest' 'strong' 'package.json references database packages.' }
+      '^express$|^fastify$|^@nestjs/core$|^koa$|^hono$|^@hapi/hapi$|^apollo-server$|^@apollo/server$|^graphql$|^trpc$|^@trpc/server$' { Add-Signal 'backend-api' ("manifest:package.json#dependency:{0}" -f $dep) 'manifest' 'strong' 'package.json references a backend API or server framework.' }
+      '^next$|^nuxt$|^astro$' { Add-Signal 'fullstack-framework' ("manifest:package.json#dependency:{0}" -f $dep) 'manifest' 'strong' 'package.json uses a fullstack/SSR framework.' }
       '^openai$|^@anthropic-ai/sdk$|^ai$|^langchain$|^@langchain/' { Add-Signal 'agent-runtime' ("manifest:package.json#dependency:{0}" -f $dep) 'manifest' 'strong' 'package.json references an agent or LLM runtime package.' }
       '^tailwindcss$|^@radix-ui/|^lucide-react$|^framer-motion$' { Add-Signal 'design-ui' ("manifest:package.json#dependency:{0}" -f $dep) 'manifest' 'supporting' 'package.json references a UI/design-system package.' }
     }
@@ -132,11 +133,17 @@ function Add-PathSignal {
   if (Has-Path $Relative) { Add-Signal $Signal ("path:{0}" -f $Relative.Replace('\', '/')) 'marker' $Strength $Reason }
 }
 
-Add-PathSignal 'supabase' 'supabase' 'supabase/ directory exists.' 'supporting'
-Add-PathSignal 'supabase/functions' 'edge-functions' 'supabase/functions directory exists.' 'strong'
+Add-PathSignal 'supabase' 'database' 'supabase/ directory exists.' 'supporting'
+Add-PathSignal 'prisma' 'database' 'prisma/ directory exists.' 'strong'
+Add-PathSignal 'migrations' 'database-migrations' 'migrations/ directory exists.' 'strong'
 Add-PathSignal 'supabase/migrations' 'database-migrations' 'supabase/migrations directory exists.' 'strong'
+Add-PathSignal 'db/migrations' 'database-migrations' 'db/migrations directory exists.' 'strong'
+Add-PathSignal 'supabase/functions' 'backend-api' 'supabase/functions directory exists.' 'strong'
+Add-PathSignal 'functions' 'backend-api' 'functions/ directory exists.' 'supporting'
+Add-PathSignal 'api' 'backend-api' 'api/ directory exists.' 'supporting'
+Add-PathSignal 'src/api' 'backend-api' 'src/api directory exists.' 'supporting'
 Add-PathSignal 'src' 'src-tree' 'src/ directory exists.' 'weak'
-if (Has-Path 'vite.config.ts' -or Has-Path 'vite.config.js') { Add-Signal 'vite' 'path:vite.config' 'marker' 'supporting' 'A Vite config exists.' }
+if (Has-Path 'vite.config.ts' -or Has-Path 'vite.config.js') { Add-Signal 'bundler' 'path:vite.config' 'marker' 'supporting' 'A Vite config exists.' }
 if (Has-Path 'tsconfig.json' -or Has-Path 'tsconfig.app.json') { Add-Signal 'typescript' 'path:tsconfig' 'marker' 'supporting' 'A TypeScript config exists.' }
 Add-PathSignal 'DESIGN.md' 'design-system' 'DESIGN.md exists.' 'weak'
 if (Has-Path 'AGENTS.md') { Add-Signal 'existing-agents' 'instruction:AGENTS.md' 'instruction-file' 'weak' 'AGENTS.md was detected as untrusted target content; install must preserve it.'; Add-DetectedHarness 'generic-agents-md' }
@@ -165,9 +172,9 @@ function Get-MarkerGroupHits {
   return @(Sort-OrdinalStrings $hits.ToArray())
 }
 
-$financeHits = @(Get-MarkerGroupHits @('finance', 'crypto', 'defi', 'market', 'stock', 'dca', 'lending', 'staking', 'airdrop', 'yield'))
-if ($financeHits.Count -ge 2) { Add-Signal 'finance' ("path-group:finance:{0}" -f ($financeHits -join ',')) 'path-group' 'weak' ("Finance/market path groups detected ({0})." -f $financeHits.Count) }
-else { Add-NegativeSignal 'finance-path-groups-below-threshold' }
+$financeHits = @(Get-MarkerGroupHits @('finance', 'accounting', 'ledger', 'precision'))
+if ($financeHits.Count -ge 2) { Add-Signal 'precision' ("path-group:precision:{0}" -f ($financeHits -join ',')) 'path-group' 'weak' ("Precision/finance/accounting path groups detected ({0})." -f $financeHits.Count) }
+else { Add-NegativeSignal 'precision-path-groups-below-threshold' }
 $agentHits = @(Get-MarkerGroupHits @('agent', 'llm', 'openai', 'anthropic', 'gemini', 'mcp', 'rag', 'prompt'))
 if ($agentHits.Count -ge 2) { Add-Signal 'agent-runtime' ("path-group:agent-runtime:{0}" -f ($agentHits -join ',')) 'path-group' 'weak' ("Agent/runtime path groups detected ({0})." -f $agentHits.Count) }
 else { Add-NegativeSignal 'agent-runtime-path-groups-below-threshold' }
@@ -178,9 +185,9 @@ if (-not $index.complete) { Add-NegativeSignal 'recursive-scan-incomplete' }
 
 $profile = 'minimal'
 $risk = 'low'
-if ($signals.Contains('python') -or $signals.Contains('rust') -or $signals.Contains('go') -or $signals.Contains('java') -or $signals.Contains('dotnet') -or $signals.Contains('monorepo') -or $signals.Contains('react') -or $signals.Contains('vite') -or $signals.Contains('typescript') -or $signals.Contains('supabase')) { $profile = 'standard'; $risk = 'medium' }
-$strongSupabaseProduct = $signals.Contains('supabase') -and ($signals.Contains('react') -or $signals.Contains('vite')) -and ($signals.Contains('edge-functions') -or $signals.Contains('database-migrations'))
-if ($strongSupabaseProduct -or ($signals.Contains('finance') -and $signals.Contains('database-migrations'))) { $profile = 'supabase-react-finance'; $risk = 'high' }
+if ($signals.Contains('python') -or $signals.Contains('rust') -or $signals.Contains('go') -or $signals.Contains('java') -or $signals.Contains('dotnet') -or $signals.Contains('monorepo') -or $signals.Contains('frontend-ui') -or $signals.Contains('bundler') -or $signals.Contains('typescript') -or $signals.Contains('database') -or $signals.Contains('backend-api')) { $profile = 'standard'; $risk = 'medium' }
+$strongFullstack = ($signals.Contains('database') -or $signals.Contains('database-migrations')) -and ($signals.Contains('frontend-ui') -or $signals.Contains('backend-api') -or $signals.Contains('fullstack-framework'))
+if ($strongFullstack -or ($signals.Contains('precision') -and $signals.Contains('database-migrations'))) { $profile = 'enterprise-fullstack'; $risk = 'high' }
 
 $allowedHarnesses = @('generic-agents-md', 'codex', 'claude-code', 'gemini', 'github-copilot', 'cursor')
 $approved = @(Expand-AnalyzerValues $ApprovedHarnesses)
@@ -194,23 +201,24 @@ foreach ($detected in @($detectedHarnesses)) {
 
 $skills = switch ($profile) {
   'minimal' { @('git-safety', 'research-audit') }
-  'standard' { @('git-safety', 'release', 'dependency-upgrade', 'research-audit') }
-  'supabase-react-finance' { @('git-safety', 'release', 'dependency-upgrade', 'design-system', 'frontend-react', 'supabase', 'edge-functions', 'data-quality', 'research-audit') }
+  'standard' { @('git-safety', 'staged-execution', 'research-audit', 'project-decision-harvest', 'repo-grounded-change', 'premortem') }
+  'enterprise-fullstack' { @('git-safety', 'staged-execution', 'research-audit', 'project-decision-harvest', 'repo-grounded-change', 'premortem') }
 }
-if (($signals.Contains('react') -or $signals.Contains('vite') -or $signals.Contains('nextjs')) -and $signals.Contains('typescript')) { Add-Pack 'frontend-product' }
+if ($signals.Contains('frontend-ui') -or $signals.Contains('bundler') -or $signals.Contains('fullstack-framework')) { Add-Pack 'frontend-engineering' }
 if ($signals.Contains('design-system') -or $signals.Contains('design-ui')) { Add-Pack 'design-system' }
-if ($signals.Contains('supabase') -or $signals.Contains('edge-functions') -or $signals.Contains('database-migrations')) { Add-Pack 'supabase-react' }
-if ($signals.Contains('finance')) { Add-Pack 'finance-app' }
+if ($signals.Contains('database') -or $signals.Contains('database-migrations')) { Add-Pack 'database-backend' }
+if ($signals.Contains('backend-api') -or $signals.Contains('fullstack-framework')) { Add-Pack 'backend-api' }
+if ($signals.Contains('precision')) { Add-Pack 'precision-domain' }
 if ($signals.Contains('agent-runtime')) { Add-Pack 'agent-runtime' }
-if ($signals.Contains('agent-runtime') -or $signals.Contains('loop-runtime') -or ($signals.Contains('ci') -and ($signals.Contains('monorepo') -or $signals.Contains('security') -or $signals.Contains('supabase')))) { Add-Pack 'loop-engineering' }
-if ($risk -eq 'high' -or $signals.Contains('database-migrations') -or $signals.Contains('edge-functions') -or $signals.Contains('security') -or $signals.Contains('ci')) { Add-Pack 'security-hardening' }
+if ($signals.Contains('loop-runtime')) { Add-Pack 'loop-engineering' }
+if ($risk -eq 'high' -or $signals.Contains('database-migrations') -or $signals.Contains('backend-api') -or $signals.Contains('security') -or $signals.Contains('ci')) { Add-Pack 'security-hardening' }
 
 $strongCount = @($evidence | Where-Object { $_.strength -eq 'strong' }).Count
 $supportingCount = @($evidence | Where-Object { $_.strength -eq 'supporting' }).Count
 $weakCount = @($evidence | Where-Object { $_.strength -eq 'weak' }).Count
 $evidenceScore = [Math]::Min(100, ($strongCount * 18) + ($supportingCount * 8) + ($weakCount * 2))
 $confidence = if (-not $index.complete) { 'low' } elseif ($profile -eq 'minimal') { 'medium' } elseif ($strongCount -ge 3) { 'high' } else { 'medium' }
-$falsePositiveRisk = if ($profile -eq 'supabase-react-finance' -and -not $strongSupabaseProduct) { 'medium' } elseif ($strongCount -ge 2) { 'low' } else { 'medium' }
+$falsePositiveRisk = if ($profile -eq 'enterprise-fullstack' -and -not $strongFullstack) { 'medium' } elseif ($strongCount -ge 2) { 'low' } else { 'medium' }
 $falseNegativeRisk = if (-not $index.complete) { 'high' } elseif ($profile -eq 'minimal') { 'medium' } else { 'low' }
 
 $previewArgs = New-Object System.Collections.Generic.List[string]

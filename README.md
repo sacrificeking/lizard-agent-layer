@@ -1,5 +1,12 @@
 # lizard-agent-layer
 
+> [!NOTE]
+> **⚡ Ultra High-Dense Quick Check:**
+> - **What is it?** A portable overlay (`.agent/`) plus install-time containment. Daily agent context is a short contract (permissions, prompt-trust, matching skills), not the whole platform.
+> - **App code untouched:** Layer files live under `.agent/` and harness shims (`.cursor/`, `.github/`). Sidecars preserve existing instruction files.
+> - **Packs are opt-in:** `standard` and `enterprise-fullstack` share six core skills. Domain packs (`database-backend`, `frontend-engineering`, …) are added with `-Packs`.
+> - **Install:** [`QUICKSTART.md`](QUICKSTART.md) — preview plan, then apply with plan SHA. One `-Harnesses` id (org-approved tool).
+
 Portable, preview-first agent infrastructure for repositories that use Codex, Claude Code, Gemini, Cursor, GitHub Copilot, or generic `AGENTS.md`-compatible tools.
 
 `lizard-agent-layer` keeps reusable agent logic in one source repository and installs a tailored local layer into each target project. The installed layer combines project profile, an explicit `curated`, `private-episodic`, or `off` persistence contract, permissions, skills, harness instructions, update metadata, and optional bounded loops without making a single model or IDE the source of truth.
@@ -9,16 +16,12 @@ Portable, preview-first agent infrastructure for repositories that use Codex, Cl
 - Multi-harness adapters for Codex, Claude Code, Gemini, Cursor, GitHub Copilot, and generic `AGENTS.md` tools.
 - Effective memory modes: curated team context, ignored private episodic context, or a physically residue-free `off` mode.
 - Provider-neutral 10-80-10 staged execution that keeps the active model by default, with optional calibrated automatic routing.
-- Profiles for small repositories, normal product development, and high-risk React/Supabase/finance systems.
-- Reusable packs for frontend, design systems, Supabase, finance, security, agent runtimes, and loop engineering.
-- Preview-first installation and updates with explicit plans, ownership manifests, content hashes, and manual merge guidance.
-- Conservative handling of existing project instructions through sidecars instead of silent replacement.
-- Handle-bound filesystem mutation on Windows (`NtCreateFile`/`NtSetInformationFile`) and Unix (`openat`/`renameat`/`unlinkat`) preventing ancestor-swap race conditions.
-- Transaction journals with write-ahead logs, canonical backups, rollback, and interrupted-operation recovery.
-- Zero-trust asymmetric evidence trust with RSA/Ed25519 signatures, challenge nonces, replay protection ledgers, and role separation.
-- Records retention, export integrity, active legal holds, and verifiable deletion receipts (`ADR-0023`).
-- Separate documentation quality and executable behavioral-readiness evidence (43 focused safety suites, 18-combination profile/harness matrix).
-- L1 report-only and L2 assisted loops with leases, budgets, attempts, atomic state, hash-chained events, worktree isolation, verifier evidence, and no auto-merge.
+- Profiles `minimal`, `standard`, and `enterprise-fullstack` (`standard` / `enterprise-fullstack` require `-Harnesses`; they share the same six core skills). Packs are opt-in.
+- Preview-first installation and updates with canonical JSON plans, independently supplied SHA-256, and `-HumanApproved`.
+- Sidecars instead of silent replacement of existing harness instruction files.
+- **Platform (not daily prompt):** handle-bound SafeFs, transaction journals, signed loop/routing evidence, records retention. Unix SafeFs runtime evidence is still pending (`docs/compatibility.md`).
+- Focused safety tests plus a profile/harness matrix. Overlay calorie budget is CI-enforced (adapter + prompt-trust + permissions ≤ 80 lines).
+- Optional L1 report-only and L2 assisted loops: no auto-merge; PASS requires per-criterion definition-of-done evidence. Not the first-rollout default.
 - Local CI plus GitHub-hosted Windows, Ubuntu, and macOS gates.
 - AI-guided installation and removal through [`INSTALL.md`](INSTALL.md) and [`UNINSTALL.md`](UNINSTALL.md).
 
@@ -91,13 +94,13 @@ pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath D:\path\to\projec
 Generate a reviewable plan:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot -Packs frontend-engineering,security-hardening -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
 ```
 
 Apply only after reviewing that exact plan:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot -Packs frontend-engineering,security-hardening -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
 ```
 
 Verify the installed target:
@@ -115,7 +118,7 @@ See the complete [Getting Started guide](docs/getting-started.md) for selection 
 | --- | --- | --- |
 | `minimal` | Small scripts, libraries, and experiments | low |
 | `standard` | Normal product repositories and team development | medium |
-| `supabase-react-finance` | React/Supabase systems with auth, migrations, finance, or high-impact data | high |
+| `enterprise-fullstack` | Fullstack applications with databases (Oracle/PostgreSQL/MSSQL), backend APIs, frontend UI, and strict security | high |
 
 Profiles are starting points. Packs and explicit harness overrides adapt them without copying profile definitions.
 
@@ -123,10 +126,11 @@ Profiles are starting points. Packs and explicit harness overrides adapt them wi
 
 | Pack | Adds |
 | --- | --- |
-| `frontend-product` | React, Vite, TypeScript, frontend and dependency discipline |
-| `design-system` | UI consistency, accessibility, and design-system review |
-| `supabase-react` | Supabase, auth, migrations, Edge Functions, and data quality |
-| `finance-app` | Financial data provenance, stale-data checks, and release controls |
+| `frontend-engineering` | Universal frontend UI architecture (React/Vue/Angular/Svelte), state, bundle discipline, and accessibility |
+| `database-backend` | Enterprise database engineering (Oracle/PostgreSQL/MSSQL/MySQL), transactional DDLs, migrations, and query safety |
+| `backend-api` | Backend API services (REST/GraphQL/gRPC/Edge Functions), DTO validation, middleware, and structured error handling |
+| `design-system` | Design contracts, design tokens, accessibility (WCAG), and visual UI consistency |
+| `precision-domain` | High-stakes precision calculations, financial/scientific data provenance, stale-data checks, and auditability |
 | `agent-runtime` | Tool permissions, model routing, fallback, memory, and evaluation boundaries |
 | `loop-engineering` | Report-only and assisted loops, verifier, state, budget, and worktrees |
 | `security-hardening` | Secrets, permissions, dependencies, CI, and production-risk controls |

@@ -7,7 +7,7 @@ A reusable skill is a small package under `skills/<name>/SKILL.md`.
 - Use lowercase hyphenated names.
 - Keep frontmatter to `name` and `description` for Codex compatibility.
 - Put trigger context in `description`.
-- Keep instructions concise and procedural.
+- Keep instructions structured as contract-shaped specifications: When to Use, Success Criteria, Boundaries, Verification & Evidence, Output, and Stop Conditions.
 - Add references only when the skill needs substantial domain detail.
 
 ## Validation
@@ -35,3 +35,11 @@ Lexical completeness alone is capped at `ready`. Add `evidence.json` only when r
 ## Package maturity
 
 Keep simple skills as `baseline` or `ready`. Promote high-impact skills toward `hardened` or `certified` only when support assets reduce ambiguity and executable evidence proves positive and negative behavior. See [Skill maturity](skill-maturity.md).
+
+## Target-Owned Local Skills
+
+Target repositories can define custom, team-specific skills under `.agent/skills-local/<name>/SKILL.md`:
+- **Ownership:** User-owned and git-committed by the target repository team.
+- **Lifecycle:** Never clobbered or overwritten by `update-target.ps1` or `install.ps1`.
+- **Integrity:** `doctor.ps1 -Strict` reports them as user-managed without requiring catalog hashes.
+- **Contract:** Follow the same contract shape (When / Success / Boundaries / Evidence / Output / Stop) and point to `.agent/protocols/permissions.md`. Local skills cannot expand permissions.

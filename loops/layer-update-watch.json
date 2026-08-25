@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "layer-update-watch",
   "description": "Report-only loop for comparing installed target projects against the current lizard-agent-layer version and producing update plans.",
   "readinessLevel": "L1",
@@ -25,5 +25,25 @@
     "strong": ["update risk assessment", "profile or pack adaptation", "high-risk target recommendation"]
   },
   "successMetrics": ["stale integrations detected", "update plans are actionable", "target-specific constraints preserved"],
+  "definitionOfDone": [
+    {
+      "id": "manifest-diff-evaluation",
+      "statement": "Installed target manifest compared against layer version with differences identified.",
+      "groundTruth": "manifest",
+      "required": true
+    },
+    {
+      "id": "actionable-update-plan",
+      "statement": "Update plan generated with exact preview hashes and preserved local customizations.",
+      "groundTruth": "lifecycle",
+      "required": true
+    },
+    {
+      "id": "human-apply-gate",
+      "statement": "No update applied without explicit operator approval and SHA-256 binding.",
+      "groundTruth": "human-gate",
+      "required": true
+    }
+  ],
   "notes": "This pattern complements scripts/update-target.ps1 and keeps integrated projects minimally invasive to update."
 }

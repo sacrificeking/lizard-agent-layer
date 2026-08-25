@@ -1,5 +1,11 @@
 # Getting Started
 
+> [!NOTE]
+> **⚡ Ultra High-Dense Quick Check:**
+> - **Zero-Runtime Dependency:** Target repositories receive an independent `.agent/` structure and never depend on `node_modules` or runtime source layers.
+> - **End-to-End Safety:** Analyze target (`analyze-target.ps1`) $\to$ Generate JSON Plan (`install.ps1 -WritePlan`) $\to$ Review SHA-256 $\to$ Apply with transaction lock (`-Apply -HumanApproved`).
+> - **Harness Compatibility:** Works seamlessly with Cursor, GitHub Copilot, Claude Code, Gemini, and Codex.
+
 This guide is the operational knowledge base for selecting, installing, verifying, updating, operating, and removing `lizard-agent-layer`.
 
 For the shortest safe path, use [`INSTALL.md`](../INSTALL.md) with an IDE assistant. For removal, use [`UNINSTALL.md`](../UNINSTALL.md). For stable failure codes and interrupted operations, use [Troubleshooting](troubleshooting.md).
@@ -59,9 +65,9 @@ Use for small libraries, scripts, and experiments. It installs light generic gui
 
 Use for normal products and team repositories. It includes Codex, Claude Code, Gemini, and GitHub Copilot by default, plus release, dependency, Git safety, and research workflows.
 
-### `supabase-react-finance`
+### `enterprise-fullstack`
 
-Use when mistakes could affect authentication, database migrations, financial interpretation, user money, or production data. It adds stricter verification and domain skills; it does not authorize remote migrations or production actions.
+Use for high-risk enterprise repositories with databases (Oracle, PostgreSQL, MSSQL, MySQL), backend APIs, frontend UI, or critical precision/financial calculations. It adds strict verification, database engineering, and domain skills; it does not authorize remote migrations or un-reviewed production actions.
 
 ## 6. Choose Harnesses
 
@@ -80,10 +86,11 @@ Codex and Generic share an instruction destination through deterministic precede
 
 Packs add reusable project-shape guidance to a profile. Combine only packs justified by the target:
 
-- `frontend-product`: React, Vite, TypeScript, and frontend delivery.
+- `frontend-engineering`: universal UI architecture, state management, bundle discipline, and accessibility across React, Vue, Angular, Svelte, etc.
+- `database-backend`: enterprise database engineering, transactional DDLs, safe migrations, and query safety across Oracle, PostgreSQL, MSSQL, MySQL, MongoDB, etc.
+- `backend-api`: API contracts, REST, GraphQL, gRPC, serverless/edge functions, DTO validation, and middleware.
 - `design-system`: design tokens, accessibility, visual consistency, and UI review.
-- `supabase-react`: database, auth, Edge Functions, generated types, and migrations.
-- `finance-app`: provenance, freshness, calculations, and high-impact financial presentation.
+- `precision-domain`: provenance, freshness, calculations, and high-impact precision/financial presentation.
 - `agent-runtime`: model routing, tools, memory, fallback, permissions, and evaluations.
 - `loop-engineering`: bounded recurring analysis and assisted worktree workflows.
 - `security-hardening`: secrets, auth, permissions, dependencies, CI, and production risk.
@@ -123,7 +130,7 @@ L2 is not autonomy. It cannot auto-merge, push, release, deploy, change dependen
 Example:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -MemoryMode curated -RoutingPolicy staged-balanced -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot -Packs frontend-engineering,security-hardening -MemoryMode curated -RoutingPolicy staged-balanced -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
 ```
 
 The plan includes profile, risk, memory, harnesses, packs, skills, planned paths, skipped paths, conflicts, sidecars, and exact preview/apply commands. Preview plus `-WritePlan` writes only the selected report outside the target.
@@ -131,7 +138,7 @@ The plan includes profile, risk, memory, harnesses, packs, skills, planned paths
 Generate merge suggestions for existing instructions:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot
+pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot
 ```
 
 Default suggestions are metadata-only and bind existing instructions by path and SHA-256 without reproducing their content.
@@ -141,7 +148,7 @@ Default suggestions are metadata-only and bind existing instructions by path and
 Use the same selections as the approved plan:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses codex,claude-code,gemini,github-copilot -Packs frontend-product,security-hardening -RoutingPolicy staged-balanced -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot -Packs frontend-engineering,security-hardening -RoutingPolicy staged-balanced -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
 ```
 
 Do not use `-Force` during ordinary initial installation. Existing target instructions receive sidecars and manual merge records.
@@ -219,15 +226,15 @@ Use `minimal`, curated memory, one or two permitted harnesses, no packs unless a
 
 ### Team product repository
 
-Use `standard`, Codex/Claude/Gemini/Copilot as actually licensed, `frontend-product` when relevant, curated team memory, required review, and L1 only until signal quality is trusted.
+Use `standard`, Codex/Claude/Gemini/Copilot as actually licensed, `frontend-engineering` when relevant, curated team memory, required review, and L1 only until signal quality is trusted.
 
 ### Enterprise GitHub repository
 
 Complete the enterprise decision checklist, select approved harnesses only, preserve organization-owned Copilot instructions through sidecars, disable memory when policy requires it, keep workflows read-only, and require explicit approval for external tools and agent modes.
 
-### High-risk Supabase or finance system
+### High-risk enterprise full-stack system
 
-Use `supabase-react-finance` plus applicable security, Supabase, finance, and frontend packs. Treat auth, migrations, calculations, data provenance, releases, and production operations as human-gated. Perform a fresh, evidence-based verification pass and use an independent verifier when the environment provides one automatically.
+Use `enterprise-fullstack` plus applicable database, API, precision, and security packs (`database-backend`, `backend-api`, `precision-domain`, `security-hardening`). Treat auth, migrations, calculations, data provenance, releases, and production operations as human-gated. Perform a fresh, evidence-based verification pass and use an independent verifier when the environment provides one automatically.
 
 ## 19. Troubleshooting
 

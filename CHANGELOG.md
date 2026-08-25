@@ -2,7 +2,29 @@
 
 All notable public changes to lizard-agent-layer are documented here.
 
-## Unreleased
+## 1.3.0 - 2026-08-25
+
+### Added
+- **100% Generic & Runtime-Adaptive Enterprise Architecture:** Replaced rigid technology-specific packs (`supabase-react`, `frontend-product`, `finance-app`) with universal domain packs (`database-backend`, `frontend-engineering`, `backend-api`, `precision-domain`), universal skills (`database-engineering`, `frontend-engineering`, `backend-api`, `precision-domain`), and the `enterprise-fullstack` profile dynamically adapting to Oracle, PostgreSQL, MSSQL, MySQL, MongoDB, React, Vue, Angular, Spring Boot, NestJS, FastAPI, and Go.
+- **Fail-Closed Definition of Done Gate in Autonomous Loops (`scripts/loop-verify.ps1`):** Requires evaluated criteria packets (`-CriteriaPath`) on PASS/WARN verdicts, sealed into `schemas/verifier-evidence.schema.json`. Missing patterns (`DOD_PATTERN_REQUIRED`), uncataloged patterns (`DOD_PATTERN_NOT_FOUND`), or empty DoD criteria arrays (`DOD_DEFINITION_EMPTY`) fail closed.
+- **Criteria Path Quarantine (`scripts/loop-verify.ps1`):** Enforced `Assert-PathOutsideRoot` for `-CriteriaPath` to reject criteria packets placed inside the target repository or worktree roots (`SAFEFS_FORBIDDEN_ROOT`).
+- **Autonomous Loop DoD Patterns:** Integrated concrete `definitionOfDone` items in `minimal-fix-assist.json`, `daily-triage.json`, `layer-update-watch.json`, and `release-readiness.json`.
+- **Plan Premortem Skill (`skills/premortem/`):** Systematic, path-grounded failure autopsy before execution with checkouts-bound mitigations.
+- **Project Decision Harvest Skill (`skills/project-decision-harvest/`):** Grounded decision elicitation that proposes 3–5 path-cited rules into `templates/memory/semantic/DECISIONS.md`.
+- **Repo-Grounded Change Skill (`skills/repo-grounded-change/`):** Grounded code modifications citing sibling implementations and presenting 3 dynamic diff-specific review questions.
+- **Target-Owned Local Skills Support:** Enabled `.agent/skills-local/` across `doctor.ps1` and all 6 IDE adapters for custom target-local skills without layer contamination.
+- **Human Operator Card (`.agent/USING.md`):** Standardized human operator guide installed in target repositories, triggered on-demand (ask-only).
+- **Hard CI Prompt Calorie Budget Gate (`tests/unit/overlay-calorie-budget.tests.ps1`):** Automated test suite strictly enforcing $\le 80$ lines total composed always-on context across all IDE adapters.
+- **Public Documentation Single-Harness CI Guardrail:** Enforced allowlist regex assertions across all public documentation files (`README.md`, `QUICKSTART.md`, `INSTALL.md`, `docs/getting-started.md`, `docs/profiles.md`, `docs/update-target.md`, `docs/merge-suggestions.md`) prohibiting accidental multi-harness copy-paste snippets.
+- **Parallel Sharded Test Runner (`tests/run-sharded.ps1`):** Multi-core parallel execution engine running all 44 focused safety test suites concurrently.
+
+### Changed
+- **Contract-Shaped IDE Adapters:** Refactored all 6 IDE adapters (`codex`, `claude-code`, `cursor`, `github-copilot`, `gemini`, `generic-agents-md`) to concise, contract-shaped standing instructions with ask-only `USING.md` triggers and a 2-matching-skill cap.
+- **Session-Level Paste Stop:** Tightened `protocols/permissions.md` and `protocols/secret-handling.md` to require an immediate session-level task stop on untrusted chat-pastes with categorized repro requests (`credential`, `customer-or-account`, `production-dump`, `unsure-treat-as-dump`).
+- **Streamlined Enterprise Profile:** Refactored `profiles/enterprise-fullstack.json` default skills to the clean 6-skill core with specialized domains added via opt-in `-Packs`.
+- **Conditional Protocol Installation:** Updated `scripts/install.ps1` to copy `release-gates.md` only when the `release` skill is installed, and `handoff.md` only for multi-harness setups.
+- **Documentation Standardization:** Standardized all public documentation install, apply, and update snippets to single-harness defaults (`github-copilot`), removed markdown splice in Quickstart, and added enterprise backend ecosystem signals (Java, .NET, Python, Go, Node).
+- **Archival Boundaries:** Documented intentional non-goals in `docs/architecture.md` and pointed enterprise residual risks at that section.
 
 ## 1.2.0 - 2026-08-23
 
@@ -21,6 +43,7 @@ All notable public changes to lizard-agent-layer are documented here.
 - Records retention lifecycle, active cryptographic legal holds, export archives, and transactional purge with verifiable deletion receipts (`ADR-0023` and `scripts/records-lifecycle.ps1`).
 - Visual Developer Quickstart Guide (`QUICKSTART.md`) with copy-paste prompts for GitHub Copilot, Cursor Composer, and Claude Code, plus one-line remote GitHub installation commands.
 - Expanded focused safety test catalog to 43 comprehensive automated suites covering all integration, unit, and adversarial vectors.
+- 100% Generic & Runtime-Adaptive Enterprise Architecture: Replaced rigid technology-specific packs (`supabase-react`, `frontend-product`, `finance-app`) with universal domain packs (`database-backend`, `frontend-engineering`, `backend-api`, `precision-domain`), universal skills (`database-engineering`, `frontend-engineering`, `backend-api`, `precision-domain`), and the `enterprise-fullstack` profile supporting Oracle, PostgreSQL, MSSQL, MySQL, MongoDB, React, Vue, Angular, Spring Boot, NestJS, and FastAPI dynamically.
 
 ### Fixed
 

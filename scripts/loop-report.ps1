@@ -81,6 +81,23 @@ if ($null -ne $manifest) {
   if (($manifest.PSObject.Properties.Name -contains 'verifier_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.verifier_file)) { Add-FileStatus 'Verifier report' ([string]$manifest.verifier_file) }
 }
 
+$fleetSummary = [ordered]@{
+  installed_patterns = @()
+  total_events = 0
+}
+$runtimeBase = Join-Path $TargetRoot '.agent\loops\runtime'
+if (Test-Path -LiteralPath $runtimeBase) {
+  $runtimeDirs = @(Get-ChildItem -LiteralPath $runtimeBase -Directory -ErrorAction SilentlyContinue)
+  foreach ($rDir in $runtimeDirs) {
+    $fleetSummary.installed_patterns += [string]$rDir.Name
+    $eventsFile = Join-Path $rDir.FullName 'events.jsonl'
+    if (Test-Path -LiteralPath $eventsFile -PathType Leaf) {
+      $eventLines = @(Get-Content -LiteralPath $eventsFile -ErrorAction SilentlyContinue)
+      $fleetSummary.total_events += $eventLines.Count
+    }
+  }
+}
+
 $report = [pscustomobject]@{
   generated_at = (Get-Date).ToUniversalTime().ToString('o')
   target = $TargetRoot
@@ -94,6 +111,7 @@ $report = [pscustomobject]@{
   skills = if ($null -ne $manifest) { @($manifest.skills) } else { @() }
   human_gates = if ($null -ne $manifest) { @($manifest.human_gates) } else { @() }
   runtime = $runtime
+  fleet = [pscustomobject]$fleetSummary
   files = @($fileRows | ForEach-Object { [pscustomobject]@{ label = [string]$_.label; path = [string]$_.path; exists = [bool]$_.exists; heading = if ($null -ne $_.heading) { [string]$_.heading } else { $null } } })
   failures = @($failures)
 }

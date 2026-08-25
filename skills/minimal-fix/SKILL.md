@@ -1,4 +1,4 @@
-﻿---
+---
 name: minimal-fix
 description: Use when a human-approved L2 assisted loop needs the smallest safe fix after constraints, isolation, verifier, and rollback checks pass.
 ---
@@ -32,7 +32,7 @@ Use this skill only for L2 assisted loops after L1 report-only signal has proven
 ## Checks
 
 - Verify that the diff only touches the approved files.
-- Check that no secrets, auth rules, finance-critical code, Supabase migrations, production infrastructure, dependencies, tags, pushes, releases, or deploys were touched without approval.
+- Check that no secrets, auth rules, precision calculations, database migrations, production infrastructure, dependencies, tags, pushes, releases, or deploys were touched without approval.
 - Validate that rollback is possible from the current worktree state.
 - Require a verifier review before considering the item done.
 

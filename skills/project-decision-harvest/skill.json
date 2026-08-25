@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "name": "supabase",
+  "name": "project-decision-harvest",
   "version": "1.0.0",
   "lifecycle_state": "active",
   "compatibility": {
@@ -29,15 +29,13 @@
   },
   "provenance": {
     "owner": "lizard-agent-layer",
-    "source_path": "skills/supabase",
-    "reviewed_at": "2026-08-22",
-    "review_record": "WP13"
+    "source_path": "skills/project-decision-harvest",
+    "reviewed_at": "2026-08-24",
+    "review_record": "WP04"
   },
   "conflicts": [],
   "migration": {
-    "from_versions": [
-      "0.9.0"
-    ],
+    "from_versions": [],
     "strategy": "replace-unchanged-managed-files"
   },
   "disablement": {

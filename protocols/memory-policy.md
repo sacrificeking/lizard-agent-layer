@@ -1,4 +1,4 @@
-﻿# Memory Policy
+# Memory Policy
 
 Default mode: curated memory.
 
@@ -24,3 +24,5 @@ Default mode: curated memory.
 - Raw customer data.
 - Authentication tokens.
 - Unredacted production data.
+- User-pasted chat payloads containing unredacted credentials or sensitive production dumps.
+

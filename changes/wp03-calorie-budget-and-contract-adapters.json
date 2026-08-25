@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "wp03-calorie-budget-and-contract-adapters",
+  "date": "2026-08-24",
+  "summary": "Standardized contract-shaped standing instructions for all 6 adapters, slimmed daily protocols, and hard 80-line prompt calorie CI gate.",
+  "changed_paths": [
+    "adapters/codex/AGENTS.lizard.md",
+    "adapters/claude-code/CLAUDE.lizard.md",
+    "adapters/cursor/lizard-agent-layer.mdc",
+    "adapters/github-copilot/copilot-instructions.lizard.md",
+    "adapters/gemini/GEMINI.lizard.md",
+    "adapters/generic-agents-md/AGENTS.generic.lizard.md",
+    "protocols/prompt-trust.md",
+    "protocols/permissions.md",
+    "profiles/standard.json",
+    "skills/staged-execution/SKILL.md",
+    "registry/quality-rubric.json",
+    "docs/skill-authoring.md",
+    "tests/unit/overlay-calorie-budget.tests.ps1",
+    "tests/run-focused.ps1"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0004-adapter-composition-and-precedence.md",
+    "docs/adr/0010-exact-plan-approval-binding.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0015-effective-memory-modes.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "All 6 IDE adapters now follow the standard task contract shape and load faster with under 80 lines of daily prompt overhead."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Replaces verbose protocol dumps with concise contract pointers and adds CI budget gate."
+  }
+}

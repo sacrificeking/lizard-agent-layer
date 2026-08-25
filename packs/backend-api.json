@@ -1,0 +1,12 @@
+{
+  "name": "backend-api",
+  "description": "Backend API and services pack for REST, GraphQL, gRPC, serverless/edge functions, DTO validation, and middleware across Java/Spring, Node/Nest, Python/FastAPI, Go, and .NET.",
+  "riskLevel": "high",
+  "projectSize": "medium",
+  "stack": ["backend", "api", "rest", "graphql", "grpc", "serverless", "microservices"],
+  "harnesses": ["codex", "claude-code", "gemini", "cursor", "github-copilot"],
+  "skills": ["backend-api", "security-hardening", "dependency-upgrade", "git-safety", "research-audit"],
+  "verification": ["validate API request/response DTO schemas", "verify authentication and authorization middleware", "inspect error envelope consistency", "run backend API tests"],
+  "recommendedForSignals": ["backend", "api", "rest", "graphql", "grpc", "spring", "nest", "express", "fastapi", "django", "serverless", "edge-functions", "microservices"],
+  "notes": "Use for backend services, APIs, microservices, and serverless/cloud functions."
+}

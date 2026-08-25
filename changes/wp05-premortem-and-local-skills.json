@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "wp05-premortem-and-local-skills",
+  "date": "2026-08-24",
+  "summary": "Added premortem plan risk autopsy skill, target-owned local skills support in doctor, and adapter matching pointers.",
+  "changed_paths": [
+    "skills/premortem/SKILL.md",
+    "skills/premortem/skill.json",
+    "scripts/doctor.ps1",
+    "adapters/codex/AGENTS.lizard.md",
+    "adapters/claude-code/CLAUDE.lizard.md",
+    "adapters/cursor/lizard-agent-layer.mdc",
+    "adapters/github-copilot/copilot-instructions.lizard.md",
+    "adapters/gemini/GEMINI.lizard.md",
+    "adapters/generic-agents-md/AGENTS.generic.lizard.md",
+    "skills/staged-execution/SKILL.md",
+    "profiles/standard.json",
+    "profiles/enterprise-fullstack.json",
+    "tests/unit/overlay-calorie-budget.tests.ps1",
+    "docs/skill-authoring.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0002-immutable-install-manifest.md",
+    "docs/adr/0004-adapter-composition-and-precedence.md",
+    "docs/adr/0008-manifest-schema-v3.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0015-effective-memory-modes.md",
+    "docs/adr/0016-regulated-data-default-review.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Introduces the premortem skill and enables target repositories to use .agent/skills-local/."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Adds premortem skill package and local skill discovery."
+  }
+}

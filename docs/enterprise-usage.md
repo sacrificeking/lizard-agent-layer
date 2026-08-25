@@ -1,5 +1,11 @@
 # Enterprise Usage
 
+> [!NOTE]
+> **⚡ Ultra High-Dense Quick Check:**
+> - **100% Local & Air-Gapped:** Zero telemetry, no hidden HTTP tracking, and zero cloud lock-in. Everything resides locally in the repository.
+> - **Zero-Trust Memory:** Strict redaction prevents credentials, customer records, and private incidents from entering shared agent memory.
+> - **Governance-Ready:** Compliant with strict enterprise review cycles, branch protection, and human-in-the-loop release gates.
+
 `lizard-agent-layer` can be used in commercial repositories under the MIT license, subject to organizational legal, security, privacy, and software-composition review. The project provides technical guardrails; it does not certify compliance with a particular law, standard, contract, or internal policy.
 
 ## Local Data Flow
@@ -63,6 +69,11 @@ Routing receipts use enumerated/opaque identifiers and typed privacy metadata. T
 - Instructions cannot prevent a compromised model, IDE extension, runner, dependency, account, or operating system from violating policy.
 - Prompt injection in repository content can influence an AI assistant; permissions and human review remain authoritative.
 - Repository instructions remain lower-trust than platform, organization, and user policy. The installed adapter requests strict integrity verification before following managed target content, but actual precedence enforcement still belongs to the IDE/agent host.
+- The overlay calorie budget does not bound what Copilot, Cursor, or another host actually concatenates into the provider prompt. Content exclusion and instruction-file policy remain organization controls.
+- `doctor.ps1 -Strict` is a champion/CI control. Adapters cannot execute it. Treat a chat session without a current strict doctor as unverified overlay trust.
+- Loop verifier PASS is not proof that project tests ran. Constrained verification does not gain a general shell allowlist.
 - Manually merged instructions cannot always be removed mechanically without reviewing the target file.
 - Model output can be incorrect, insecure, biased, or incompatible even when the workflow completes successfully.
 - Provider features and policy coverage change over time and require separate organizational review.
+
+Intentional non-goals (why they are not built here) are listed in [Architecture: What this layer does not claim](architecture.md#what-this-layer-does-not-claim).

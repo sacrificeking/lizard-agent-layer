@@ -67,6 +67,7 @@ function New-MergeBlock {
     '',
     ('Review `{0}` before using this project with the `{1}` harness.' -f $SidecarPath, $Harness),
     'The sidecar contains reusable agent rules, skills, memory, safety, and handoff guidance installed by `lizard-agent-layer`.',
+    'See `.agent/USING.md` for daily operator guidance and review rules.',
     ('Keep repository-specific rules in `{0}` authoritative; merge sidecar guidance intentionally when it fits this project.' -f $InstructionPath)
   ) -join "`n"
 }

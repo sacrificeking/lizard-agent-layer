@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "wp06-loop-verifier-and-observability",
+  "date": "2026-08-24",
+  "summary": "Added definitionOfDone criteria to loop schema and 4 built-in loop patterns, hardened loop-verify against failing required criteria, and added fleet rollups to loop-report.",
+  "changed_paths": [
+    "schemas/loop.schema.json",
+    "loops/daily-triage.json",
+    "loops/layer-update-watch.json",
+    "loops/minimal-fix-assist.json",
+    "loops/release-readiness.json",
+    "scripts/loop-verify.ps1",
+    "scripts/loop-report.ps1",
+    "skills/loop-verifier/SKILL.md",
+    "tests/run-sharded.ps1"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0008-loop-lifecycle-and-no-auto-merge.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0019-signed-evidence-and-calibrated-trust.md",
+    "docs/adr/0020-loop-runtime-and-state-machine.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Introduces definitionOfDone criteria in loop patterns and fleet rollup reporting."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Enhances loop patterns with structured criteria and adds fleet summary."
+  }
+}

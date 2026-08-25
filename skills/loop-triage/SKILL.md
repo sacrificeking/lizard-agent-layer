@@ -1,4 +1,4 @@
-﻿---
+---
 name: loop-triage
 description: Run report-only loop triage with structured findings, state updates, early exit, and human escalation rules.
 ---
@@ -52,4 +52,4 @@ Constraints read: yes|no
 
 ## Model Routing
 
-Cheap models may run inventory, classification, and state pruning. Use a stronger model when findings touch security, auth, finance, Supabase migrations, release readiness, or cross-module architecture.
+Cheap models may run inventory, classification, and state pruning. Use a stronger model when findings touch security, auth, precision calculations, database migrations, release readiness, or cross-module architecture.

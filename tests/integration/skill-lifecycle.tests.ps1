@@ -99,8 +99,8 @@ try {
   Assert-Equal 0 @($removedState.files).Count 'Removal tombstone must not claim installed files.'
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.lizard-agent-layer.lock')) 'Completed lifecycle must leave no transaction lock.'
 
-  $missingDependencyPlan = Join-Path $plans 'edge-functions-install.json'
-  $missingDependency = Invoke-Lifecycle -SelectedTarget $faultTarget -Action Install -Skill edge-functions -PlanPath $missingDependencyPlan
+  $missingDependencyPlan = Join-Path $plans 'minimal-fix-install.json'
+  $missingDependency = Invoke-Lifecycle -SelectedTarget $faultTarget -Action Install -Skill minimal-fix -PlanPath $missingDependencyPlan
   Assert-True ($missingDependency.exit_code -ne 0 -and $missingDependency.output -match 'SKILL_DEPENDENCY_NOT_ACTIVE') 'Required inactive dependencies must fail closed before plan creation.'
 
   $faultPlan = Join-Path $plans 'fault-target-git-safety-install.json'

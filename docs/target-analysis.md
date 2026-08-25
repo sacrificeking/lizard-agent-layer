@@ -4,19 +4,15 @@
 
 ## Signals
 
-The analyzer currently detects:
+The analyzer detects project ecosystem and architectural markers:
 
-- Node, React, Vite, TypeScript, Next.js, and Supabase dependencies.
-- Supabase directories, Edge Functions, and migrations.
-- Existing instruction files such as `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md`.
-- Cursor usage through `.cursor/`.
-- Finance, market, crypto, DeFi, stock, DCA, and yield markers in repository paths.
-- Design-system signal through `DESIGN.md`.
-- Agent-runtime signals through common LLM and tool-runtime dependencies.
-- Monorepo signals through workspaces, pnpm, Turborepo, Nx, Lerna, and Rush markers.
-- Non-Node signals through Python, Rust, Go, Java, and .NET project markers.
-- Security and CI signals through workflow, env, container, auth, token, policy, and permission markers.
-- UI/design package signals through Tailwind, Radix, lucide, and framer-motion dependencies.
+- Enterprise and backend ecosystems (Java/Maven/Gradle, .NET/C#, Python, Go, Rust, Node/TypeScript).
+- Frontend UI and fullstack frameworks (React, Vite, Next.js, Angular, Vue).
+- Database systems, schema migrations, and backend API structures.
+- Finance, accounting, ledger, and precision calculation paths.
+- Monorepo structures (workspaces, pnpm, Turborepo, Nx).
+- Security, auth, permissions, and CI/CD workflow configurations.
+- Existing agent instructions (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, Copilot instructions, Cursor rules).
 
 Dependency, build, coverage, and cache directories are skipped during recursive marker scans.
 

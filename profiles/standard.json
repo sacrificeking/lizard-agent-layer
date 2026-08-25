@@ -1,14 +1,14 @@
-﻿{
+{
   "projectName": "target-project",
   "profile": "standard",
   "stack": ["git"],
   "projectSize": "medium",
   "riskLevel": "medium",
   "memoryMode": "curated",
-  "harnesses": ["codex", "claude-code", "gemini", "github-copilot"],
+  "harnesses": [],
   "routingPolicy": "staged-balanced",
   "modelMode": "inherit-current",
-  "skills": ["git-safety", "release", "dependency-upgrade", "research-audit", "staged-execution"],
+  "skills": ["git-safety", "staged-execution", "research-audit", "project-decision-harvest", "repo-grounded-change", "premortem"],
   "verification": ["run project tests before release", "inspect git status before commits"],
-  "notes": "Default product-repo profile with Codex, Claude Code, Gemini, and GitHub Copilot instructions."
+  "notes": "Default product-repo profile. Requires explicit -Harnesses parameter."
 }

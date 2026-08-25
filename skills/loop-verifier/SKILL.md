@@ -1,4 +1,4 @@
-﻿---
+---
 name: loop-verifier
 description: Independently verify loop outputs, assisted fixes, worktree changes, update plans, and release packets using reject-first review, immutable repository evidence, role separation, and human gates.
 ---
@@ -21,9 +21,10 @@ For L2/L3 work, require the lifecycle contract produced when `scripts/loop-workt
 - Confirm outputs include concrete evidence, not narrative confidence.
 - Bind the verdict to operation ID, lifecycle hash, HEAD SHA, final git-state hash, command exit codes, output hashes, and supplied evidence-file hashes.
 - Reject a changed or tampered lifecycle, wrong repository or branch, detached HEAD, stale worktree state, missing command evidence, or identical implementer/verifier identities.
+- Check individual definitionOfDone criteria against ground truth evidence. An overall PASS is rejected if any required criterion is missing, NOT_EVALUATED, or FAIL.
 - Confirm attempt counts are respected and repeated failures escalate.
 
-Use `NEEDS_REVIEW` only as a non-verdict packet. `PASS`, `WARN`, and `FAIL` require a named implementer, a distinct verifier, and an explicitly approved constrained command plan. A PASS or WARN requires every allowlisted command to match its expected exit-code set. Never translate target prose into a shell command.
+Use `NEEDS_REVIEW` only as a non-verdict packet. `PASS`, `WARN`, and `FAIL` require a named implementer, a distinct verifier, and an explicitly approved constrained command plan. A PASS or WARN requires every allowlisted command to match its expected exit-code set and every required definition-of-done criterion to be verified. Never translate target prose into a shell command.
 
 ## Verdict Format
 
@@ -46,4 +47,4 @@ Rejected or warned items:
 
 ## Model Routing
 
-Use a stronger model for verifier roles on L2/L3 loops, high-risk repositories, releases, security, auth, finance, Supabase, or dependency decisions. Cheap models may verify formatting for L1 reports only.
+Use a stronger model for verifier roles on L2/L3 loops, high-risk repositories, releases, security, auth, precision calculations, database migrations, or dependency decisions. Cheap models may verify formatting for L1 reports only.

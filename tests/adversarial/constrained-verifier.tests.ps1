@@ -1,6 +1,8 @@
-param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)))
+param([string]$LayerRoot)
 
 $ErrorActionPreference = 'Stop'
+if (-not $LayerRoot) { $LayerRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot) }
+if (-not $LayerRoot) { $LayerRoot = (Get-Location).Path }
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
 Import-Module (Join-Path $LayerRoot 'scripts\Lizard.ConstrainedRunner.psm1') -Force
@@ -113,13 +115,25 @@ try {
   Set-Content -LiteralPath $lifecyclePath -Value ($lifecycleEnvelope | ConvertTo-Json -Depth 12)
   $loopRoot = Join-Path $integrationTarget '.agent\loops'
   New-Item -ItemType Directory -Path $loopRoot -Force | Out-Null
-  Set-Content -LiteralPath (Join-Path $loopRoot 'lizard-agent-layer.loop-install.json') -Value '{"verifier_file":".agent/loops/loop-verifier-report.md"}'
+  Set-Content -LiteralPath (Join-Path $loopRoot 'lizard-agent-layer.loop-install.json') -Value '{"pattern":"minimal-fix-assist","verifier_file":".agent/loops/loop-verifier-report.md"}'
+  $criteriaDir = Join-Path $fixture 'criteria'
+  New-Item -ItemType Directory -Path $criteriaDir -Force | Out-Null
+  $criteriaPath = Join-Path $criteriaDir 'criteria.json'
+  $criteriaPayload = [ordered]@{
+    criteria = @(
+      [ordered]@{ id = 'worktree-isolation'; verdict = 'PASS'; ground_truth_ref = 'worktree' }
+      [ordered]@{ id = 'scoped-diff'; verdict = 'PASS'; ground_truth_ref = 'diff' }
+      [ordered]@{ id = 'verifier-pass'; verdict = 'PASS'; ground_truth_ref = 'verifier' }
+      [ordered]@{ id = 'human-approval-gate'; verdict = 'PASS'; ground_truth_ref = 'human' }
+    )
+  }
+  Set-Content -LiteralPath $criteriaPath -Value ($criteriaPayload | ConvertTo-Json -Depth 5)
   $integrationPlan = New-LizardVerificationPlan -WorktreeRoot $integrationWorktree -CommandIds @('git-head')
   $integrationPlanWritten = Write-TestPlan -Plan $integrationPlan -Name 'integration-plan.json'
   $trustBinding = Get-LizardVerifierTrustBinding -OperationId $lifecyclePayload.operation_id -LifecycleHash $lifecycleEnvelope.payload_sha256 -VerificationPlanSha256 $integrationPlanWritten.sha256 -TargetRoot $integrationTarget
   $trust = New-LizardTestTrustMaterial -Root (Join-Path $fixture 'trust') -BindingSha256 $trustBinding -Subject $lifecyclePayload.operation_id -Now $trustNow -PrincipalId 'verifier-1'
   $verifyOutput = Join-Path $fixture 'verify-output'
-  $verify = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -Arguments @('-TargetPath', $integrationTarget, '-LifecyclePath', $lifecyclePath, '-Verifier', 'verifier-1', '-Implementer', 'implementer-1', '-Status', 'PASS', '-Summary', 'Constrained integration pass.', '-VerificationPlanPath', $integrationPlanWritten.path, '-VerificationPlanSha256', $integrationPlanWritten.sha256, '-HumanApprovedVerificationPlan', '-LifecycleTrustStorePath', $lifecycleTrust.trust_store_path, '-LifecycleTrustStoreSha256', $lifecycleTrust.trust_store_sha256, '-LifecycleChallengePath', $lifecycleTrust.challenge_path, '-LifecycleChallengeSha256', $lifecycleTrust.challenge_sha256, '-TrustChallengePath', $trust.challenge_path, '-TrustChallengeSha256', $trust.challenge_sha256, '-VerifierPrivateKeyPath', $trust.private_key_path, '-VerifierPrivateKeySha256', $trust.private_key_sha256, '-OutputDir', $verifyOutput, '-Apply')
+  $verify = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -Arguments @('-TargetPath', $integrationTarget, '-LifecyclePath', $lifecyclePath, '-Verifier', 'verifier-1', '-Implementer', 'implementer-1', '-Status', 'PASS', '-Summary', 'Constrained integration pass.', '-CriteriaPath', $criteriaPath, '-VerificationPlanPath', $integrationPlanWritten.path, '-VerificationPlanSha256', $integrationPlanWritten.sha256, '-HumanApprovedVerificationPlan', '-LifecycleTrustStorePath', $lifecycleTrust.trust_store_path, '-LifecycleTrustStoreSha256', $lifecycleTrust.trust_store_sha256, '-LifecycleChallengePath', $lifecycleTrust.challenge_path, '-LifecycleChallengeSha256', $lifecycleTrust.challenge_sha256, '-TrustChallengePath', $trust.challenge_path, '-TrustChallengeSha256', $trust.challenge_sha256, '-VerifierPrivateKeyPath', $trust.private_key_path, '-VerifierPrivateKeySha256', $trust.private_key_sha256, '-OutputDir', $verifyOutput, '-Apply')
   Assert-Equal 0 $verify.exit_code "loop-verify must accept an exact approved constrained plan: $($verify.output)"
   $verifyReport = Get-Content -LiteralPath (Join-Path $verifyOutput 'loop-verify-report.json') -Raw | ConvertFrom-Json
   Assert-Equal 'PASS' ([string]$verifyReport.status) 'Constrained verifier integration must produce PASS.'

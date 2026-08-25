@@ -28,5 +28,31 @@
     "strong": ["minimal fix design", "failed verification diagnosis", "security/auth/finance impact", "release-sensitive verdict"]
   },
   "successMetrics": ["all writes isolated from main worktree", "smallest approved diff", "verifier report exists before completion", "no auto-merge or push", "rollback path recorded"],
+  "definitionOfDone": [
+    {
+      "id": "worktree-isolation",
+      "statement": "All changes prepared in an isolated git worktree with main worktree untouched.",
+      "groundTruth": "diff-scope",
+      "required": true
+    },
+    {
+      "id": "scoped-diff",
+      "statement": "Diff contains only approved minimal-fix files without unrequested refactoring.",
+      "groundTruth": "diff-scope",
+      "required": true
+    },
+    {
+      "id": "verifier-pass",
+      "statement": "Independent verifier report confirms test verification without auto-merge.",
+      "groundTruth": "tests",
+      "required": true
+    },
+    {
+      "id": "human-approval-gate",
+      "statement": "Human reviewer approval recorded before merge or release.",
+      "groundTruth": "human-gate",
+      "required": true
+    }
+  ],
   "notes": "L2 is assisted, not autonomous. It may prepare a change only after explicit approval, in an isolated worktree, with mandatory verifier review before any merge decision."
 }

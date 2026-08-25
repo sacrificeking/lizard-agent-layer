@@ -1,5 +1,11 @@
 # Security Policy
 
+> [!NOTE]
+> **⚡ Ultra High-Dense Quick Check:**
+> - **Security-First Stance:** Layer operations use Handle-Bound SafeFS, pre-flight plan hashes, and cryptographic verification to prevent path traversal and arbitrary code execution.
+> - **Vulnerability Reporting:** Report vulnerabilities privately via GitHub Private Vulnerability Reporting; never post secret reproduction details in public issues.
+> - **Supported Versions:** Active security fixes apply to the latest public major release (`v1.x`).
+
 ## Supported Versions
 
 Security fixes are maintained for the latest public major release. Pre-release development snapshots are not supported.

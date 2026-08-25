@@ -1,5 +1,11 @@
 # Provider-Neutral Staged Execution
 
+> [!NOTE]
+> **⚡ Ultra High-Dense Quick Check:**
+> - **The 10-80-10 Principle:** 10% Strategy & Decomposition $\to$ 80% Execution & Iteration $\to$ 10% Verification & Evidence Collection.
+> - **Zero Configuration:** By default uses `modelMode: inherit-current`—the active model in your IDE fulfills all stages without manual role switching.
+> - **Cryptographic Evidence:** When independent verification is enabled, verifier receipts are cryptographically signed to prevent unauthorized auto-approvals.
+
 `lizard-agent-layer` treats 10-80-10 as a workflow:
 
 - strategy: roughly 10% for outcome, constraints, plan, risks, and success criteria;

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "wp01-safety-and-harness-restraint",
+  "date": "2026-08-24",
+  "summary": "Untrusted chat-paste refusal protocols and fail-closed explicit harness requirements for team profiles.",
+  "changed_paths": [
+    "protocols/permissions.md",
+    "protocols/secret-handling.md",
+    "protocols/memory-policy.md",
+    "profiles/standard.json",
+    "profiles/enterprise-fullstack.json",
+    "scripts/install.ps1",
+    "scripts/analyze-target.ps1",
+    "docs/target-analysis.md",
+    "docs/profiles.md",
+    "tests/run-focused.ps1",
+    "tests/smoke.ps1",
+    "tests/integration/model-routing.tests.ps1"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0004-adapter-composition-and-precedence.md",
+    "docs/adr/0010-exact-plan-approval-binding.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0013-handle-bound-filesystem-access.md",
+    "docs/adr/0015-effective-memory-modes.md",
+    "docs/adr/0016-regulated-data-default-review.md",
+    "docs/adr/0017-typed-safe-routing-reports.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0019-authenticated-evidence-trust.md",
+    "docs/adr/0020-bounded-target-analysis.md",
+    "docs/adr/0021-host-invocations-and-git-ref-validation.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Existing target projects are unaffected. Standard and enterprise-fullstack profile invocations now require -Harnesses to be passed explicitly."
+  },
+  "compatibility": {
+    "impact": "breaking",
+    "note": "Installing standard or enterprise-fullstack profiles without -Harnesses now fails closed with INSTALL_HARNESSES_REQUIRED."
+  }
+}

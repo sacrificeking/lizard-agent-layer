@@ -102,13 +102,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Failed to commit L2 smoke repository.' }
 
 $overlayPack = @{
   name = 'project-overlay'
-  extends = 'finance-app'
+  extends = 'precision-domain'
   description = 'Project-specific smoke overlay pack.'
   riskLevel = 'high'
   projectSize = 'large'
   stack = @('overlay')
   harnesses = @('codex')
-  skills = @('frontend-react')
+  skills = @('frontend-engineering')
   verification = @('verify overlay-specific behavior')
   recommendedForSignals = @('overlay')
   notes = 'Smoke overlay pack.'
@@ -158,33 +158,33 @@ Run-Step 'validate layer' {
 Run-Step 'analyze target recommendation' {
   $json = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\analyze-target.ps1') -TargetPath $analysisTarget -ApprovedHarnesses codex,claude-code,gemini,github-copilot -Json | Out-String
   $analysis = $json | ConvertFrom-Json
-  if ($analysis.recommendedProfile -ne 'supabase-react-finance') { throw "Expected supabase-react-finance recommendation, got $($analysis.recommendedProfile)." }
+  if ($analysis.recommendedProfile -ne 'enterprise-fullstack') { throw "Expected enterprise-fullstack recommendation, got $($analysis.recommendedProfile)." }
   if (@($analysis.recommendedHarnesses) -notcontains 'codex') { throw 'Expected codex harness recommendation.' }
-  foreach ($expectedSignal in @('finance', 'monorepo', 'agent-runtime', 'security')) {
+  foreach ($expectedSignal in @('precision', 'monorepo', 'agent-runtime', 'security')) {
     if (@($analysis.signals) -notcontains $expectedSignal) { throw "Expected signal: $expectedSignal" }
   }
-  foreach ($expectedPack in @('frontend-product', 'design-system', 'supabase-react', 'finance-app', 'security-hardening', 'agent-runtime', 'loop-engineering')) {
+  foreach ($expectedPack in @('frontend-engineering', 'design-system', 'database-backend', 'precision-domain', 'security-hardening', 'agent-runtime', 'loop-engineering')) {
     if (@($analysis.recommendedPacks) -notcontains $expectedPack) { throw "Expected pack recommendation: $expectedPack" }
   }
   if (-not $analysis.projectShape.monorepo) { throw 'Expected monorepo project shape.' }
 }
 
 Run-Step 'install apply pack merge' {
-  Invoke-SmokePlannedInstall @('-TargetPath', $packTarget, '-Profile', 'minimal', '-Packs', 'frontend-product,security-hardening', '-WritePlan', '-PlanPath', $packPlanPath)
+  Invoke-SmokePlannedInstall @('-TargetPath', $packTarget, '-Profile', 'minimal', '-Packs', 'frontend-engineering,security-hardening', '-WritePlan', '-PlanPath', $packPlanPath)
   if (-not (Test-Path -LiteralPath $packPlanPath)) { throw 'Expected pack install plan report.' }
   $packPlan = Get-Content -LiteralPath $packPlanPath -Raw
-  foreach ($expected in @('Requested packs', 'frontend-product', 'security-hardening', 'Risk level: `high`')) {
+  foreach ($expected in @('Requested packs', 'frontend-engineering', 'security-hardening', 'Risk level: `high`')) {
     if ($packPlan -notmatch [regex]::Escape($expected)) { throw "Expected pack plan to contain: $expected" }
   }
   $manifest = Get-Content -LiteralPath (Join-Path $packTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
-  foreach ($expected in @('frontend-product', 'security-hardening')) {
+  foreach ($expected in @('frontend-engineering', 'security-hardening')) {
     if (@($manifest.requested_packs) -notcontains $expected) { throw "Expected requested pack in manifest: $expected" }
     if (@($manifest.packs) -notcontains $expected) { throw "Expected expanded pack in manifest: $expected" }
   }
   if (@($manifest.pack_sources).Count -lt 2) { throw 'Expected pack sources in manifest.' }
   $profileDoc = Get-Content -LiteralPath (Join-Path $packTarget '.agent\project-profile.json') -Raw | ConvertFrom-Json
   if ($profileDoc.riskLevel -ne 'high') { throw "Expected pack-merged risk high, got $($profileDoc.riskLevel)." }
-  foreach ($expectedSkill in @('frontend-react', 'design-system', 'dependency-upgrade', 'security-hardening')) {
+  foreach ($expectedSkill in @('frontend-engineering', 'design-system', 'dependency-upgrade', 'security-hardening')) {
     if (@($profileDoc.skills) -notcontains $expectedSkill) { throw "Expected pack-merged skill: $expectedSkill" }
     if (-not (Test-Path -LiteralPath (Join-Path $packTarget ".agent\skills\$expectedSkill\SKILL.md"))) { throw "Expected installed pack skill: $expectedSkill" }
   }
@@ -321,12 +321,12 @@ Run-Step 'install apply target pack overlay' {
   Invoke-SmokePlannedInstall @('-TargetPath', $overlayTarget, '-Profile', 'minimal', '-Packs', 'project-overlay')
   $manifest = Get-Content -LiteralPath (Join-Path $overlayTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
   if (@($manifest.requested_packs) -notcontains 'project-overlay') { throw 'Expected requested overlay pack.' }
-  foreach ($expectedPack in @('finance-app', 'project-overlay')) {
+  foreach ($expectedPack in @('precision-domain', 'project-overlay')) {
     if (@($manifest.packs) -notcontains $expectedPack) { throw "Expected expanded overlay pack: $expectedPack" }
   }
   $overlaySource = @($manifest.pack_sources) | Where-Object { $_.name -eq 'project-overlay' } | Select-Object -First 1
   if (-not $overlaySource -or $overlaySource.source -ne 'target-overlay') { throw 'Expected target-overlay pack source.' }
-  foreach ($expectedSkill in @('data-quality', 'security-hardening', 'frontend-react')) {
+  foreach ($expectedSkill in @('data-quality', 'security-hardening', 'frontend-engineering')) {
     if (-not (Test-Path -LiteralPath (Join-Path $overlayTarget ".agent\skills\$expectedSkill\SKILL.md"))) { throw "Expected overlay-expanded skill: $expectedSkill" }
   }
 }
@@ -343,7 +343,7 @@ Run-Step 'upgrade preserves requested packs' {
   & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\upgrade.ps1') -TargetPath $overlayTarget -OutputDir $upgradeOutput -Apply -ApprovedPlanPath $upgradePlan -ApprovedPlanSha256 $upgradeSha -HumanApproved | Out-String | Write-Host
   $manifest = Get-Content -LiteralPath (Join-Path $overlayTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
   if (@($manifest.requested_packs) -notcontains 'project-overlay') { throw 'Upgrade did not preserve requested overlay pack.' }
-  if (@($manifest.packs) -notcontains 'finance-app') { throw 'Upgrade did not preserve expanded base pack.' }
+  if (@($manifest.packs) -notcontains 'precision-domain') { throw 'Upgrade did not preserve expanded base pack.' }
 }
 
 Run-Step 'update target preview plan' {
@@ -369,7 +369,7 @@ Run-Step 'update target apply preserves packs' {
   Invoke-SmokePlannedUpdate @('-TargetPath', $overlayTarget, '-OutputDir', $overlayUpdateApplyOutputDir)
   $manifest = Get-Content -LiteralPath (Join-Path $overlayTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
   if (@($manifest.requested_packs) -notcontains 'project-overlay') { throw 'Update apply did not preserve requested overlay pack.' }
-  if (@($manifest.packs) -notcontains 'finance-app') { throw 'Update apply did not preserve expanded base pack.' }
+  if (@($manifest.packs) -notcontains 'precision-domain') { throw 'Update apply did not preserve expanded base pack.' }
   $historyPath = Join-Path $overlayTarget '.agent\lizard-agent-layer.update-history.jsonl'
   if (-not (Test-Path -LiteralPath $historyPath)) { throw 'Expected update history JSONL.' }
   $history = @(Get-Content -LiteralPath $historyPath)
@@ -382,11 +382,11 @@ Run-Step 'update target apply preserves packs' {
 }
 
 Run-Step 'install preview standard multi-harness' {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $standardTarget -Profile standard | Out-String | Write-Host
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\install.ps1') -TargetPath $standardTarget -Profile standard -Harnesses 'codex,claude-code,gemini,github-copilot' | Out-String | Write-Host
 }
 
 Run-Step 'install apply standard multi-harness' {
-  Invoke-SmokePlannedInstall @('-TargetPath', $standardTarget, '-Profile', 'standard')
+  Invoke-SmokePlannedInstall @('-TargetPath', $standardTarget, '-Profile', 'standard', '-Harnesses', 'codex,claude-code,gemini,github-copilot')
   foreach ($expected in @('AGENTS.md', 'CLAUDE.md', 'GEMINI.md', '.agents\skills\release\SKILL.md', '.claude\skills\release\SKILL.md', '.gemini\skills\release\SKILL.md')) {
     if (-not (Test-Path -LiteralPath (Join-Path $standardTarget $expected))) { throw "Expected missing standard artifact: $expected" }
   }
@@ -397,7 +397,7 @@ Run-Step 'doctor standard strict' {
 }
 
 Run-Step 'install apply standard idempotent' {
-  Invoke-SmokePlannedInstall @('-TargetPath', $standardTarget, '-Profile', 'standard')
+  Invoke-SmokePlannedInstall @('-TargetPath', $standardTarget, '-Profile', 'standard', '-Harnesses', 'codex,claude-code,gemini,github-copilot')
 }
 
 Run-Step 'install apply cursor override' {

@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "release-readiness",
   "description": "Report-only release readiness loop for version, changelog, quality gates, drift, and human release decisions.",
   "readinessLevel": "L1",
@@ -25,5 +25,25 @@
     "strong": ["final readiness verdict", "risk acceptance", "security or finance impact"]
   },
   "successMetrics": ["release blockers found before version commit", "no release without human approval", "clear evidence for every readiness verdict"],
+  "definitionOfDone": [
+    {
+      "id": "version-changelog-alignment",
+      "statement": "Version numbers and changelog entries aligned with proposed release artifacts.",
+      "groundTruth": "changelog",
+      "required": true
+    },
+    {
+      "id": "quality-gates-verified",
+      "statement": "Static analysis, contract checks, and test reports verified without failures.",
+      "groundTruth": "tests",
+      "required": true
+    },
+    {
+      "id": "human-release-decision",
+      "statement": "Final release tagging and publishing left strictly to human gate.",
+      "groundTruth": "human-gate",
+      "required": true
+    }
+  ],
   "notes": "Use this loop to produce a release decision packet, not to make the release decision itself."
 }

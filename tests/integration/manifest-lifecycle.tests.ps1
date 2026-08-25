@@ -31,10 +31,10 @@ function Invoke-PlannedInstall {
 }
 
 try {
-  $frontendPath = '.agent/skills/frontend-react/SKILL.md'
+  $frontendPath = '.agent/skills/frontend-engineering/SKILL.md'
   $modifiedPath = '.agent/skills/design-system/SKILL.md'
   $baseArguments = @('-TargetPath', $target, '-Profile', 'minimal', '-Harnesses', 'codex')
-  $packArguments = @($baseArguments) + @('-Packs', 'frontend-product')
+  $packArguments = @($baseArguments) + @('-Packs', 'frontend-engineering')
 
   $null = Invoke-PlannedInstall -Arguments $packArguments
   $initial = Read-Manifest

@@ -128,7 +128,7 @@ try {
   $escape = Invoke-TestPowerShell -ScriptPath $routeScript -Arguments @('-TargetPath', $target, '-Phase', 'execution', '-TaskClass', 'implementation', '-RiskLevel', 'medium', '-DataClass', 'internal-code', '-ReceiptId', 'escape', '-OutputPath', '..\escape.json', '-Apply')
   Assert-False ($escape.exit_code -eq 0) 'Receipt traversal outside the receipts root must fail.'
 
-  $missingInventory = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $missingInventoryTarget, '-Profile', 'standard', '-ModelMode', 'inventory-routing')
+  $missingInventory = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $missingInventoryTarget, '-Profile', 'standard', '-Harnesses', 'codex', '-ModelMode', 'inventory-routing')
   Assert-False ($missingInventory.exit_code -eq 0) 'Advanced install must fail closed when its target inventory is missing.'
   Assert-True ($missingInventory.output -match 'Recommended for normal IDE use') 'Missing Advanced configuration must explain the beginner-friendly fallback.'
   Assert-False (Test-Path -LiteralPath (Join-Path $missingInventoryTarget '.agent')) 'Failed Advanced preflight must not mutate the target.'

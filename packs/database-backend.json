@@ -1,0 +1,12 @@
+{
+  "name": "database-backend",
+  "description": "Enterprise database engineering pack for safe migrations, transactional DDL, query optimization, and schema consistency across Oracle, PostgreSQL, MSSQL, MySQL, and MongoDB.",
+  "riskLevel": "high",
+  "projectSize": "large",
+  "stack": ["database", "sql", "migrations", "data-quality"],
+  "harnesses": ["codex", "claude-code", "gemini", "cursor", "github-copilot"],
+  "skills": ["database-engineering", "data-quality", "security-hardening", "git-safety", "release", "research-audit"],
+  "verification": ["validate database migration scripts and rollback paths", "inspect query explain plans and index coverage", "verify zero credentials in source", "run schema and model consistency checks"],
+  "recommendedForSignals": ["database", "sql", "oracle", "postgres", "postgresql", "mssql", "mysql", "mongodb", "prisma", "typeorm", "liquibase", "flyway", "hibernate", "jpa", "database-migrations"],
+  "notes": "Use for any repository interacting with relational or document database systems."
+}

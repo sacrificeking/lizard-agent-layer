@@ -50,6 +50,20 @@
       "additionalProperties": false
     },
     "successMetrics": { "type": "array", "items": { "type": "string" } },
+    "definitionOfDone": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement", "groundTruth", "required"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+          "statement": { "type": "string", "minLength": 5 },
+          "groundTruth": { "enum": ["tests", "diff-scope", "manifest", "changelog", "human-gate", "lifecycle", "budget", "custom-evidence-file"] },
+          "required": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
     "notes": { "type": "string" }
   },
   "additionalProperties": false

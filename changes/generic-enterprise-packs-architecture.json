@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "generic-enterprise-packs-architecture",
+  "date": "2026-08-23",
+  "summary": "Transition all packs, skills, and profiles from vendor/technology-specific shapes to 100% generic, runtime-adaptive enterprise packs (frontend-engineering, database-backend, backend-api, precision-domain, enterprise-fullstack).",
+  "changed_paths": [
+    "packs/*.json",
+    "profiles/*.json",
+    "skills/*/*",
+    "examples/*.agent-layer.json",
+    "schemas/target-analysis.schema.json",
+    "scripts/analyze-target.ps1",
+    "tests/schema/fixtures/target-analysis.valid.json",
+    "tests/schema/fixtures/install-manifest-v4.valid.json",
+    "tests/adversarial/analyzer-hardening.tests.ps1",
+    "tests/integration/manifest-lifecycle.tests.ps1",
+    "tests/integration/manifest-v3.tests.ps1",
+    "tests/integration/skill-lifecycle.tests.ps1",
+    "tests/smoke.ps1",
+    "registry/drift-baseline.json",
+    "docs/getting-started.md",
+    "docs/profiles.md",
+    "docs/packs.md",
+    "docs/visual-architecture.md",
+    "docs/update-target.md",
+    "docs/adapter-matrix.md",
+    "README.md",
+    "QUICKSTART.md",
+    "INSTALL.md",
+    "CHANGELOG.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0008-loop-lifecycle-and-no-auto-merge.md",
+    "docs/adr/0009-provider-neutral-staged-routing.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0020-bounded-target-analysis.md",
+    "docs/adr/0021-host-invocations-and-git-ref-validation.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Existing installed profiles remain stable. New target installations and updates use generic enterprise packs adapting dynamically to target database and backend technologies."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Replaces rigid technology-specific packs with generic architecture domains."
+  }
+}

@@ -7,7 +7,7 @@
   "harnessApprovalSource": "explicit-input",
   "detectedHarnesses": ["claude-code"],
   "recommendedSkills": ["git-safety", "research-audit"],
-  "recommendedPacks": ["frontend-product"],
+  "recommendedPacks": ["frontend-engineering"],
   "signals": ["node", "react"],
   "evidence": [
     { "id": "manifest:package.json", "signal": "node", "kind": "manifest", "strength": "strong" },

@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "daily-triage",
   "description": "Report-only daily project triage loop for risks, stale work, open decisions, and next suggested actions.",
   "readinessLevel": "L1",
@@ -25,5 +25,25 @@
     "strong": ["risk synthesis", "cross-cutting architecture concern", "security-sensitive interpretation"]
   },
   "successMetrics": ["low false-positive rate", "clear human-next-action items", "state pruned every run"],
+  "definitionOfDone": [
+    {
+      "id": "report-only-containment",
+      "statement": "No application source files modified during triage execution.",
+      "groundTruth": "diff-scope",
+      "required": true
+    },
+    {
+      "id": "state-pruned",
+      "statement": "Loop state file updated and pruned to current unresolved actionable items.",
+      "groundTruth": "lifecycle",
+      "required": true
+    },
+    {
+      "id": "budget-compliance",
+      "statement": "Token and run consumption remained strictly within configured daily budget.",
+      "groundTruth": "budget",
+      "required": true
+    }
+  ],
   "notes": "This is the safest first loop for most target projects. Keep it L1 until the team trusts the signal."
 }

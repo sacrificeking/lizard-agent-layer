@@ -43,7 +43,7 @@ try {
   Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/install-manifest.schema.json' -InstancePath (Join-Path $ownedTarget '.agent\lizard-agent-layer.install.json') -Message 'Fresh installer output must satisfy manifest schema v4.'
   $userArtifact = Find-Artifact $manifest '.agent/protocols/permissions.md'
   Assert-Equal 'user-owned' ([string]$userArtifact.ownership) 'Pre-existing files must remain user-owned.'
-  $layerArtifact = Find-Artifact $manifest '.agent/protocols/handoff.md'
+  $layerArtifact = Find-Artifact $manifest '.agent/protocols/secret-handling.md'
   Assert-Equal 'layer-owned' ([string]$layerArtifact.ownership) 'Newly installed files must be layer-owned.'
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$layerArtifact.installed_hash)) 'Layer-owned files require an installed hash.'
 

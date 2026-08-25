@@ -1,6 +1,10 @@
 # Architecture
 
-> For a complete visual blueprint with Mermaid diagrams, sequence flows, and system topologies, see [Visual Architecture](visual-architecture.md).
+> [!NOTE]
+> **⚡ Ultra High-Dense Quick Check:**
+> - **Separation of Concerns:** Reusable governance logic is decoupled from project-local memory (`.agent/memory/`) and IDE harness translation (`adapters/`).
+> - **Universal Default:** Provider-neutral staged execution keeps the active harness model by default.
+> - **Visual Map:** See [Visual Architecture Blueprint](visual-architecture.md) for full ASCII topology and flowcharts.
 
 `lizard-agent-layer` separates reusable agent infrastructure from project-local knowledge and harness-specific wiring.
 
@@ -88,6 +92,24 @@ The layer owns only files it generated. Upgrades should:
 - preserve project-local edits
 - avoid replacing target instructions without explicit force
 - produce a clear summary of created, skipped, and merge-needed files
+
+## What this layer does not claim
+
+The installed overlay tells the **model** what to read and when to stop. The **installer** contains filesystem and plan mutations. The **IDE and organization** still own which bytes reach the provider and whether `doctor.ps1` actually ran.
+
+These gaps are **intentional**. Closing them inside this repository would be a second product, a false control, or both.
+
+| Not in this layer | Why it stays out |
+| --- | --- |
+| Forcing Copilot/Cursor to load only the 80-line always-on set | The host concatenates context. Calorie CI measures overlay files, not the provider prompt. Tenant content exclusion and instruction scope are organization controls. |
+| A runtime cap that blocks a third skill file | Skills are Markdown. A quota needs a vendor skill loader (harness OS). Adapters state “at most two matching skills”; they cannot enforce it. |
+| Running `doctor.ps1` from the chat session | The adapter **asks** for a current strict doctor + manifest-diff. The host does not execute that. Auto-doctor from the agent would be a new privileged runner and would weaken [ADR 0018](adr/0018-prompt-trust-and-constrained-verification.md). Champions run doctor after install/update. |
+| L2 verifier executing `mvn test` / `npm test` | Target scripts are untrusted executable code ([ADR 0018](adr/0018-prompt-trust-and-constrained-verification.md)). Loop PASS is identity + plan + definition-of-done **packets**, not a substitute for the team’s test suite. |
+| Deleting catalog slogan skills (`frontend-engineering`, …) | Defaults do not install them. `-Packs` is the honest opt-in. Removing the catalog forces every stack into `DECISIONS.md` or a fork. |
+| An `expert` profile, DLP/PII engine, or Spec-Kit-style slash OS | Same overlay for novices and experienced users. Paste-stop is protocol judgment, not a scanner. SDD CLIs are adjacent products. |
+| Replacing PowerShell with Node for install | Containment scripts are the platform. Target apps do not take that dependency. Champions need PowerShell 7.5+. |
+
+Unix handle-bound SafeFs **runtime** evidence (H-03) is the remaining **in-repo** platform task, not an overlay skill. See [Compatibility](compatibility.md) and [0022](implementation-ideas/0022-unix-safefs-ci-evidence.md). Organization residual risk: [Enterprise usage](enterprise-usage.md).
 
 ## Durable contracts
 

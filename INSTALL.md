@@ -1,10 +1,18 @@
-# AI-Guided Installation
+# AI-Guided Installation & Lifecycle Guide
 
-Use this file when installing `lizard-agent-layer` into another repository with an AI assistant in Codex, Claude Code, Gemini, Cursor, GitHub Copilot, or a compatible IDE.
+> [!NOTE]
+> **⚡ Ultra High-Dense Quick Check:**
+> - **Preview-First Mandate:** Never run `-Apply` directly; always generate and inspect a canonical JSON plan first.
+> - **Zero-Clobber Guarantee:** Existing `AGENTS.md`, `CLAUDE.md`, or `.github/` instructions are protected with sidecars (`.lizard-agent-layer.md`).
+> - **Profiles:** `minimal` (low risk), `standard` (medium risk product), `enterprise-fullstack` (high risk DB/API/Frontend).
+> - **Memory Modes:** `curated` (default, team decisions), `private-episodic` (local only), `off` (100% memory-free).
+> - **Lifecycle Operations:** Install (`install.ps1`), Update (`update-target.ps1`), Health Check (`doctor.ps1`), Uninstall (`uninstall.ps1`).
 
-Suggested user prompt:
+Use this file when installing, updating, or removing `lizard-agent-layer` with an AI assistant in Codex, Claude Code, Gemini, Cursor, GitHub Copilot, or a compatible IDE.
 
-> Read `INSTALL.md`, inspect my target repository, ask me the required questions one group at a time, and stop after presenting the installation plan. Do not apply changes until I explicitly approve the plan.
+Suggested user prompt for initial setup & migration:
+
+> Read `INSTALL.md`, inspect my target repository, check if an existing agent setup is present (`.cursorrules`, `CLAUDE.md`, `.github/copilot-instructions.md`, etc.), plan the migration of project-specific rules into `.agent/memory/`, ask me the required questions one group at a time, and stop after presenting the installation plan. Do not apply changes until I explicitly approve the plan.
 
 ## Rules For The Assistant
 
@@ -38,6 +46,16 @@ pwsh -NoProfile -File .\scripts\analyze-target.ps1 -TargetPath <absolute-target-
 
 Summarize detected stack, size, risk signals, existing instruction files, recommended profile, packs, skills, and harnesses. Distinguish detected facts from recommendations.
 
+### Legacy Agent Setup Migration (if applicable)
+
+If existing agent instruction files are detected (e.g., `.cursorrules`, `.cursor/rules/`, `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.clinerules`):
+1. **Extract Custom Rules:** Parse and extract project-specific rules into the appropriate `.agent/memory/` categories:
+   - **Coding Style & Conventions** $\to$ `.agent/memory/personal/PREFERENCES.md`
+   - **Architecture & Technology Decisions** $\to$ `.agent/memory/semantic/DECISIONS.md`
+   - **Lessons Learned & Gotchas** $\to$ `.agent/memory/semantic/LESSONS.md`
+2. **Present in Preview Plan:** Include the extracted memory items in the installation plan for user review.
+3. **Consolidate Wiring:** Ensure the newly installed Lizard adapters (`.cursor/rules/lizard-agent-layer.mdc`, `.github/copilot-instructions.md`, etc.) become the authoritative instructions, eliminating prompt conflicts.
+
 ## Step 3: Ask For Installation Choices
 
 Ask the user to confirm or change each group.
@@ -46,7 +64,7 @@ Ask the user to confirm or change each group.
 
 - `minimal`: small repositories with light guidance.
 - `standard`: normal product repositories and the recommended default.
-- `supabase-react-finance`: high-risk React, Supabase, finance, auth, or migration-heavy repositories.
+- `enterprise-fullstack`: high-risk repositories with databases, backend APIs, frontend UI, or critical precision/security requirements.
 
 ### Harnesses
 
@@ -61,10 +79,11 @@ Select only tools the organization allows. GitHub Copilot uses `.github/copilot-
 
 ### Packs
 
-- `frontend-product`
+- `frontend-engineering`
+- `database-backend`
+- `backend-api`
 - `design-system`
-- `supabase-react`
-- `finance-app`
+- `precision-domain`
 - `agent-runtime`
 - `loop-engineering`
 - `security-hardening`
@@ -156,36 +175,61 @@ Conclude with the installed version, manifest path, selected profile, packs, har
 
 For experienced developers who prefer running direct commands without the interactive AI prompt:
 
-### Quick 1-Liner (Auto-clones latest from GitHub):
-```powershell
-if (-not (Test-Path "$HOME/.lizard-agent-layer")) { git clone https://github.com/sacrificeking/lizard-agent-layer.git "$HOME/.lizard-agent-layer" } else { git -C "$HOME/.lizard-agent-layer" pull --quiet }
-pwsh -File "$HOME/.lizard-agent-layer/scripts/install.ps1" -TargetPath "." -Profile standard -Harnesses cursor,github-copilot,codex -Apply -HumanApproved
-```
-
-### Standard Local Installation (Cursor + VS Code / Copilot)
+### Standard Local Installation (VS Code / Copilot or Cursor)
 ```powershell
 # 1. Preview installation (safe, dry-run)
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile standard -Harnesses cursor,github-copilot,codex -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile standard -Harnesses github-copilot -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
 
 # 2. Apply installation
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile standard -Harnesses cursor,github-copilot,codex -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 <sha256-from-preview> -HumanApproved
+$planSha = (Get-FileHash .\.tmp\install-plan.json -Algorithm SHA256).Hash.ToLowerInvariant()
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile standard -Harnesses github-copilot -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 $planSha -HumanApproved
 
 # 3. Verify health
 pwsh -NoProfile -File .\scripts\doctor.ps1 -TargetPath "C:\path\to\your-project" -Strict
 ```
 
-### Full-Stack Supabase / React / Finance Stack
+> **Note:** Replace `-Harnesses github-copilot` with `cursor`, `claude-code`, `gemini`, or `codex` if that is your team's approved primary harness.
+
+### Enterprise Full-Stack (Database / API / Frontend / Security)
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile supabase-react-finance -Harnesses cursor,claude-code,gemini -Packs frontend-product,supabase-react,security-hardening -Apply -HumanApproved
+# 1. Preview installation
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile enterprise-fullstack -Harnesses github-copilot -Packs frontend-engineering,database-backend,backend-api,security-hardening -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
+
+# 2. Apply installation
+$planSha = (Get-FileHash .\.tmp\install-plan.json -Algorithm SHA256).Hash.ToLowerInvariant()
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile enterprise-fullstack -Harnesses github-copilot -Packs frontend-engineering,database-backend,backend-api,security-hardening -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 $planSha -HumanApproved
 ```
 
 ### Future Updates & Modifications
+
+#### 📋 Copy-Paste Update Prompt for AI Assistant:
+```text
+Read `docs/update-target.md` in lizard-agent-layer. Run a preview update against this target repository using `scripts/update-target.ps1 -TargetPath "<this-repo-path>" -OutputDir .tmp/update-plan`. Verify that all local memory files and project source code are preserved, show me the plan diff, and wait for my approval before applying.
+```
+
+#### 💻 Terminal Commands for Updating:
 ```powershell
-# Preview update against latest layer source
+# 1. Preview update against latest layer source
 pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath "C:\path\to\your-project" -OutputDir .\.tmp\update-plan
 
-# Apply update
+# 2. Apply approved update
 pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath "C:\path\to\your-project" -OutputDir .\.tmp\update-plan -Apply -ApprovedPlanPath .\.tmp\update-plan\update-plan.json -ApprovedPlanSha256 <sha256-from-preview> -HumanApproved
+```
+
+### Complete Clean Uninstallation
+
+#### 📋 Copy-Paste Uninstall Prompt for AI Assistant:
+```text
+Read `UNINSTALL.md` in lizard-agent-layer. Run a preview uninstallation plan using `scripts/uninstall.ps1 -TargetPath "<this-repo-path>" -Mode complete -PlanPath .tmp/uninstall-plan.json`. Confirm that only layer-owned files will be removed, show me the plan, and wait for my approval before executing the deletion.
+```
+
+#### 💻 Terminal Commands for Uninstalling:
+```powershell
+# 1. Preview uninstall plan
+pwsh -NoProfile -File .\scripts\uninstall.ps1 -TargetPath "C:\path\to\your-project" -Mode complete -PlanPath .\.tmp\uninstall-plan.json
+
+# 2. Apply verified uninstall
+pwsh -NoProfile -File .\scripts\uninstall.ps1 -TargetPath "C:\path\to\your-project" -Mode complete -Apply -PlanPath .\.tmp\uninstall-plan.json -Sha256 <sha256-from-preview> -HumanApproved
 ```
 
 ### Diagnostic Health Checks

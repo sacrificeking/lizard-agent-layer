@@ -1,4 +1,11 @@
-# Executable and AI-Guided Uninstall
+# Executable and AI-Guided Uninstall Guide
+
+> [!NOTE]
+> **⚡ Ultra High-Dense Quick Check:**
+> - **Zero-Accidental-Loss Rule:** Deletion uses manifest-bound object handles and SHA-256 hashes—never name-based recursive `rm -rf`.
+> - **3 Scopes:** `managed-only` (default, removes unmodified layer files), `complete` (removes all layer files), `export-then-complete` (backs up files first).
+> - **Proof of Deletion:** Generates a cryptographic, machine-readable receipt (`uninstall-receipt.json`) outside the target repository.
+> - **1-Liner:** `pwsh -File .\scripts\uninstall.ps1 -TargetPath "." -Mode complete -Apply -HumanApproved`
 
 Use this file with an AI assistant to remove a `lizard-agent-layer` installation from a target repository. This is a review-driven procedure, not blanket permission to delete `.agent`, `.agents`, `.github`, or any other directory.
 

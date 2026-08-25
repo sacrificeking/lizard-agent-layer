@@ -1,3 +1,7 @@
-﻿# Decisions
+# Architectural & Workflow Decisions
 
-Accepted architectural and workflow decisions for this project.
+Status: placeholder
+
+- Record agreed project architecture, patterns, and framework decisions here.
+- Human review is required before adopting new decisions.
+- Do not store secrets, credentials, or private customer data in this file.

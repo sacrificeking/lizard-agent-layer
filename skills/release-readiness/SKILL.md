@@ -1,4 +1,4 @@
-﻿---
+---
 name: release-readiness
 description: Produce report-only release readiness packets with version, changelog, gates, drift, risks, and human approval requirements.
 ---
@@ -40,4 +40,4 @@ Next action: <one sentence>
 
 ## Model Routing
 
-Cheap models can collect evidence. Use a stronger model for the final verdict when the release touches security, auth, finance, Supabase, or dependencies.
+Cheap models can collect evidence. Use a stronger model for the final verdict when the release touches security, auth, precision calculations, database migrations, or dependencies.

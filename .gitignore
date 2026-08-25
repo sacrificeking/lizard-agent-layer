@@ -1,8 +1,9 @@
-﻿# runtime and local state
+# runtime and local state
 .agent/
 .agents/
 *.log
 .tmp/
+docs/implementation-ideas/
 
 # environment
 .env

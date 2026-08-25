@@ -8,9 +8,9 @@
   "memory_mode": "curated",
   "pack_sources": [
     {
-      "name": "finance-app",
+      "name": "precision-domain",
       "source": "builtin",
-      "path": "packs/finance-app.json",
+      "path": "packs/precision-domain.json",
       "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "prose_trust": "layer-reviewed"
     }

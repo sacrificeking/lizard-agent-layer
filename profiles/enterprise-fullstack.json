@@ -1,0 +1,26 @@
+{
+  "projectName": "target-project",
+  "profile": "enterprise-fullstack",
+  "stack": ["frontend", "backend", "database", "api", "security", "precision"],
+  "projectSize": "large",
+  "riskLevel": "high",
+  "memoryMode": "curated",
+  "harnesses": [],
+  "routingPolicy": "staged-balanced",
+  "modelMode": "inherit-current",
+  "skills": [
+    "git-safety",
+    "staged-execution",
+    "research-audit",
+    "project-decision-harvest",
+    "repo-grounded-change",
+    "premortem"
+  ],
+  "verification": [
+    "run project typecheck and linter",
+    "run build and test suite",
+    "validate database migration rollback paths",
+    "verify zero secrets in source and client bundles"
+  ],
+  "notes": "Enterprise-grade profile for full-stack applications with databases (Oracle/PostgreSQL/MSSQL), backend APIs, frontend UI, and strict security. Domain specializations are added via -Packs."
+}

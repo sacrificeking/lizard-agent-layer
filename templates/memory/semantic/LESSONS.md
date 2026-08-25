@@ -1,5 +1,7 @@
-﻿# Lessons
+# Engineering Lessons & Gotchas
 
-Curated lessons that should influence future sessions.
+Status: placeholder
 
-Do not store secrets or raw private data here.
+- Document recurring debugging lessons, repo quirks, and test gotchas here.
+- Keep entries factual, concise, and grounded in this repository's codebase.
+- Never store secrets, API keys, or raw customer data in this file.

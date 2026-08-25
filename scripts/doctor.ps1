@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$TargetPath = (Get-Location).Path,
   [switch]$Strict
 )
@@ -141,19 +141,29 @@ if ($null -ne $manifest -and $manifestSchema -ge 3 -and $manifestSchema -le 4) {
   }
 }
 
-foreach ($file in @(
-  '.agent\.gitignore',
-  '.agent\protocols\permissions.md',
-  '.agent\protocols\project-context.md',
-  '.agent\protocols\secret-handling.md',
-  '.agent\protocols\release-gates.md',
-  '.agent\protocols\handoff.md',
-  '.agent\protocols\staged-execution.md',
-  '.agent\protocols\context-hygiene.md',
-  '.agent\routing\policy.json',
-  '.agent\skills\_index.md',
-  '.agent\skills\_manifest.jsonl'
-)) {
+$expectedFiles = New-Object System.Collections.Generic.List[string]
+$expectedFiles.Add('.agent\.gitignore')
+$expectedFiles.Add('.agent\protocols\permissions.md')
+$expectedFiles.Add('.agent\protocols\project-context.md')
+$expectedFiles.Add('.agent\protocols\secret-handling.md')
+$expectedFiles.Add('.agent\routing\policy.json')
+$expectedFiles.Add('.agent\skills\_index.md')
+$expectedFiles.Add('.agent\skills\_manifest.jsonl')
+
+if ($manifest) {
+  if ($manifest.skills -contains 'staged-execution') {
+    $expectedFiles.Add('.agent\protocols\staged-execution.md')
+    $expectedFiles.Add('.agent\protocols\context-hygiene.md')
+  }
+  if ($manifest.skills -contains 'release') {
+    $expectedFiles.Add('.agent\protocols\release-gates.md')
+  }
+  if ($manifest.harnesses -and $manifest.harnesses.Count -ge 2) {
+    $expectedFiles.Add('.agent\protocols\handoff.md')
+  }
+}
+
+foreach ($file in $expectedFiles) {
   Check-File $file -Required | Out-Null
 }
 
@@ -322,6 +332,16 @@ if ($null -ne $profile) {
   $activeSkills = if ($null -ne $manifest -and $manifestSchema -ge 4) { @($manifest.skills) } else { @($profile.skills) }
   foreach ($skill in $activeSkills) {
     Check-File ".agent\skills\$skill\SKILL.md" -Required | Out-Null
+  }
+  $skillsLocalDir = Join-Path $TargetRoot '.agent\skills-local'
+  if (Test-Path -LiteralPath $skillsLocalDir -PathType Container) {
+    $localSkillDirs = @(Get-ChildItem -LiteralPath $skillsLocalDir -Directory -ErrorAction SilentlyContinue)
+    foreach ($localDir in $localSkillDirs) {
+      $localSkillFile = Join-Path $localDir.FullName 'SKILL.md'
+      if (Test-Path -LiteralPath $localSkillFile -PathType Leaf) {
+        Add-Ok "target-owned local skill '$($localDir.Name)' present (user-managed, not hash-bound to catalog)"
+      }
+    }
   }
 }
 
