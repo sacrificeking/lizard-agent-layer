@@ -19,7 +19,7 @@ Portable, preview-first agent infrastructure for repositories that use Codex, Cl
 - Profiles `minimal`, `standard`, and `enterprise-fullstack` (`standard` / `enterprise-fullstack` require `-Harnesses`; they share the same six core skills). Packs are opt-in.
 - Preview-first installation and updates with canonical JSON plans, independently supplied SHA-256, and `-HumanApproved`.
 - Sidecars instead of silent replacement of existing harness instruction files.
-- **Platform (not daily prompt):** handle-bound SafeFs, transaction journals, signed loop/routing evidence, records retention. Unix SafeFs runtime evidence is still pending (`docs/compatibility.md`).
+- **Platform (not daily prompt):** handle-bound SafeFs, transaction journals, signed loop/routing evidence, and records retention. Multi-host assurance is validated via GitHub Actions across Windows, Ubuntu, and macOS (see [`docs/compatibility.md`](docs/compatibility.md)).
 - Focused safety tests plus a profile/harness matrix. Overlay calorie budget is CI-enforced (adapter + prompt-trust + permissions ≤ 80 lines).
 - Optional L1 report-only and L2 assisted loops: no auto-merge; PASS requires per-criterion definition-of-done evidence. Not the first-rollout default.
 - Local CI plus GitHub-hosted Windows, Ubuntu, and macOS gates.

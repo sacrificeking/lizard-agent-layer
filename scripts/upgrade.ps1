@@ -16,10 +16,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Host.psm1') -Force
 $PowerShellHost = Get-LizardPowerShellHostPath
 $PowerShellFilePrefix = Get-LizardPowerShellFilePrefix
-$TargetRoot = (Resolve-Path -LiteralPath $TargetPath).Path
+$TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $manifestPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.install.json'
 $profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
 
@@ -32,14 +34,14 @@ $selectedHarnesses = $Harnesses
 $selectedPacks = @()
 $selectedMemoryMode = $MemoryMode
 if (Test-Path -LiteralPath $manifestPath) {
-  $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+  $manifest = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $manifestPath -Raw)
   if ($manifest.profile) { $profile = $manifest.profile }
   if ((-not $selectedHarnesses -or $selectedHarnesses.Count -eq 0) -and $manifest.harnesses) { $selectedHarnesses = @($manifest.harnesses) }
   if ($manifest.requested_packs) { $selectedPacks = @($manifest.requested_packs) }
   elseif ($manifest.packs) { $selectedPacks = @($manifest.packs) }
   if ([string]::IsNullOrWhiteSpace($selectedMemoryMode) -and $manifest.memory_mode) { $selectedMemoryMode = [string]$manifest.memory_mode }
 } elseif (Test-Path -LiteralPath $profilePath) {
-  $profileDoc = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
+  $profileDoc = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $profilePath -Raw)
   if ($profileDoc.profile) { $profile = $profileDoc.profile }
   if ((-not $selectedHarnesses -or $selectedHarnesses.Count -eq 0) -and $profileDoc.harnesses) { $selectedHarnesses = @($profileDoc.harnesses) }
   if ($profileDoc.requestedPacks) { $selectedPacks = @($profileDoc.requestedPacks) }

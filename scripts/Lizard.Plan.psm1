@@ -430,7 +430,64 @@ function Assert-LizardPlanIntentMatch {
   return $approvedHash
 }
 
+function Assert-LizardPlanApprovalSignature {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)]$ApprovedPlan,
+    [Parameter(Mandatory = $true)][string]$PlanSha256,
+    [Parameter(Mandatory = $true)][string]$ApprovalEnvelopePath,
+    [Parameter(Mandatory = $true)][string]$TrustStorePath,
+    [Parameter(Mandatory = $true)][string]$TrustStoreSha256,
+    [Parameter(Mandatory = $true)][string]$ChallengePath,
+    [Parameter(Mandatory = $true)][string]$ChallengeSha256,
+    [string]$ReplayLedgerPath,
+    [Parameter(Mandatory = $true)][string]$TargetRoot,
+    [string]$RequiredRole = 'operator',
+    [DateTimeOffset]$Now = [DateTimeOffset]::UtcNow
+  )
+  $root = Resolve-SafeRoot -Path $TargetRoot -RequireExisting
+  if (Test-LizardPathWithinRoot -AuthorizedRoot $root -Path $ApprovalEnvelopePath -AllowRoot) {
+    throw (New-LizardPlanException -Code 'PLAN_APPROVAL_ENVELOPE_IN_TARGET' -Message 'Signed approval envelope cannot reside inside the target root.')
+  }
+  if (Test-LizardPathWithinRoot -AuthorizedRoot $root -Path $TrustStorePath -AllowRoot) {
+    throw (New-LizardPlanException -Code 'PLAN_APPROVAL_STORE_IN_TARGET' -Message 'Trust store cannot reside inside the target root.')
+  }
+  if (Test-LizardPathWithinRoot -AuthorizedRoot $root -Path $ChallengePath -AllowRoot) {
+    throw (New-LizardPlanException -Code 'PLAN_APPROVAL_CHALLENGE_IN_TARGET' -Message 'Challenge cannot reside inside the target root.')
+  }
+
+  Import-Module (Join-Path $PSScriptRoot 'Lizard.Trust.psm1') -Force
+
+  $trustStoreRead = Read-LizardTrustStore -Path $TrustStorePath -ExpectedSha256 $TrustStoreSha256 -Now $Now
+  $challengeRead = Read-LizardTrustChallenge -Path $ChallengePath -ExpectedSha256 $ChallengeSha256 -Now $Now
+  $envelope = Read-LizardSignedEvidenceFile -Path $ApprovalEnvelopePath
+
+  $expectedSubject = Get-LizardPlanRootHash $root
+  $expectedOperation = [string]$ApprovedPlan.operation_kind
+  $expectedPurpose = "$expectedOperation-apply-approval"
+
+  $verified = Test-LizardSignedEvidenceEnvelope `
+    -Envelope $envelope `
+    -TrustStoreRead $trustStoreRead `
+    -ChallengeRead $challengeRead `
+    -ExpectedPayloadKind 'operation-plan' `
+    -ExpectedPurpose $expectedPurpose `
+    -ExpectedSubject $expectedSubject `
+    -ExpectedBindingSha256 $PlanSha256.ToLowerInvariant() `
+    -RequiredRole $RequiredRole `
+    -Now $Now
+
+  if (-not [string]::IsNullOrWhiteSpace($ReplayLedgerPath)) {
+    if (Test-LizardPathWithinRoot -AuthorizedRoot $root -Path $ReplayLedgerPath -AllowRoot) {
+      throw (New-LizardPlanException -Code 'PLAN_APPROVAL_LEDGER_IN_TARGET' -Message 'Replay ledger cannot reside inside the target root.')
+    }
+    Use-LizardReplayLedger -LedgerPath $ReplayLedgerPath -EnvelopeId ([string]$verified.envelope_id) -Nonce ([string]$verified.nonce) -Purpose $expectedPurpose -Now $Now | Out-Null
+  }
+  return $verified
+}
+
 Export-ModuleMember -Function @(
+  'Assert-LizardPlanApprovalSignature',
   'Assert-LizardPlanIntentMatch',
   'ConvertTo-LizardCanonicalJson',
   'Get-LizardPlanIntentSha256',

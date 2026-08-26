@@ -11,9 +11,13 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
+$LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $patternPath = Join-Path $LayerRoot ("loops\{0}.json" -f $Pattern)
 if (-not (Test-Path -LiteralPath $patternPath)) { throw "Unknown loop pattern '$Pattern'." }
-$patternDoc = Get-Content -LiteralPath $patternPath -Raw | ConvertFrom-Json
+$patternDoc = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $patternPath -Raw)
 $effectiveLevel = if ([string]::IsNullOrWhiteSpace($Level)) { [string]$patternDoc.readinessLevel } else { $Level }
 $patternCadence = if ($patternDoc.cadence -and ($patternDoc.cadence.PSObject.Properties.Name -contains 'recommended')) { [string]$patternDoc.cadence.recommended } else { '1d' }
 $effectiveCadence = if ([string]::IsNullOrWhiteSpace($Cadence)) { $patternCadence } else { $Cadence }

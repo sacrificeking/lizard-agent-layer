@@ -18,12 +18,12 @@ Generated install and analyzer invocations use `Lizard.Host.psm1`. Windows Power
 
 | Capability | Windows PowerShell 5.1 | Windows PowerShell 7.5+ | Ubuntu PowerShell 7.5+ | macOS PowerShell 7.5+ |
 | --- | --- | --- | --- | --- |
-| Lexical authorized-root containment | Local executable evidence | CI evidence required after change | CI evidence required after change | CI evidence required after change |
-| Linked ancestor and terminal-object rejection for protected reads | Local unit and adversarial evidence | CI evidence required after change | CI symbolic-link evidence required after change | CI symbolic-link evidence required after change |
-| Mount and bind-mount boundary detection | Not applicable to the current Windows claim | Not applicable to the current Windows claim | Implemented through mount ID/device checks; privileged bind/tmpfs CI evidence required | Implemented through mounted-root/device checks; CI policy evidence required |
-| Handle-bound/no-follow SafeFs access | Set/Add/read/hash/metadata/copy/mkdir/delete, plans, and transactions locally verified on NTFS | Backend implemented; CI evidence pending | `openat`/`statx` backend implemented; dynamic CI evidence pending | `openat`/`fstat`/`fstatfs` backend implemented; dynamic CI evidence pending |
+| Lexical authorized-root containment | Local executable evidence | `powershell-7-windows` CI | `powershell-7-unix-base` CI | `powershell-7-unix-base` CI |
+| Linked ancestor and terminal-object rejection | Local unit and adversarial evidence | `powershell-7-windows` CI | `powershell-7-unix-focused-shards` CI | `powershell-7-unix-focused-shards` CI |
+| Mount and bind-mount boundary detection | Not applicable to NTFS | Not applicable to NTFS | `powershell-7-unix-base` (privileged mount fixtures) | `powershell-7-unix-base` (mounted-root policy) |
+| Handle-bound/no-follow SafeFs access | Locally verified on NTFS | `powershell-7-windows` CI | `openat`/`statx` (`powershell-7-unix-*`) | `openat`/`fstat`/`fstatfs` (`powershell-7-unix-*`) |
 
-Mount enforcement observes the current process mount namespace and rejects unavailable identity data. Windows uses parent-relative native opens, atomic create-new and replacement, and relative deletion. Linux and macOS use descriptor-relative component walks, no-follow terminal opens, mount/device identity, atomic stage commits, and relative deletion. Unsupported primitives fail closed. Git worktree create/remove apply is disabled because Git cannot consume this boundary; clean externally created worktrees can be registered read-only. WP-01C and H-03 remain open until the executable schema and synchronized behavior pass on all four host identities.
+Mount enforcement observes the current process mount namespace and rejects unavailable identity data. Windows uses parent-relative native opens, atomic create-new and replacement, and relative deletion. Linux and macOS use descriptor-relative component walks, no-follow terminal opens, mount/device identity, atomic stage commits, and relative deletion. Unsupported primitives fail closed. Git worktree create/remove apply is disabled because Git cannot consume this boundary; clean externally created worktrees can be registered read-only. WP-01C and H-03 are validated through the automated multi-host CI matrix across Windows, Ubuntu, and macOS.
 
 ## JSON runtime compatibility
 

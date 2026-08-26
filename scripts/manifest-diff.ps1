@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$TargetPath = (Get-Location).Path,
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [string]$OutputDir,
@@ -11,6 +11,7 @@ $ErrorActionPreference = "Stop"
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Manifest.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
@@ -71,7 +72,8 @@ function Get-Pack {
   param([string]$PackName)
   if (-not $PackCache.ContainsKey($PackName)) {
     $info = Get-PackManifestInfo $PackName
-    $pack = Get-Content -LiteralPath $info.path -Raw | ConvertFrom-Json
+    $packRoot = if ([string]$info.source -eq 'target-overlay') { $TargetRoot } else { $LayerRoot }
+    $pack = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $packRoot -Path $info.path -Raw)
     if ($pack.name -ne $PackName) { throw "Pack manifest name '$($pack.name)' does not match '$PackName'." }
     $pack | Add-Member -NotePropertyName '_sourceKind' -NotePropertyValue $info.source -Force
     $pack | Add-Member -NotePropertyName '_sourcePath' -NotePropertyValue $info.display -Force
@@ -90,15 +92,15 @@ function Add-PackWithExtends {
   Add-Unique $ExpandedPackNames $PackName
 }
 
-$manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$manifest = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $manifestPath -Raw)
 $manifestSchema = if ($null -ne $manifest.schema_version) { [int]$manifest.schema_version } else { 1 }
 if ($manifestSchema -gt 4) { throw "MANIFEST_READER_TOO_OLD: Target schema $manifestSchema is newer than supported schema 4." }
 $legacyIntegrityUnknown = $manifestSchema -lt 3
-$installedProfile = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
+$installedProfile = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $profilePath -Raw)
 $profileName = if ($manifest.profile) { [string]$manifest.profile } elseif ($installedProfile.profile) { [string]$installedProfile.profile } else { 'standard' }
 $baseProfilePath = Join-Path $LayerRoot "profiles\$profileName.json"
 if (-not (Test-Path -LiteralPath $baseProfilePath)) { throw "Missing layer profile for installed profile '$profileName'." }
-$expectedProfile = Get-Content -LiteralPath $baseProfilePath -Raw | ConvertFrom-Json
+$expectedProfile = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $baseProfilePath -Raw)
 
 $requestedPacks = if ($manifest.requested_packs) { Expand-ValueList $manifest.requested_packs } elseif ($manifest.packs) { Expand-ValueList $manifest.packs } else { @() }
 foreach ($packName in @($requestedPacks)) { Add-PackWithExtends -PackName $packName }

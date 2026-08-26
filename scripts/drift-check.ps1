@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [string]$BaselinePath,
   [string]$OutputDir,
@@ -10,6 +10,7 @@ $ErrorActionPreference = "Stop"
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 if ([string]::IsNullOrWhiteSpace($BaselinePath)) { $BaselinePath = Join-Path $LayerRoot 'registry\drift-baseline.json' }
 if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp\drift' }
@@ -182,7 +183,7 @@ $baseline = $null
 $comparison = [ordered]@{ status = 'baseline-missing'; added = @(); changed = @(); removed = @(); added_count = 0; changed_count = 0; removed_count = 0; token_delta = 0 }
 
 if ($baselineExists) {
-  $baseline = Get-Content -LiteralPath $BaselinePath -Raw | ConvertFrom-Json
+  $baseline = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot (Split-Path -Parent $BaselinePath) -Path $BaselinePath -Raw)
   $comparison = Compare-Snapshots -Baseline $baseline -Current $current
 }
 

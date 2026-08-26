@@ -4,6 +4,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
+Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Json.psm1') -Force
 Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Manifest.psm1') -Force
 Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SkillPackage.psm1') -Force
 $Failures = New-Object System.Collections.Generic.List[string]
@@ -24,7 +26,7 @@ function Is-SafeRelativePath {
 
 function Read-JsonFile {
   param([string]$Path)
-  try { return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json }
+  try { return ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $Path -Raw) }
   catch { Fail "Invalid JSON: $Path ($($_.Exception.Message))"; return $null }
 }
 

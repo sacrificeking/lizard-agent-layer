@@ -58,6 +58,7 @@ $tests = @(
   'tests\adversarial\signed-calibration.tests.ps1',
   'tests\adversarial\analyzer-hardening.tests.ps1',
   'tests\adversarial\git-ref-validation.tests.ps1',
+  'tests\adversarial\signed-apply-approval.tests.ps1',
   'tests\integration\skill-lifecycle.tests.ps1',
   'tests\integration\records-lifecycle.tests.ps1'
 )

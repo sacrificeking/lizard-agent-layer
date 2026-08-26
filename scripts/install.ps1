@@ -20,6 +20,13 @@ param(
   [string]$ApprovedPlanPath,
   [string]$ApprovedPlanSha256,
   [switch]$HumanApproved,
+  [switch]$RequireSignedApproval,
+  [string]$ApprovalEnvelopePath,
+  [string]$TrustStorePath,
+  [string]$TrustStoreSha256,
+  [string]$ChallengePath,
+  [string]$ChallengeSha256,
+  [string]$ReplayLedgerPath,
   [switch]$AllowTargetReportWrite,
   [string]$TransactionId,
   [switch]$JoinTransaction,
@@ -35,9 +42,11 @@ $InstallScriptPath = $MyInvocation.MyCommand.Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LayerRoot = Split-Path -Parent $ScriptDir
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Manifest.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Plan.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Trust.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Host.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.SkillPackage.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
@@ -60,6 +69,21 @@ if ($Apply) {
   }
   Assert-PathOutsideRoot -Path $ApprovedPlanPath -ExcludedRoot $TargetRoot -Label 'ApprovedPlanPath'
   $ApprovedPlan = Read-LizardApprovedPlan -Path $ApprovedPlanPath -ExpectedSha256 $ApprovedPlanSha256 -ExpectedOperationKind 'install'
+  if ($RequireSignedApproval) {
+    if ([string]::IsNullOrWhiteSpace($ApprovalEnvelopePath) -or [string]::IsNullOrWhiteSpace($TrustStorePath) -or [string]::IsNullOrWhiteSpace($TrustStoreSha256) -or [string]::IsNullOrWhiteSpace($ChallengePath) -or [string]::IsNullOrWhiteSpace($ChallengeSha256)) {
+      throw 'SIGNED_APPROVAL_REQUIRED: -RequireSignedApproval requires -ApprovalEnvelopePath, -TrustStorePath, -TrustStoreSha256, -ChallengePath, and -ChallengeSha256.'
+    }
+    Assert-LizardPlanApprovalSignature `
+      -ApprovedPlan $ApprovedPlan `
+      -PlanSha256 $ApprovedPlanSha256 `
+      -ApprovalEnvelopePath $ApprovalEnvelopePath `
+      -TrustStorePath $TrustStorePath `
+      -TrustStoreSha256 $TrustStoreSha256 `
+      -ChallengePath $ChallengePath `
+      -ChallengeSha256 $ChallengeSha256 `
+      -ReplayLedgerPath $ReplayLedgerPath `
+      -TargetRoot $TargetRoot | Out-Null
+  }
 } elseif ($ValidateApprovedPlanOnly) {
   throw 'PLAN_APPROVAL_REQUIRED: -ValidateApprovedPlanOnly requires the normal plan-bound -Apply contract.'
 }
@@ -68,7 +92,7 @@ if (-not (Test-Path -LiteralPath $ProfilePath)) {
   throw "Unknown profile '$Profile'. Expected a JSON file under profiles/."
 }
 
-$ProfileDoc = Get-Content -LiteralPath $ProfilePath -Raw | ConvertFrom-Json
+$ProfileDoc = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $ProfilePath -Raw)
 
 function Expand-ValueList {
   param($Values)
@@ -135,7 +159,8 @@ function Get-PackManifestInfo {
 function Read-PackManifest {
   param([string]$PackName)
   $info = Get-PackManifestInfo $PackName
-  $pack = Get-Content -LiteralPath $info.path -Raw | ConvertFrom-Json
+  $packRoot = if ([string]$info.source -eq 'target-overlay') { $TargetRoot } else { $LayerRoot }
+  $pack = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $packRoot -Path $info.path -Raw)
   if ($pack.name -ne $PackName) { throw "Pack manifest name '$($pack.name)' does not match '$PackName'." }
   $pack | Add-Member -NotePropertyName '_sourceKind' -NotePropertyValue $info.source -Force
   $pack | Add-Member -NotePropertyName '_sourcePath' -NotePropertyValue $info.display -Force
@@ -164,7 +189,7 @@ function Add-PackWithExtends {
 
 $ModelProfileNames = New-Object System.Collections.Generic.HashSet[string]
 Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'model-profiles') -Filter '*.json' -File -ErrorAction SilentlyContinue | ForEach-Object {
-  $model = Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json
+  $model = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $_.FullName -Raw)
   if ($model.name) { $ModelProfileNames.Add([string]$model.name) | Out-Null }
 }
 
@@ -296,7 +321,7 @@ $EffectiveRoutingPolicy = if (-not [string]::IsNullOrWhiteSpace($RoutingPolicy))
 if ($EffectiveRoutingPolicy -notmatch '^[a-z0-9][a-z0-9-]{0,62}$') { throw "Invalid routing policy '$EffectiveRoutingPolicy'." }
 $RoutingPolicyPath = Join-Path $LayerRoot "routing-policies\$EffectiveRoutingPolicy.json"
 if (-not (Test-Path -LiteralPath $RoutingPolicyPath -PathType Leaf)) { throw "Unknown routing policy '$EffectiveRoutingPolicy'. Expected routing-policies/$EffectiveRoutingPolicy.json." }
-$RoutingPolicyDoc = Get-Content -LiteralPath $RoutingPolicyPath -Raw | ConvertFrom-Json
+$RoutingPolicyDoc = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $RoutingPolicyPath -Raw)
 if ([string]$RoutingPolicyDoc.name -ne $EffectiveRoutingPolicy) { throw "Routing policy name '$($RoutingPolicyDoc.name)' does not match '$EffectiveRoutingPolicy'." }
 Set-DocProperty $ProfileDoc 'routingPolicy' $EffectiveRoutingPolicy
 $EffectiveModelMode = if (-not [string]::IsNullOrWhiteSpace($ModelMode)) {
@@ -324,7 +349,7 @@ if ($EffectiveModelMode -eq 'inventory-routing') {
     Write-Output "Recommended for normal IDE use: omit '-ModelMode inventory-routing' and keep the default inherit-current mode; no model-picker changes are required."
     throw "MODEL_INVENTORY_REQUIRED: Advanced automatic routing is not configured because '$EffectiveModelInventory' is missing. Only a routing administrator or automatic runtime adapter should create this inventory."
   }
-  try { $inventoryPreflight = Get-Content -LiteralPath $inventoryTargetPath -Raw | ConvertFrom-Json }
+  try { $inventoryPreflight = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $inventoryTargetPath -Raw) }
   catch { throw "MODEL_INVENTORY_INVALID: $($_.Exception.Message)" }
   if (@($inventoryPreflight.models).Count -eq 0) { throw 'MODEL_INVENTORY_INVALID: inventory contains no models.' }
   $duplicateInventoryIds = @($inventoryPreflight.models | Group-Object { [string]$_.id } | Where-Object { $_.Count -gt 1 })
@@ -343,7 +368,7 @@ if ($EffectiveModelMode -eq 'inventory-routing') {
     Write-Output "Recommended for normal IDE use: omit '-ModelMode inventory-routing' and keep the default inherit-current mode."
     throw "MODEL_RUNTIME_REQUIRED: Advanced automatic routing is not configured because '$EffectiveModelRuntime' is missing. Only enable Advanced mode after an automatic runtime can select and report models without user interaction."
   }
-  try { $runtimePreflight = Get-Content -LiteralPath $runtimeTargetPath -Raw | ConvertFrom-Json }
+  try { $runtimePreflight = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $runtimeTargetPath -Raw) }
   catch { throw "MODEL_RUNTIME_INVALID: $($_.Exception.Message)" }
   if ([string]$runtimePreflight.status -ne 'ready') { throw 'MODEL_RUNTIME_NOT_READY: runtime status must be ready.' }
   if ([string]$runtimePreflight.selection -notin @('subagent', 'per-call')) { throw 'MODEL_RUNTIME_AUTOMATION_REQUIRED: selection must be subagent or per-call.' }
@@ -442,7 +467,7 @@ $ExistingInstallManifestPath = Join-Path $TargetRoot ".agent\lizard-agent-layer.
 $existingInstallManifest = $null
 $ExistingManifestSchema = $null
 if (Test-Path -LiteralPath $ExistingInstallManifestPath) {
-  $existingInstallManifest = Get-Content -LiteralPath $ExistingInstallManifestPath -Raw | ConvertFrom-Json
+  $existingInstallManifest = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $ExistingInstallManifestPath -Raw)
   $ExistingManifestSchema = if ($null -ne $existingInstallManifest.schema_version) { [int]$existingInstallManifest.schema_version } else { 1 }
   if ($ExistingManifestSchema -gt 4) { throw "MANIFEST_READER_TOO_OLD: Target schema $ExistingManifestSchema is newer than supported schema 4." }
   if ($ExistingManifestSchema -ge 4 -and ($existingInstallManifest.PSObject.Properties.Name -notcontains 'memory_mode' -or [string]::IsNullOrWhiteSpace([string]$existingInstallManifest.memory_mode))) {
@@ -1269,7 +1294,7 @@ foreach ($adapterName in $SelectedHarnesses) {
   $adapterDir = Join-Path $LayerRoot "adapters\$adapterName"
   $adapterManifestPath = Join-Path $adapterDir 'adapter.json'
   if (-not (Test-Path -LiteralPath $adapterManifestPath)) { throw "Missing adapter manifest for '$adapterName': $adapterManifestPath" }
-  $adapter = Get-Content -LiteralPath $adapterManifestPath -Raw | ConvertFrom-Json
+  $adapter = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $adapterManifestPath -Raw)
   if ($adapter.name -ne $adapterName) { throw "Adapter manifest name '$($adapter.name)' does not match folder '$adapterName'." }
   $entry = [pscustomobject]@{ name = $adapterName; manifest = $adapter; adapter_dir = $adapterDir }
   $AdapterEntries.Add($entry) | Out-Null

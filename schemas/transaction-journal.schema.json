@@ -31,6 +31,7 @@
           "original_state": { "enum": ["missing", "file", "directory"] },
           "original_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
           "backup_path": { "type": ["string", "null"], "pattern": "^backups/[0-9]{6}\\.bin$" },
+          "post_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
           "status": { "enum": ["pending", "applied", "rolled-back"] }
         },
         "allOf": [

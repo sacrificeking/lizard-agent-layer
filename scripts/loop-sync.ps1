@@ -14,6 +14,7 @@ $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
@@ -75,11 +76,11 @@ $versionPath = Join-Path $LayerRoot 'VERSION'
 $currentVersion = if (Test-Path -LiteralPath $versionPath) { (Get-Content -LiteralPath $versionPath -Raw).Trim() } else { '0.0.0-dev' }
 $manifestPath = Join-Path $TargetRoot '.agent\loops\lizard-agent-layer.loop-install.json'
 if (-not (Test-Path -LiteralPath $manifestPath)) { throw 'Missing loop install manifest. Run loop-init.ps1 first.' }
-$manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$manifest = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $manifestPath -Raw)
 $patternName = if (-not [string]::IsNullOrWhiteSpace($Pattern)) { $Pattern } elseif ($manifest.pattern) { [string]$manifest.pattern } else { 'daily-triage' }
 $patternPath = Join-Path $LayerRoot ("loops\{0}.json" -f $patternName)
 if (-not (Test-Path -LiteralPath $patternPath)) { throw "Unknown loop pattern '$patternName'." }
-$patternDoc = Get-Content -LiteralPath $patternPath -Raw | ConvertFrom-Json
+$patternDoc = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $patternPath -Raw)
 
 if ($manifest.layer_version -ne $currentVersion) { Add-Warning "Layer version drift: installed $($manifest.layer_version), current $currentVersion." }
 if ($manifest.pattern -ne $patternDoc.name) { Add-Warning "Pattern drift: manifest $($manifest.pattern), current $($patternDoc.name)." }

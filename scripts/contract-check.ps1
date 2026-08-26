@@ -11,6 +11,7 @@ $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp\contracts' }
 $OutputDir = Initialize-SafeDirectory -Path $OutputDir
@@ -90,7 +91,7 @@ $detected = if ($ChangedPaths -and $ChangedPaths.Count -gt 0) {
   Get-DetectedChanges
 }
 $normalizedChanges = Expand-PathList $detected.paths
-$registry = Get-Content -LiteralPath (Join-Path $LayerRoot 'registry\contracts.json') -Raw | ConvertFrom-Json
+$registry = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path (Join-Path $LayerRoot 'registry\contracts.json') -Raw)
 $declarationPaths = @($normalizedChanges | Where-Object { $_ -like 'changes/*.json' })
 $declarations = New-Object System.Collections.Generic.List[object]
 $failures = New-Object System.Collections.Generic.List[string]
@@ -104,7 +105,7 @@ foreach ($relative in $declarationPaths) {
     continue
   }
   try {
-    $doc = Get-Content -LiteralPath $fullPath -Raw | ConvertFrom-Json
+    $doc = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $fullPath -Raw)
     $declarations.Add([pscustomobject]@{ path = $relative; doc = $doc }) | Out-Null
   } catch {
     $failures.Add("Change declaration is invalid JSON: $relative") | Out-Null

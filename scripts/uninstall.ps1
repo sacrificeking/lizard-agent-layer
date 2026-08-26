@@ -8,6 +8,13 @@ param(
   [string]$ApprovedPlanPath,
   [string]$ApprovedPlanSha256,
   [switch]$HumanApproved,
+  [switch]$RequireSignedApproval,
+  [string]$ApprovalEnvelopePath,
+  [string]$TrustStorePath,
+  [string]$TrustStoreSha256,
+  [string]$ChallengePath,
+  [string]$ChallengeSha256,
+  [string]$ReplayLedgerPath,
   [switch]$ConfirmModifiedLayerOwnedPurge,
   [string]$ExportPath,
   [string[]]$ExportRelativePaths,
@@ -25,6 +32,7 @@ Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Manifest.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Plan.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Trust.psm1') -Force
 
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $VersionPath = Join-Path $LayerRoot 'VERSION'
@@ -52,6 +60,21 @@ if ($Apply) {
   }
   Assert-PathOutsideRoot -Path $ApprovedPlanPath -ExcludedRoot $TargetRoot -Label 'ApprovedPlanPath'
   $ApprovedPlan = Read-LizardApprovedPlan -Path $ApprovedPlanPath -ExpectedSha256 $ApprovedPlanSha256 -ExpectedOperationKind uninstall
+  if ($RequireSignedApproval) {
+    if ([string]::IsNullOrWhiteSpace($ApprovalEnvelopePath) -or [string]::IsNullOrWhiteSpace($TrustStorePath) -or [string]::IsNullOrWhiteSpace($TrustStoreSha256) -or [string]::IsNullOrWhiteSpace($ChallengePath) -or [string]::IsNullOrWhiteSpace($ChallengeSha256)) {
+      throw 'SIGNED_APPROVAL_REQUIRED: -RequireSignedApproval requires -ApprovalEnvelopePath, -TrustStorePath, -TrustStoreSha256, -ChallengePath, and -ChallengeSha256.'
+    }
+    Assert-LizardPlanApprovalSignature `
+      -ApprovedPlan $ApprovedPlan `
+      -PlanSha256 $ApprovedPlanSha256 `
+      -ApprovalEnvelopePath $ApprovalEnvelopePath `
+      -TrustStorePath $TrustStorePath `
+      -TrustStoreSha256 $TrustStoreSha256 `
+      -ChallengePath $ChallengePath `
+      -ChallengeSha256 $ChallengeSha256 `
+      -ReplayLedgerPath $ReplayLedgerPath `
+      -TargetRoot $TargetRoot | Out-Null
+  }
   if ([string]$ApprovedPlan.intent.options.scope -ne $Scope) { throw 'PLAN_BINDING_OPTIONS_MISMATCH: Approved uninstall scope differs from the current invocation.' }
   if ([bool]$ApprovedPlan.intent.options.confirm_modified_layer_owned_purge -ne $ConfirmModifiedLayerOwnedPurge.IsPresent) { throw 'PLAN_BINDING_OPTIONS_MISMATCH: Modified-content purge confirmation differs from the approved plan.' }
   if ([bool]$ApprovedPlan.intent.options.confirm_export_may_contain_sensitive_data -ne $ConfirmExportMayContainSensitiveData.IsPresent) { throw 'PLAN_BINDING_OPTIONS_MISMATCH: Export sensitivity confirmation differs from the approved plan.' }
@@ -102,8 +125,10 @@ function Read-UninstallManifest {
   catch { throw "UNINSTALL_MANIFEST_INVALID: $($_.Exception.Message)" }
   $required = @('schema_version', 'layer', 'layer_version', 'minimum_reader_schema_version', 'writer_schema_version', 'profile', 'memory_mode', 'harnesses', 'artifacts')
   $allowed = @('schema_version', 'layer', 'layer_version', 'minimum_reader_schema_version', 'writer_schema_version', 'migrated_from_schema_version', 'profile', 'requested_packs', 'pack_sources', 'packs', 'installed_at', 'target_root', 'memory_mode', 'risk_level', 'harnesses', 'model_profiles', 'model_mode', 'model_inventory', 'model_runtime', 'routing_policy', 'routing_models', 'skills', 'adapters', 'adapter_aliases', 'artifacts', 'managed_paths', 'owned_paths', 'merge_needed', 'merge_suggestions', 'conflicts', 'transaction_operation_id', 'applied_plan_id', 'applied_plan_sha256')
-  Assert-UninstallProperties -Document $manifest -Required $required -Allowed $allowed -Label 'Install manifest'
-  if ($manifest.schema_version -isnot [int] -or [int]$manifest.schema_version -ne 4 -or $manifest.minimum_reader_schema_version -isnot [int] -or [int]$manifest.minimum_reader_schema_version -ne 4 -or $manifest.writer_schema_version -isnot [int] -or [int]$manifest.writer_schema_version -ne 4) { throw 'UNINSTALL_MANIFEST_SCHEMA_UNSUPPORTED: Uninstall requires an exact schema-v4 manifest.' }
+  $schemaV = if ($manifest.schema_version -is [ValueType]) { [int64]$manifest.schema_version } else { -1 }
+  $minReaderV = if ($manifest.minimum_reader_schema_version -is [ValueType]) { [int64]$manifest.minimum_reader_schema_version } else { -1 }
+  $writerV = if ($manifest.writer_schema_version -is [ValueType]) { [int64]$manifest.writer_schema_version } else { -1 }
+  if ($schemaV -ne 4 -or $minReaderV -ne 4 -or $writerV -ne 4) { throw 'UNINSTALL_MANIFEST_SCHEMA_UNSUPPORTED: Uninstall requires an exact schema-v4 manifest.' }
   if ([string]$manifest.layer -ne 'lizard-agent-layer') { throw 'UNINSTALL_MANIFEST_INVALID: Manifest layer identity is invalid.' }
   if ([string]$manifest.memory_mode -notin @('curated', 'private-episodic', 'off')) { throw 'UNINSTALL_MANIFEST_INVALID: Manifest memory_mode is invalid.' }
   if ($manifest.artifacts -isnot [System.Array]) { throw 'UNINSTALL_MANIFEST_INVALID: Manifest artifacts must be a JSON array.' }

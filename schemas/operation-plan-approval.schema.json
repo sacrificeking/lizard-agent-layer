@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lizard-agent-layer.local/schemas/operation-plan-approval.schema.json",
+  "title": "signed operation plan approval envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "envelope_id",
+    "payload_kind",
+    "issuer_id",
+    "key_id",
+    "principal_id",
+    "issued_at",
+    "expires_at",
+    "purpose",
+    "subject",
+    "nonce",
+    "challenge_sha256",
+    "binding_sha256",
+    "approval_ref",
+    "payload_sha256",
+    "signature_algorithm",
+    "payload",
+    "signature"
+  ],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "artifact_kind": { "const": "signed-evidence" },
+    "envelope_id": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "payload_kind": { "const": "operation-plan" },
+    "issuer_id": { "$ref": "#/$defs/id" },
+    "key_id": { "$ref": "#/$defs/id" },
+    "principal_id": { "$ref": "#/$defs/id" },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "purpose": { "enum": ["install-apply-approval", "update-apply-approval", "uninstall-apply-approval", "apply-approval"] },
+    "subject": { "$ref": "#/$defs/id" },
+    "nonce": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "challenge_sha256": { "$ref": "#/$defs/hash" },
+    "binding_sha256": { "$ref": "#/$defs/hash" },
+    "approval_ref": { "$ref": "#/$defs/id" },
+    "payload_sha256": { "$ref": "#/$defs/hash" },
+    "signature_algorithm": { "const": "RS256" },
+    "payload": { "$ref": "operation-plan.schema.json" },
+    "signature": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@:+-]{0,127}$" },
+    "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

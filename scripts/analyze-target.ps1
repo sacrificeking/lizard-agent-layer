@@ -8,6 +8,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $LayerRoot = Split-Path -Parent $PSScriptRoot
 Import-Module (Join-Path $PSScriptRoot 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'Lizard.Host.psm1') -Force
 
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
@@ -102,7 +103,7 @@ function Read-JsonSafe {
   param([string]$Relative)
   if (-not (Has-File $Relative)) { return $null }
   $path = Join-Path $TargetRoot $Relative
-  try { return (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $path -Raw -MaximumBytes 2097152) | ConvertFrom-Json }
+  try { return ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $path -Raw -MaximumBytes 2097152) }
   catch { Add-Warning "$Relative exists but is not valid bounded JSON."; return $null }
 }
 

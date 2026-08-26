@@ -8,15 +8,16 @@ param(
 
 $ErrorActionPreference = "Stop"
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+$ScriptDir = if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Host.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.QualityEvidence.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp\quality' }
 $OutputDir = Initialize-SafeDirectory -Path $OutputDir
 
-function Read-JsonFile { param([string]$Path) Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json }
+function Read-JsonFile { param([string]$Path) ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $Path -Raw) }
 function Get-RelativePath {
   param([string]$Path)
   $resolved = (Resolve-Path -LiteralPath $Path).Path
@@ -281,7 +282,7 @@ if ([string]::IsNullOrWhiteSpace($FocusedReportPath)) {
   $focusedReportPath = Resolve-SafeTargetDestination -AuthorizedRoot $LayerRoot -DestinationPath $focusedReportCandidate
 }
 $focusedReport = if (Test-Path -LiteralPath $focusedReportPath -PathType Leaf) {
-  (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $focusedReportPath -Raw | ConvertFrom-Json)
+  ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $focusedReportPath -Raw)
 } else {
   $null
 }

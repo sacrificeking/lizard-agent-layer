@@ -15,6 +15,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Trust.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 if ($MinimumCasesPerRole -lt 1) { throw 'CALIBRATION_MINIMUM_CASES_INVALID: MinimumCasesPerRole must be at least 1.' }
@@ -49,7 +50,7 @@ if ([string]$verifiedEvaluation.principal_id -eq [string]$evaluation.executor_id
 
 $profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
 if (-not (Test-Path -LiteralPath $profilePath -PathType Leaf)) { throw 'CALIBRATION_PROFILE_MISSING: install the layer first.' }
-$profile = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
+$profile = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $profilePath -Raw)
 if ([string]$profile.modelMode -ne 'inventory-routing') { throw 'CALIBRATION_INVENTORY_MODE_REQUIRED: calibration requires inventory-routing.' }
 
 $routingRoot = Resolve-SafeRoot -Path (Join-Path $TargetRoot '.agent\routing') -RequireExisting
@@ -58,8 +59,8 @@ $runtimeRelative = if ($profile.modelRuntime) { [string]$profile.modelRuntime } 
 $inventoryPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $inventoryRelative.Replace('/', '\'))
 $runtimePath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $runtimeRelative.Replace('/', '\'))
 foreach ($required in @($inventoryPath, $runtimePath)) { if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "CALIBRATION_INPUT_MISSING: $required" } }
-$inventory = Get-Content -LiteralPath $inventoryPath -Raw | ConvertFrom-Json
-$runtime = Get-Content -LiteralPath $runtimePath -Raw | ConvertFrom-Json
+$inventory = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $inventoryPath -Raw)
+$runtime = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $runtimePath -Raw)
 
 if ([string]$runtime.status -ne 'ready' -or $runtime.actual_model_reporting -ne $true -or [string]$runtime.selection -notin @('subagent', 'per-call')) { throw 'CALIBRATION_RUNTIME_NOT_READY: runtime must select automatically and report actual model identity.' }
 if ([string]$runtime.attestation -notin @('observed', 'attested')) { throw 'CALIBRATION_RUNTIME_NOT_READY: runtime attestation is insufficient.' }

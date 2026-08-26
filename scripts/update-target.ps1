@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$TargetPath = (Get-Location).Path,
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [string]$Profile,
@@ -19,10 +19,17 @@
   [int]$PlanTtlMinutes = 60,
   [string]$ApprovedPlanPath,
   [string]$ApprovedPlanSha256,
+  [switch]$HumanApproved,
+  [switch]$RequireSignedApproval,
+  [string]$ApprovalEnvelopePath,
+  [string]$TrustStorePath,
+  [string]$TrustStoreSha256,
+  [string]$ChallengePath,
+  [string]$ChallengeSha256,
+  [string]$ReplayLedgerPath,
   [string]$OutputDir,
   [switch]$AllowTargetReportWrite,
   [switch]$AllowDowngrade,
-  [switch]$HumanApproved,
   [int]$TestFailAfterMutation = 0
 )
 
@@ -30,9 +37,11 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Host.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Plan.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Trust.psm1') -Force
 $PowerShellHost = Get-LizardPowerShellHostPath
 $PowerShellFilePrefix = Get-LizardPowerShellFilePrefix
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
@@ -47,6 +56,21 @@ if ($Apply) {
   }
   Assert-PathOutsideRoot -Path $ApprovedPlanPath -ExcludedRoot $TargetRoot -Label 'ApprovedPlanPath'
   $ApprovedUpdatePlan = Read-LizardApprovedPlan -Path $ApprovedPlanPath -ExpectedSha256 $ApprovedPlanSha256 -ExpectedOperationKind update
+  if ($RequireSignedApproval) {
+    if ([string]::IsNullOrWhiteSpace($ApprovalEnvelopePath) -or [string]::IsNullOrWhiteSpace($TrustStorePath) -or [string]::IsNullOrWhiteSpace($TrustStoreSha256) -or [string]::IsNullOrWhiteSpace($ChallengePath) -or [string]::IsNullOrWhiteSpace($ChallengeSha256)) {
+      throw 'SIGNED_APPROVAL_REQUIRED: -RequireSignedApproval requires -ApprovalEnvelopePath, -TrustStorePath, -TrustStoreSha256, -ChallengePath, and -ChallengeSha256.'
+    }
+    Assert-LizardPlanApprovalSignature `
+      -ApprovedPlan $ApprovedUpdatePlan `
+      -PlanSha256 $ApprovedPlanSha256 `
+      -ApprovalEnvelopePath $ApprovalEnvelopePath `
+      -TrustStorePath $TrustStorePath `
+      -TrustStoreSha256 $TrustStoreSha256 `
+      -ChallengePath $ChallengePath `
+      -ChallengeSha256 $ChallengeSha256 `
+      -ReplayLedgerPath $ReplayLedgerPath `
+      -TargetRoot $TargetRoot | Out-Null
+  }
 }
 
 function Write-Status {
@@ -137,7 +161,7 @@ function Invoke-ManifestDiff {
   $text = & $PowerShellHost @argsList | Out-String
   if ($LASTEXITCODE -ne 0) { throw "manifest-diff.ps1 failed with exit code $LASTEXITCODE. Output: $text" }
   if ([string]::IsNullOrWhiteSpace($text)) { throw 'manifest-diff.ps1 returned no JSON output.' }
-  $report = $text | ConvertFrom-Json
+  $report = ConvertFrom-LizardJson -InputObject $text
   if ($Strict -and [int]$report.summary.differences -gt 0) {
     throw "manifest-diff.ps1 strict check failed with $($report.summary.differences) differences. Report: $DiffOutputDir"
   }
@@ -255,8 +279,8 @@ if (-not (Test-Path -LiteralPath $profilePath)) {
 }
 if (-not (Test-Path -LiteralPath $versionPath)) { throw "Missing layer VERSION file: $versionPath" }
 
-$Manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-$ProfileDoc = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
+$Manifest = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $manifestPath -Raw)
+$ProfileDoc = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $profilePath -Raw)
 $CurrentVersion = (Get-Content -LiteralPath $versionPath -Raw).Trim()
 $InstalledVersion = if ($Manifest.layer_version) { [string]$Manifest.layer_version } else { 'unknown' }
 $InstalledManifestSchema = if ($null -ne $Manifest.schema_version) { try { [int]$Manifest.schema_version } catch { throw "MANIFEST_SCHEMA_INVALID: $($Manifest.schema_version)" } } else { 1 }

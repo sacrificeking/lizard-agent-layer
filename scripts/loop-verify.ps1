@@ -33,6 +33,7 @@ $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.LoopEvidence.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.ConstrainedRunner.psm1') -Force
@@ -225,7 +226,7 @@ $manifestPath = Join-Path $TargetRoot '.agent\loops\lizard-agent-layer.loop-inst
 $verifierRel = '.agent/loops/loop-verifier-report.md'
 if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
   try {
-    $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    $manifest = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $manifestPath -Raw)
     if (($manifest.PSObject.Properties.Name -contains 'verifier_file') -and -not [string]::IsNullOrWhiteSpace([string]$manifest.verifier_file)) { $verifierRel = [string]$manifest.verifier_file }
   } catch { $failures = Add-ResultItem $failures "Loop install manifest is invalid JSON: $($_.Exception.Message)" }
 } else { $failures = Add-ResultItem $failures 'Loop install manifest missing. Run loop-init.ps1 first.' }
@@ -257,7 +258,7 @@ if ($Status -in @('PASS', 'WARN') -and $failures.Count -eq 0) {
       $failures = Add-ResultItem $failures "DOD_PATTERN_NOT_FOUND: Pattern '$patternName' was not found in layer loops catalog."
     } else {
       try {
-        $patternJson = Get-Content -LiteralPath $patternFile -Raw | ConvertFrom-Json
+        $patternJson = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $patternFile -Raw)
         $requiredDoD = @()
         if ($patternJson.PSObject.Properties.Name -contains 'definitionOfDone') {
           $requiredDoD = @($patternJson.definitionOfDone | Where-Object { $_.required -eq $true })
@@ -280,7 +281,7 @@ if ($Status -in @('PASS', 'WARN') -and $failures.Count -eq 0) {
               $failures = Add-ResultItem $failures "Criteria file path rejected: $($_.Exception.Message)"
             }
             if ($failures.Count -eq 0) {
-              $criteriaDoc = Get-Content -LiteralPath $effectiveCriteriaPath -Raw | ConvertFrom-Json
+              $criteriaDoc = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $effectiveCriteriaPath -Raw)
               $submitted = @($criteriaDoc.criteria)
               foreach ($sub in $submitted) {
                 $evaluatedCriteria.Add([pscustomobject][ordered]@{

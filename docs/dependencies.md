@@ -24,7 +24,7 @@ Use LTS Node.js for release and enterprise work. Current, odd, EOL, nightly, pre
 | Package | Locked Version | License | Directly Managed |
 | --- | ---: | --- | --- |
 | fast-deep-equal | `3.1.3` | MIT | No; resolved by Ajv |
-| fast-uri | `3.1.3` | BSD-3-Clause | No; resolved by Ajv |
+| fast-uri | `3.1.6` | BSD-3-Clause | No; resolved by Ajv |
 | json-schema-traverse | `1.0.0` | MIT | No; resolved by Ajv |
 | require-from-string | `2.0.2` | MIT | No; resolved by ajv-formats |
 

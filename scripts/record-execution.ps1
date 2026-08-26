@@ -32,6 +32,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeReport.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Trust.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
@@ -54,7 +55,7 @@ if (-not (Test-Path -LiteralPath $profilePath -PathType Leaf)) { throw 'EXECUTIO
 if (-not (Test-Path -LiteralPath $decisionPath -PathType Leaf)) { throw "EXECUTION_ROUTE_DECISION_MISSING: $RouteDecisionId" }
 foreach ($required in @(@{ value = $RouteTrustStorePath; label = 'RouteTrustStorePath' }, @{ value = $RouteTrustStoreSha256; label = 'RouteTrustStoreSha256' }, @{ value = $RouteTrustChallengePath; label = 'RouteTrustChallengePath' }, @{ value = $RouteTrustChallengeSha256; label = 'RouteTrustChallengeSha256' })) { if ([string]::IsNullOrWhiteSpace([string]$required.value)) { throw "EXECUTION_ROUTE_TRUST_REQUIRED: $($required.label) is required." } }
 
-$profile = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
+$profile = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $profilePath -Raw)
 $decisionEnvelope = Read-LizardSignedEvidenceFile -Path $decisionPath
 $decision = $decisionEnvelope.payload
 if ([string]$profile.modelMode -ne 'inventory-routing') { throw 'EXECUTION_RUNTIME_MODE_REQUIRED: execution receipts require inventory-routing.' }
@@ -71,7 +72,7 @@ if ([string]$verifiedRoute.principal_id -ne [string]$decision.router_id) { throw
 $runtimeRelative = if ($profile.modelRuntime) { [string]$profile.modelRuntime } else { '.agent/routing/runtime.json' }
 $runtimePath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $runtimeRelative.Replace('/', '\'))
 if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf)) { throw 'EXECUTION_RUNTIME_MISSING: runtime capability file is missing.' }
-$runtime = Get-Content -LiteralPath $runtimePath -Raw | ConvertFrom-Json
+$runtime = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $runtimePath -Raw)
 if ([string]$runtime.status -ne 'ready' -or $runtime.actual_model_reporting -ne $true) { throw 'EXECUTION_RUNTIME_NOT_READY: runtime cannot attest actual model execution.' }
 if ([string]$runtime.selection -notin @('subagent', 'per-call')) { throw 'EXECUTION_RUNTIME_NOT_READY: runtime cannot select models automatically.' }
 if ([string]$runtime.attestation -notin @('observed', 'attested')) { throw 'EXECUTION_ATTESTATION_INVALID: runtime attestation is insufficient.' }

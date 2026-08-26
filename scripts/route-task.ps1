@@ -29,6 +29,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeReport.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Trust.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Plan.psm1') -Force
@@ -128,8 +129,8 @@ function Assert-RuntimeContract {
   if ($runtimeExpiry -le [DateTimeOffset]::UtcNow) { throw 'runtime capability evidence has expired' }
 }
 
-$profile = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
-$policy = Get-Content -LiteralPath $policyPath -Raw | ConvertFrom-Json
+$profile = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $profilePath -Raw)
+$policy = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $policyPath -Raw)
 if ([string]$profile.routingPolicy -ne [string]$policy.name) { throw "ROUTING_POLICY_MISMATCH: Profile '$($profile.routingPolicy)' does not match installed policy '$($policy.name)'." }
 
 $modelMode = if ($profile.PSObject.Properties.Name -contains 'modelMode' -and -not [string]::IsNullOrWhiteSpace([string]$profile.modelMode)) { [string]$profile.modelMode } else { [string]$policy.model_selection.default_mode }
@@ -232,7 +233,7 @@ if ($decision -eq 'route') {
       try {
         $runtimePath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $runtimeRelative.Replace('/', '\'))
         if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf)) { throw "runtime capability file is missing: $runtimeRelative" }
-        $runtime = Get-Content -LiteralPath $runtimePath -Raw | ConvertFrom-Json
+        $runtime = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $runtimePath -Raw)
         $runtimeSourceSha256 = Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path $runtimePath
         Assert-RuntimeContract -Runtime $runtime
         $selectionCapability = [string]$runtime.selection
@@ -241,7 +242,7 @@ if ($decision -eq 'route') {
         $runtimeConfigurationFingerprint = [string]$runtime.configuration_fingerprint
         $inventoryPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $inventoryRelative.Replace('/', '\'))
         if (-not (Test-Path -LiteralPath $inventoryPath -PathType Leaf)) { throw "inventory file is missing: $inventoryRelative" }
-        $inventory = Get-Content -LiteralPath $inventoryPath -Raw | ConvertFrom-Json
+        $inventory = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $inventoryPath -Raw)
         $inventorySha256 = Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path $inventoryPath
         Assert-InventoryContract -Inventory $inventory
         $duplicateIds = @($inventory.models | Group-Object { [string]$_.id } | Where-Object { $_.Count -gt 1 })

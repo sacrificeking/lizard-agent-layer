@@ -11,8 +11,8 @@ $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.LoopRuntime.psm1') -Force
-Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
@@ -52,7 +52,7 @@ $manifestPath = Join-Path $TargetRoot '.agent\loops\lizard-agent-layer.loop-inst
 $manifest = $null
 $runtime = $null
 if (Test-Path -LiteralPath $manifestPath) {
-  try { $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json }
+  try { $manifest = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $manifestPath -Raw) }
   catch { Add-Failure "Invalid loop manifest: $($_.Exception.Message)" }
 } else {
   Add-Failure 'Loop manifest missing. Run loop-init.ps1 first.'

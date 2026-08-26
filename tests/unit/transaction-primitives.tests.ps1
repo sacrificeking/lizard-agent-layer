@@ -58,6 +58,16 @@ try {
   Undo-LizardTransaction | Out-Null
   Assert-NoTransactionMetadata
 
+  # Identity-bound rollback test (Idea 0003 / Audit F-06)
+  $divergedPath = Join-Path $target 'diverged.txt'
+  Start-LizardTransaction -TargetRoot $target -OperationName 'divergence-guard' | Out-Null
+  Set-LizardTransactionalContent -Path $divergedPath -Value 'original lizard write'
+  Set-Content -LiteralPath $divergedPath -Value 'external foreign write' -Encoding UTF8
+  Assert-ThrowsCode { Undo-LizardTransaction | Out-Null } 'TRANSACTION_ROLLBACK_DESTINATION_DIVERGED' 'Rollback must fail closed when destination diverged from recorded post-mutation identity.'
+  Assert-True ((Get-Content -LiteralPath $divergedPath -Raw) -match 'external foreign write') 'Rollback must not overwrite a diverged destination file.'
+  Remove-Item -LiteralPath (Join-Path $target '.lizard-agent-layer.lock') -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath (Join-Path $target '.lizard-agent-layer-transactions') -Recurse -Force -ErrorAction SilentlyContinue
+
   Write-Host 'PASS tests\unit\transaction-primitives.tests.ps1'
 } finally {
   if (Test-Path -LiteralPath $fixture) { Clear-TestDirectory -Path $fixture -AllowedRoot $testRoot }

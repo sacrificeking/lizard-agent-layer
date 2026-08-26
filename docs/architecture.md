@@ -49,9 +49,13 @@ A target project may receive:
     working/WORKSPACE.md
   protocols/
     permissions.md
-    memory-policy.md
-    release-gates.md
+    prompt-trust.md
+    staged-execution.md
+    context-hygiene.md
     secret-handling.md
+    memory-policy.md
+    project-context.md
+    release-gates.md
     handoff.md
   skills/
     _index.md
@@ -63,6 +67,7 @@ AGENTS.md or AGENTS.lizard-agent-layer.md       # Codex/generic
 CLAUDE.md or CLAUDE.lizard-agent-layer.md       # Claude Code
 GEMINI.md or GEMINI.lizard-agent-layer.md       # Gemini
 .cursor/rules/lizard-agent-layer.mdc            # Cursor
+.github/copilot-instructions.md                 # GitHub Copilot
 
 .agents/skills/<skill>/SKILL.md                 # Codex mirror
 .claude/skills/<skill>/SKILL.md                 # Claude mirror
@@ -109,7 +114,7 @@ These gaps are **intentional**. Closing them inside this repository would be a s
 | An `expert` profile, DLP/PII engine, or Spec-Kit-style slash OS | Same overlay for novices and experienced users. Paste-stop is protocol judgment, not a scanner. SDD CLIs are adjacent products. |
 | Replacing PowerShell with Node for install | Containment scripts are the platform. Target apps do not take that dependency. Champions need PowerShell 7.5+. |
 
-Unix handle-bound SafeFs **runtime** evidence (H-03) is the remaining **in-repo** platform task, not an overlay skill. See [Compatibility](compatibility.md) and [0022](implementation-ideas/0022-unix-safefs-ci-evidence.md). Organization residual risk: [Enterprise usage](enterprise-usage.md).
+Unix handle-bound SafeFs **runtime** evidence (H-03) is validated through the multi-host CI matrix across Windows, Ubuntu, and macOS. See [Compatibility](compatibility.md). Organization residual risk: [Enterprise usage](enterprise-usage.md).
 
 ## Durable contracts
 

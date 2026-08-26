@@ -12,6 +12,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LayerRoot = Split-Path -Parent $ScriptDir
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $ProfilePath = Join-Path $LayerRoot "profiles\$Profile.json"
@@ -121,7 +122,7 @@ function Add-MarkdownList {
   $Lines.Add('') | Out-Null
 }
 
-$ProfileDoc = Get-Content -LiteralPath $ProfilePath -Raw | ConvertFrom-Json
+$ProfileDoc = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $ProfilePath -Raw)
 $SelectedHarnesses = if ($Harnesses -and $Harnesses.Count -gt 0) { Expand-HarnessList $Harnesses } else { Expand-HarnessList $ProfileDoc.harnesses }
 if ($SelectedHarnesses.Count -eq 0) { throw "No harnesses selected. Set profile.harnesses or pass -Harnesses." }
 
@@ -144,7 +145,7 @@ foreach ($harness in $SelectedHarnesses) {
   $adapterDir = Join-Path $LayerRoot "adapters\$harness"
   $adapterManifestPath = Join-Path $adapterDir 'adapter.json'
   if (-not (Test-Path -LiteralPath $adapterManifestPath)) { throw "Missing adapter manifest for '$harness'." }
-  $adapter = Get-Content -LiteralPath $adapterManifestPath -Raw | ConvertFrom-Json
+  $adapter = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $adapterManifestPath -Raw)
   $instruction = $adapter.instruction
   $dstRel = Assert-SafeRelativePath $instruction.dst "adapter instruction dst"
   $sidecarRel = if ($instruction.sidecar) { Assert-SafeRelativePath $instruction.sidecar "adapter instruction sidecar" } else { "$dstRel.lizard-agent-layer" }

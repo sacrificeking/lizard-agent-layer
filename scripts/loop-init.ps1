@@ -14,13 +14,14 @@ $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $VersionPath = Join-Path $LayerRoot 'VERSION'
 $LayerVersion = if (Test-Path -LiteralPath $VersionPath) { (Get-Content -LiteralPath $VersionPath -Raw).Trim() } else { '0.0.0-dev' }
 $PatternPath = Join-Path $LayerRoot ("loops\{0}.json" -f $Pattern)
 if (-not (Test-Path -LiteralPath $PatternPath)) { throw "Unknown loop pattern '$Pattern'. Expected loops/$Pattern.json." }
-$PatternDoc = Get-Content -LiteralPath $PatternPath -Raw | ConvertFrom-Json
+$PatternDoc = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $PatternPath -Raw)
 
 function Resolve-UserPath {
   param([string]$Path, [string]$Fallback)

@@ -7,6 +7,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $LayerRoot = Split-Path -Parent $ScriptDir
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Manifest.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Transaction.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.SkillPackage.psm1') -Force
@@ -75,13 +76,13 @@ $manifestSchema = 0
 
 Check-File '.agent\project-profile.json' -Required | Out-Null
 if (Test-Path -LiteralPath $profilePath) {
-  try { $profile = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json; Add-Ok "profile loaded: $($profile.profile)" }
+  try { $profile = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $profilePath -Raw); Add-Ok "profile loaded: $($profile.profile)" }
   catch { Add-Fail "project-profile.json is invalid JSON: $($_.Exception.Message)" }
 }
 
 if (Test-Path -LiteralPath $manifestPath) {
   try {
-    $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    $manifest = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $manifestPath -Raw)
     $manifestSchema = if ($null -ne $manifest.schema_version) { [int]$manifest.schema_version } else { 1 }
     if ($manifestSchema -gt 4) { Add-Fail "install manifest schema $manifestSchema is newer than supported schema 4." }
     elseif ($manifestSchema -lt 3) { Add-Warn "install manifest schema $manifestSchema has unknown content integrity; migrate to schema 4." }
@@ -173,7 +174,7 @@ if (Test-Path -LiteralPath $skillManifestPath -PathType Leaf) {
     $skillRecords = @{}
     $skillLines = @((Get-SafeContent -AuthorizedRoot $TargetRoot -Path $skillManifestPath -Raw -MaximumBytes 4194304) -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     foreach ($line in $skillLines) {
-      $record = $line | ConvertFrom-Json
+      $record = ConvertFrom-LizardJson -InputObject $line
       $required = @('schema_version', 'name', 'version', 'status', 'source', 'metadata', 'metadata_sha256', 'dependencies', 'permissions')
       $names = @($record.PSObject.Properties.Name)
       foreach ($name in $required) { if ($names -notcontains $name) { throw "skill manifest record is missing '$name'." } }
@@ -247,7 +248,7 @@ if ($null -ne $profile) {
     $routingPolicyPath = Join-Path $TargetRoot '.agent\routing\policy.json'
     if (Test-Path -LiteralPath $routingPolicyPath -PathType Leaf) {
       try {
-        $routingPolicy = Get-Content -LiteralPath $routingPolicyPath -Raw | ConvertFrom-Json
+        $routingPolicy = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $routingPolicyPath -Raw)
         if ([string]$routingPolicy.name -ne [string]$profile.routingPolicy) { Add-Fail "routing policy '$($routingPolicy.name)' does not match profile '$($profile.routingPolicy)'." }
         else { Add-Ok "routing policy loaded: $($routingPolicy.name)" }
         $regulatedPolicy = if ($routingPolicy.PSObject.Properties.Name -contains 'regulated_data') { $routingPolicy.regulated_data } else { $null }
@@ -276,7 +277,7 @@ if ($null -ne $profile) {
       $runtimePath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $runtimeRelative.Replace('/', '\'))
       if (-not (Test-Path -LiteralPath $inventoryPath -PathType Leaf)) { throw "inventory-routing requires $inventoryRelative." }
       if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf)) { throw "inventory-routing requires $runtimeRelative." }
-      $runtime = Get-Content -LiteralPath $runtimePath -Raw | ConvertFrom-Json
+      $runtime = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $runtimePath -Raw)
       if ([string]$runtime.status -ne 'ready') { Add-Fail 'routing runtime status is not ready.' }
       if ([string]$runtime.selection -notin @('subagent', 'per-call')) { Add-Fail 'routing runtime lacks automatic selection.' }
       if ($runtime.actual_model_reporting -ne $true) { Add-Fail 'routing runtime cannot report actual model identity.' }
@@ -287,7 +288,7 @@ if ($null -ne $profile) {
       if ($missingHarnesses.Count -gt 0) { Add-Fail "routing runtime does not cover installed harnesses: $($missingHarnesses -join ', ')." }
       else { Add-Ok "automatic runtime $($runtime.executor_id): $($runtime.selection), harnesses $($harnesses -join ', ')" }
 
-      $inventory = Get-Content -LiteralPath $inventoryPath -Raw | ConvertFrom-Json
+      $inventory = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $inventoryPath -Raw)
       $duplicateIds = @($inventory.models | Group-Object { [string]$_.id } | Where-Object { $_.Count -gt 1 })
       if ($duplicateIds.Count -gt 0) { Add-Fail "model inventory contains duplicate id '$([string]$duplicateIds[0].Name)'." }
       $eligible = @($inventory.models | Where-Object {
@@ -351,7 +352,7 @@ foreach ($harness in $harnesses) {
     Add-Warn "Adapter '$harness' is installed in manifest/profile, but this doctor cannot find its local adapter manifest."
     continue
   }
-  $adapter = Get-Content -LiteralPath $layerAdapterPath -Raw | ConvertFrom-Json
+  $adapter = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $layerAdapterPath -Raw)
   $dst = Normalize-RelPath $adapter.instruction.dst
   $sidecar = if ($adapter.instruction.sidecar) { Normalize-RelPath $adapter.instruction.sidecar } else { "$dst.lizard-agent-layer" }
   $dstPath = Join-Path $TargetRoot $dst

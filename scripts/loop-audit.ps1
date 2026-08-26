@@ -20,10 +20,10 @@ $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Trust.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.LoopEvidence.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.LoopRuntime.psm1') -Force
-Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
@@ -40,7 +40,7 @@ function Add-Warning { param([string]$Message) $Warnings.Add($Message) | Out-Nul
 function Add-Pass { param([string]$Message) $Checks.Add([ordered]@{ status = 'pass'; message = $Message }) | Out-Null }
 function Read-JsonFile {
   param([string]$Path)
-  try { return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json }
+  try { return ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $Path -Raw) }
   catch { Add-Failure "Invalid JSON: $Path ($($_.Exception.Message))"; return $null }
 }
 function Test-RelativeFile {

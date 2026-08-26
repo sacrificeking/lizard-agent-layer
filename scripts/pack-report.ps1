@@ -8,6 +8,7 @@ $ErrorActionPreference = "Stop"
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp\packs' }
 $OutputDir = Initialize-SafeDirectory -Path $OutputDir
@@ -19,7 +20,7 @@ function Warn { param([string]$Message) $Warnings.Add($Message) | Out-Null }
 function Is-HyphenName { param([string]$Name) $Name -match '^[a-z0-9][a-z0-9-]{0,62}$' }
 function Read-JsonFile {
   param([string]$Path)
-  try { Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json }
+  try { ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $Path -Raw) }
   catch { Fail "Invalid JSON: $Path ($($_.Exception.Message))"; $null }
 }
 function Get-RelativePath {

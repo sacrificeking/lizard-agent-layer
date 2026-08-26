@@ -100,17 +100,23 @@ function Assert-LizardTransactionJournalDocument {
   if ($Journal.operation_name -isnot [string] -or $Journal.started_at -isnot [string] -or $Journal.updated_at -isnot [string] -or $Journal.mutations -isnot [System.Array]) { throw (New-LizardTransactionException -Code 'TRANSACTION_JOURNAL_INVALID' -Message 'Journal names, timestamps, and mutations must use their declared JSON types.') }
 
   $mutationRequired = @('sequence', 'path', 'kind', 'original_state', 'original_hash', 'backup_path', 'status')
+  $mutationAllowed = @($mutationRequired + 'post_hash')
   $seen = New-Object 'System.Collections.Generic.HashSet[int]'
   $previousSequence = 0
   $rolledBackSuffixStarted = $false
   foreach ($mutation in @($Journal.mutations)) {
-    Assert-LizardTransactionProperties -Document $mutation -Required $mutationRequired -Allowed $mutationRequired -Label 'Transaction mutation'
+    Assert-LizardTransactionProperties -Document $mutation -Required $mutationRequired -Allowed $mutationAllowed -Label 'Transaction mutation'
     if (-not (Test-LizardTransactionInteger $mutation.sequence)) { throw (New-LizardTransactionException -Code 'TRANSACTION_SEQUENCE_INVALID' -Message 'Mutation sequences must be JSON integers.') }
     $sequence = [int64]$mutation.sequence
     if ($sequence -ne ($previousSequence + 1) -or -not $seen.Add($sequence)) { throw (New-LizardTransactionException -Code 'TRANSACTION_SEQUENCE_INVALID' -Message 'Mutation sequences must be contiguous, unique, and stored in ascending order.') }
     $previousSequence = $sequence
     if ($mutation.path -isnot [string] -or -not (Test-LizardTransactionRelativePath -Path ([string]$mutation.path))) { throw (New-LizardTransactionException -Code 'TRANSACTION_DESTINATION_PATH_INVALID' -Message "Mutation path '$($mutation.path)' is unsafe.") }
     if ($mutation.kind -isnot [string] -or $mutation.original_state -isnot [string] -or $mutation.status -isnot [string] -or [string]$mutation.kind -notin @('file', 'directory') -or [string]$mutation.original_state -notin @('missing', 'file', 'directory') -or [string]$mutation.status -notin @('pending', 'applied', 'rolled-back')) { throw (New-LizardTransactionException -Code 'TRANSACTION_MUTATION_INVALID' -Message "Mutation $sequence has an invalid kind, original state, or status.") }
+    if ($mutation.PSObject.Properties.Name -contains 'post_hash' -and -not [string]::IsNullOrWhiteSpace([string]$mutation.post_hash)) {
+      if ($mutation.post_hash -isnot [string] -or [string]$mutation.post_hash -notmatch '^[a-f0-9]{64}$') {
+        throw (New-LizardTransactionException -Code 'TRANSACTION_MUTATION_INVALID' -Message "Mutation $sequence post_hash is invalid.")
+      }
+    }
     if ([string]$mutation.status -eq 'rolled-back') { $rolledBackSuffixStarted = $true }
     elseif ($rolledBackSuffixStarted) { throw (New-LizardTransactionException -Code 'TRANSACTION_ROLLBACK_ORDER_INVALID' -Message 'Rolled-back mutations must form a contiguous highest-sequence suffix.') }
     if ([string]$mutation.original_state -eq 'file') {
@@ -351,6 +357,7 @@ function Add-LizardTransactionMutation {
     original_state = $originalState
     original_hash = $originalHash
     backup_path = $backupRel
+    post_hash = $null
     status = 'pending'
   }
   $Context.journal.mutations = @(@($Context.journal.mutations) + $mutation)
@@ -360,11 +367,17 @@ function Add-LizardTransactionMutation {
 }
 
 function Complete-LizardTransactionMutation {
-  param($Mutation)
+  param($Mutation, [string]$PostHash = '')
   $Context = Sync-LizardTransactionContext
   $entry = @($Context.journal.mutations) | Where-Object { [int]$_.sequence -eq [int]$Mutation.sequence } | Select-Object -First 1
   if ($null -eq $entry) { throw (New-LizardTransactionException -Code 'TRANSACTION_MUTATION_MISSING' -Message "Mutation $($Mutation.sequence) is not journaled.") }
   $entry.status = 'applied'
+  if (-not [string]::IsNullOrWhiteSpace($PostHash)) {
+    if ($entry.PSObject.Properties.Name -contains 'post_hash') { $entry.post_hash = $PostHash }
+    else { $entry | Add-Member -NotePropertyName 'post_hash' -NotePropertyValue $PostHash }
+  } else {
+    if ($entry.PSObject.Properties.Name -contains 'post_hash') { $entry.post_hash = $null }
+  }
   Save-LizardTransactionContext -Context $Context
   $appliedCount = @($Context.journal.mutations | Where-Object { $_.status -eq 'applied' }).Count
   if ([int]$Context.journal.fail_after_mutation -gt 0 -and $appliedCount -ge [int]$Context.journal.fail_after_mutation) {
@@ -409,7 +422,8 @@ function Set-LizardTransactionalContent {
   New-LizardTransactionalDirectory -Path (Split-Path -Parent $safePath) | Out-Null
   $mutation = Add-LizardTransactionMutation -Context $Context -Path $safePath -Kind file
   Set-SafeContent -AuthorizedRoot $Context.target_root -Path $safePath -Value $Value -Encoding $Encoding
-  Complete-LizardTransactionMutation -Mutation $mutation
+  $postHash = Get-SafeFileHash -AuthorizedRoot $Context.target_root -Path $safePath
+  Complete-LizardTransactionMutation -Mutation $mutation -PostHash $postHash
 }
 
 function Set-LizardTransactionalBytes {
@@ -420,7 +434,8 @@ function Set-LizardTransactionalBytes {
   New-LizardTransactionalDirectory -Path (Split-Path -Parent $safePath) | Out-Null
   $mutation = Add-LizardTransactionMutation -Context $Context -Path $safePath -Kind file
   Set-SafeBytes -AuthorizedRoot $Context.target_root -Path $safePath -Bytes $Bytes
-  Complete-LizardTransactionMutation -Mutation $mutation
+  $postHash = Get-SafeFileHash -AuthorizedRoot $Context.target_root -Path $safePath
+  Complete-LizardTransactionMutation -Mutation $mutation -PostHash $postHash
 }
 
 function Add-LizardTransactionalContent {
@@ -431,7 +446,8 @@ function Add-LizardTransactionalContent {
   New-LizardTransactionalDirectory -Path (Split-Path -Parent $safePath) | Out-Null
   $mutation = Add-LizardTransactionMutation -Context $Context -Path $safePath -Kind file
   Add-SafeContent -AuthorizedRoot $Context.target_root -Path $safePath -Value $Value -Encoding $Encoding
-  Complete-LizardTransactionMutation -Mutation $mutation
+  $postHash = Get-SafeFileHash -AuthorizedRoot $Context.target_root -Path $safePath
+  Complete-LizardTransactionMutation -Mutation $mutation -PostHash $postHash
 }
 
 function Copy-LizardTransactionalFile {
@@ -443,7 +459,8 @@ function Copy-LizardTransactionalFile {
   New-LizardTransactionalDirectory -Path (Split-Path -Parent $safePath) | Out-Null
   $mutation = Add-LizardTransactionMutation -Context $Context -Path $safePath -Kind file
   Copy-SafeItem -SourceAuthorizedRoot $SourceAuthorizedRoot -AuthorizedRoot $Context.target_root -Source $Source -Destination $safePath -Force:$Force
-  Complete-LizardTransactionMutation -Mutation $mutation
+  $postHash = Get-SafeFileHash -AuthorizedRoot $Context.target_root -Path $safePath
+  Complete-LizardTransactionMutation -Mutation $mutation -PostHash $postHash
 }
 
 function Remove-LizardTransactionalItem {
@@ -523,6 +540,16 @@ function Undo-LizardTransaction {
     if ([string]$mutation.status -eq 'rolled-back') { continue }
     try {
       $destination = Resolve-SafeTargetDestination -AuthorizedRoot $Context.target_root -DestinationPath (Join-Path $Context.target_root ([string]$mutation.path).Replace('/', [System.IO.Path]::DirectorySeparatorChar))
+      if ([string]$mutation.status -eq 'applied' -and $mutation.PSObject.Properties.Name -contains 'post_hash' -and -not [string]::IsNullOrWhiteSpace([string]$mutation.post_hash)) {
+        if (Test-Path -LiteralPath $destination -PathType Leaf) {
+          $currentHash = Get-SafeFileHash -AuthorizedRoot $Context.target_root -Path $destination
+          if ($currentHash -ne [string]$mutation.post_hash) {
+            throw (New-LizardTransactionException -Code 'TRANSACTION_ROLLBACK_DESTINATION_DIVERGED' -Message "Rollback destination '$($mutation.path)' diverged from post-mutation identity (expected $($mutation.post_hash), found $currentHash).")
+          }
+        } elseif (Test-Path -LiteralPath $destination -PathType Container) {
+          throw (New-LizardTransactionException -Code 'TRANSACTION_ROLLBACK_DESTINATION_DIVERGED' -Message "Rollback destination '$($mutation.path)' was replaced by a directory.")
+        }
+      }
       if ([string]$mutation.original_state -eq 'file') {
         $backupPath = Resolve-LizardTransactionBackupPath -Context $Context -Mutation $mutation
         if (-not (Test-Path -LiteralPath $backupPath -PathType Leaf)) { throw (New-LizardTransactionException -Code 'TRANSACTION_BACKUP_MISSING' -Message "Backup missing for mutation $($mutation.sequence).") }
@@ -548,7 +575,7 @@ function Undo-LizardTransaction {
       if ($TestFailAfterRollback -gt 0 -and $rolledBackThisRun -ge $TestFailAfterRollback) { throw (New-LizardTransactionException -Code 'TRANSACTION_RECOVERY_FAULT_INJECTED' -Message "Injected recovery failure after $rolledBackThisRun rollback mutation(s).") }
     } catch {
       try { $Context.journal.state = 'recovery-required'; Save-LizardTransactionContext -Context $Context } catch { }
-      if ($_.Exception.Data['transaction_code'] -eq 'TRANSACTION_RECOVERY_FAULT_INJECTED') { throw }
+      if ($_.Exception.Data['transaction_code'] -in @('TRANSACTION_RECOVERY_FAULT_INJECTED', 'TRANSACTION_ROLLBACK_DESTINATION_DIVERGED')) { throw }
       throw (New-LizardTransactionException -Code 'TRANSACTION_ROLLBACK_FAILED' -Message ("Mutation {0} ({1}): {2}" -f $mutation.sequence, $mutation.path, $_.Exception.Message))
     }
   }
@@ -623,6 +650,24 @@ function Get-LizardTransactionRecoveryInfo {
   $kind = if ([string]$journal.state -in @('active', 'recovery-required')) { 'rollback' } else { 'cleanup' }
   if ($kind -eq 'rollback') {
     $backupContext = [pscustomobject]@{ backup_dir = $paths.backup_dir }
+    $latestAppliedPerPath = [ordered]@{}
+    foreach ($mutation in @($journal.mutations | Where-Object { $_.status -eq 'applied' })) {
+      $latestAppliedPerPath[[string]$mutation.path] = $mutation
+    }
+    foreach ($mutationPath in $latestAppliedPerPath.Keys) {
+      $mutation = $latestAppliedPerPath[$mutationPath]
+      if ($mutation.PSObject.Properties.Name -contains 'post_hash' -and -not [string]::IsNullOrWhiteSpace([string]$mutation.post_hash)) {
+        $destination = Resolve-SafeTargetDestination -AuthorizedRoot $paths.target_root -DestinationPath (Join-Path $paths.target_root ([string]$mutation.path).Replace('/', [System.IO.Path]::DirectorySeparatorChar))
+        if (Test-Path -LiteralPath $destination -PathType Leaf) {
+          $currentHash = Get-SafeFileHash -AuthorizedRoot $paths.target_root -Path $destination
+          if ($currentHash -ne [string]$mutation.post_hash) {
+            throw (New-LizardTransactionException -Code 'TRANSACTION_ROLLBACK_DESTINATION_DIVERGED' -Message "Recovery destination '$($mutation.path)' diverged from post-mutation identity (expected $($mutation.post_hash), found $currentHash).")
+          }
+        } elseif (Test-Path -LiteralPath $destination -PathType Container) {
+          throw (New-LizardTransactionException -Code 'TRANSACTION_ROLLBACK_DESTINATION_DIVERGED' -Message "Recovery destination '$($mutation.path)' was replaced by a directory.")
+        }
+      }
+    }
     foreach ($mutation in @($journal.mutations | Where-Object { $_.status -ne 'rolled-back' -and $_.original_state -eq 'file' })) {
       $backupPath = Resolve-LizardTransactionBackupPath -Context $backupContext -Mutation $mutation
       if (-not (Test-Path -LiteralPath $backupPath -PathType Leaf)) { throw (New-LizardTransactionException -Code 'TRANSACTION_BACKUP_MISSING' -Message "Backup missing for mutation $($mutation.sequence).") }

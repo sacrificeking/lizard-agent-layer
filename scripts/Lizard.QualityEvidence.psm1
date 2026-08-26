@@ -1,5 +1,8 @@
 Set-StrictMode -Version 2.0
 
+Import-Module (Join-Path $PSScriptRoot 'Lizard.SafeFs.psm1')
+Import-Module (Join-Path $PSScriptRoot 'Lizard.Json.psm1')
+
 function ConvertTo-EvidenceRelativePath {
   param([string]$Path)
   if ([string]::IsNullOrWhiteSpace($Path) -or [System.IO.Path]::IsPathRooted($Path) -or $Path -match '^[A-Za-z]:' -or $Path.Replace('\', '/') -match '(^|/)\.\.(/|$)') {
@@ -45,7 +48,7 @@ function Get-LizardBehavioralEvidence {
   $failures = New-Object System.Collections.Generic.List[string]
   $fixtureResults = New-Object System.Collections.Generic.List[object]
   try {
-    $evidence = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
+    $evidence = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $evidencePath -Raw)
     if ([int]$evidence.schema_version -ne 1) { $failures.Add('Evidence schema_version must be 1.') | Out-Null }
     if ([string]$evidence.skill -ne $SkillDirectory.Name) { $failures.Add("Evidence skill '$($evidence.skill)' does not match '$($SkillDirectory.Name)'.") | Out-Null }
 

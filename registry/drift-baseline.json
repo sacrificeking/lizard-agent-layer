@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-08-25T17:03:29.5099000Z",
-    "layer_version":  "1.3.0",
-    "artifact_count":  173,
-    "total_bytes":  273227,
-    "token_estimate":  68378,
+    "generated_at":  "2026-08-26T17:31:49.1705836Z",
+    "layer_version":  "1.4.0",
+    "artifact_count":  174,
+    "total_bytes":  275207,
+    "token_estimate":  68873,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -1340,6 +1340,15 @@
                       },
                       {
                           "kind":  "schema",
+                          "path":  "schemas/operation-plan-approval.schema.json",
+                          "sha256":  "909a5a7dc7bace6b95aefc808bc3c90c49df52f0182e5993b11816b0fad8c5e9",
+                          "bytes":  1896,
+                          "lines":  54,
+                          "words":  166,
+                          "token_estimate":  474
+                      },
+                      {
+                          "kind":  "schema",
                           "path":  "schemas/pack.schema.json",
                           "sha256":  "a849008584e229cfa0ec427e58910f20d70940a08da9949b3d5ce3b810ab0ec3",
                           "bytes":  1202,
@@ -1503,11 +1512,11 @@
                       {
                           "kind":  "schema",
                           "path":  "schemas/transaction-journal.schema.json",
-                          "sha256":  "5a241206a968ec49ba3c2c5e83f29f3ba751addfe869206a997a6ec494464a65",
-                          "bytes":  3067,
-                          "lines":  60,
-                          "words":  288,
-                          "token_estimate":  767
+                          "sha256":  "2d6d64782a5945046789f72b627669b9310d71e9e59441263eafc40ecdb2eb99",
+                          "bytes":  3151,
+                          "lines":  61,
+                          "words":  296,
+                          "token_estimate":  788
                       },
                       {
                           "kind":  "schema",
