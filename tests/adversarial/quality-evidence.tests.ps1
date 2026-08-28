@@ -48,9 +48,9 @@ function Write-Evidence {
 }
 
 try {
-  foreach ($path in @('skills', 'adapters', 'profiles', 'registry', 'tests', '.tmp\tests')) { New-Item -ItemType Directory -Path (Join-Path $miniRoot $path) -Force | Out-Null }
+  foreach ($path in @('skills', 'adapters', 'profiles', 'registry', 'tests', '.tmp/tests')) { New-Item -ItemType Directory -Path (Join-Path $miniRoot $path) -Force | Out-Null }
   foreach ($name in @('quality-rubric.json', 'risk-signals.json', 'maturity-levels.json', 'behavioral-readiness.json')) {
-    Copy-Item -LiteralPath (Join-Path $LayerRoot "registry\$name") -Destination (Join-Path $miniRoot "registry\$name")
+    Copy-Item -LiteralPath (Join-Path $LayerRoot "registry/$name") -Destination (Join-Path $miniRoot "registry/$name")
   }
   Set-Content -LiteralPath (Join-Path $miniRoot 'REVIEW.md') -Value '# Reviewed fixture' -Encoding UTF8
 

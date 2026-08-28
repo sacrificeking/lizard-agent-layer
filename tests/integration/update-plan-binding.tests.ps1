@@ -10,7 +10,7 @@ $fixtureRoot = Join-Path $RepoRoot '.tmp/tests/update-plan-binding'
 if (Test-Path -LiteralPath $fixtureRoot) { Clear-TestDirectory -Path $fixtureRoot -AllowedRoot (Join-Path $RepoRoot '.tmp') }
 New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
 $target = Join-Path $fixtureRoot 'target'
-$output = '.\.tmp\tests\update-plan-binding\update-output'
+$output = Join-Path $fixtureRoot 'update-output'
 New-Item -ItemType Directory -Path $target -Force | Out-Null
 
 function Write-TestCanonicalPlan {
