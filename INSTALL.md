@@ -213,20 +213,21 @@ pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath "C:\path\to\your-p
 pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath "C:\path\to\your-project" -OutputDir .\.tmp\update-plan -Apply -ApprovedPlanPath .\.tmp\update-plan\update-plan.json -ApprovedPlanSha256 <sha256-from-preview> -HumanApproved
 ```
 
-### Complete Clean Uninstallation
+### Clean Uninstallation
 
 #### 📋 Copy-Paste Uninstall Prompt for AI Assistant:
 ```text
-Read `UNINSTALL.md` in lizard-agent-layer. Run a preview uninstallation plan using `scripts/uninstall.ps1 -TargetPath "<this-repo-path>" -Mode complete -PlanPath .tmp/uninstall-plan.json`. Confirm that only layer-owned files will be removed, show me the plan, and wait for my approval before executing the deletion.
+Read `UNINSTALL.md` in lizard-agent-layer. Run a preview uninstallation plan using `scripts/uninstall.ps1 -TargetPath "<this-repo-path>" -Scope managed-only -CanonicalPlanPath .tmp/uninstall-plan.json`. Confirm that only layer-owned files will be removed, show me the plan, and wait for my approval before executing the deletion.
 ```
 
 #### 💻 Terminal Commands for Uninstalling:
 ```powershell
-# 1. Preview uninstall plan
-pwsh -NoProfile -File .\scripts\uninstall.ps1 -TargetPath "C:\path\to\your-project" -Mode complete -PlanPath .\.tmp\uninstall-plan.json
+# 1. Preview uninstall plan (safe, dry-run)
+pwsh -NoProfile -File .\scripts\uninstall.ps1 -TargetPath "C:\path\to\your-project" -Scope managed-only -CanonicalPlanPath .\.tmp\uninstall-plan.json
 
 # 2. Apply verified uninstall
-pwsh -NoProfile -File .\scripts\uninstall.ps1 -TargetPath "C:\path\to\your-project" -Mode complete -Apply -PlanPath .\.tmp\uninstall-plan.json -Sha256 <sha256-from-preview> -HumanApproved
+$planSha = (Get-FileHash .\.tmp\uninstall-plan.json -Algorithm SHA256).Hash.ToLowerInvariant()
+pwsh -NoProfile -File .\scripts\uninstall.ps1 -TargetPath "C:\path\to\your-project" -Scope managed-only -Apply -ApprovedPlanPath .\.tmp\uninstall-plan.json -ApprovedPlanSha256 $planSha -HumanApproved
 ```
 
 ### Diagnostic Health Checks

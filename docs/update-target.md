@@ -4,7 +4,7 @@
 > **⚡ Ultra High-Dense Quick Check:**
 > - **Preserves Local State:** Updating updates shared skills, protocols, and adapters while preserving `.agent/memory/` and custom target files.
 > - **Canonical Plan First:** Generates an external Markdown and JSON update plan with SHA-256 integrity binding before touching the target.
-> - **1-Liner:** `pwsh -File .\scripts\update-target.ps1 -TargetPath "." -Apply -HumanApproved`
+> - **1-Liner:** `pwsh -File .\scripts\update-target.ps1 -TargetPath "." -OutputDir .\.tmp\update-plan`
 
 For interrupted transactions, unsupported manifests, integrity-unknown files, and downgrade gates, follow [Troubleshooting and recovery](troubleshooting.md).
 

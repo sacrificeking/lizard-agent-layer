@@ -6,7 +6,7 @@
 > - **Install (AI):** Paste the Prompt from Section 2 into Copilot / Cursor Composer.
 > - **Install (CLI):** Run the 2-step command in Section 3 (`pwsh -File install.ps1 ...`).
 > - **Update (AI/CLI):** Run `update-target.ps1` (Section 6) to refresh skills without losing project-local memory.
-> - **Uninstall (AI/CLI):** Run `uninstall.ps1 -Mode complete` (Section 7) for residue-free removal with deletion receipt.
+> - **Uninstall (AI/CLI):** Run `uninstall.ps1 -Scope managed-only` (Section 7) for residue-free removal with deletion receipt.
 
 ---
 
@@ -171,20 +171,20 @@ If you ever wish to remove the agent layer, the uninstaller will cleanly remove 
 You are an expert software engineer. Please safely uninstall lizard-agent-layer from this repository:
 
 1. Reference `UNINSTALL.md` in lizard-agent-layer: https://github.com/sacrificeking/lizard-agent-layer
-2. Run a preview uninstall plan first: `scripts/uninstall.ps1 -TargetPath "<this-repo-path>" -Mode complete -PlanPath .tmp/uninstall-plan.json`.
+2. Run a preview uninstall plan first: `scripts/uninstall.ps1 -TargetPath "<this-repo-path>" -Scope managed-only -CanonicalPlanPath .tmp/uninstall-plan.json`.
 3. Confirm to me that only layer-owned files will be removed and no application source files will be touched.
-4. Ask for my explicit confirmation, then apply the verified deletion with `-Apply -PlanPath .tmp/uninstall-plan.json -Sha256 <sha256> -HumanApproved`.
+4. Ask for my explicit confirmation, then apply the verified deletion with `-Apply -ApprovedPlanPath .tmp/uninstall-plan.json -ApprovedPlanSha256 <sha256> -HumanApproved`.
 5. Present the external deletion receipt (`uninstall-receipt.json`) as cryptographic proof.
 ```
 
 ### 💻 Option B: Terminal Commands for Clean Uninstall:
 ```powershell
-# 1. Preview uninstall plan
-pwsh -File "$HOME/.lizard-agent-layer/scripts/uninstall.ps1" -TargetPath "." -Mode complete -PlanPath .\.tmp\uninstall-plan.json
+# 1. Preview uninstall plan (safe, dry-run)
+pwsh -File "$HOME/.lizard-agent-layer/scripts/uninstall.ps1" -TargetPath "." -Scope managed-only -CanonicalPlanPath .\.tmp\uninstall-plan.json
 
 # 2. Apply verified uninstall
 $uninstallSha = (Get-FileHash .\.tmp\uninstall-plan.json -Algorithm SHA256).Hash.ToLowerInvariant()
-pwsh -File "$HOME/.lizard-agent-layer/scripts/uninstall.ps1" -TargetPath "." -Mode complete -Apply -PlanPath .\.tmp\uninstall-plan.json -Sha256 $uninstallSha -HumanApproved
+pwsh -File "$HOME/.lizard-agent-layer/scripts/uninstall.ps1" -TargetPath "." -Scope managed-only -Apply -ApprovedPlanPath .\.tmp\uninstall-plan.json -ApprovedPlanSha256 $uninstallSha -HumanApproved
 ```
 
 ---
