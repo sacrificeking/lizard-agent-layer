@@ -5,6 +5,24 @@ All notable public changes to `lizard-agent-layer` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.4.1 - 2026-08-27
+
+### Added
+- **Centralized High-Risk Operation Approval Policy:** Introduced `Get-LizardOperationApprovalPolicy` in `scripts/Lizard.Plan.psm1` enforcing mandatory cryptographic signed approval (`PLAN_SIGNED_APPROVAL_REQUIRED`) for high-risk operations (including enterprise profiles, complete uninstall scopes, and force mutations).
+- **Mandatory Replay Protection For Signed Mutations:** Required single-use replay ledgers (`PLAN_REPLAY_LEDGER_REQUIRED`) for all signed operation approvals, preventing token reuse and concurrent replay attacks.
+- **Explicit Post-State Transaction Rollback Binding:** Added `post_state` objects (`schemas/transaction-journal.schema.json`) to all transaction mutations. Rollback operations now verify that deleted files have not been recreated externally and that directories have not been replaced before restoring original state (`TRANSACTION_ROLLBACK_DESTINATION_DIVERGED`).
+- **macOS SafeFS Permission Normalization & Path Alias Resolution:** Added explicit POSIX permission normalization (`0644`) during atomic file replacement and canonicalized `/var`, `/tmp`, and `/etc` paths to prevent descriptor traversal rejection on macOS root symlinks.
+- **Deep Repository Verification Drift Engine:** Created `scripts/check-repository-drift.ps1` to detect discrepancies between profiles, harnesses, schemas, CI matrix configurations, policies, and documentation.
+- **Automated Release Readiness Evidence:** Created `scripts/release-readiness.ps1` providing machine-readable verification reports and blocker analysis prior to release promotion.
+- **Automated Release Pipeline with Exact-SHA Provenance:** Added `.github/workflows/release.yml` with exact commit SHA verification, mandatory green CI validation, and SHA256 checksum artifact generation.
+- **Comprehensive Release Regression Suites:** Added integration tests in `tests/release/` and `tests/adversarial/` verifying approval policies, post-state rollback safety, macOS permissions, and repository drift invariants.
+
+### Changed
+- **CI Matrix Consistency:** Synchronized CI workflow definitions with the canonical profile registry, replacing deprecated profile identifiers with `enterprise-fullstack`.
+- **Analyzer Smoke Contract Hardening:** Calibrated precision signal thresholding and directory structure requirements in `scripts/analyze-target.ps1` and `tests/smoke.ps1`.
+- **Universal Test Suite Canonical JSON Migration:** Migrated all 30 test scripts and test helpers across `tests/` to use `ConvertFrom-LizardJson` and added static policy linting in `scripts/check-json-reader-policy.ps1`.
+- **Release Protocol & Skill Governance:** Updated `protocols/release-gates.md` and `skills/release/SKILL.md` with explicit exact-commit SHA green CI invariants.
+
 ## 1.4.0 - 2026-08-26
 
 ### Added
