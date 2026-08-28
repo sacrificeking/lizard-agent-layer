@@ -11,7 +11,14 @@ param(
   [string]$PlanPath,
   [string]$CanonicalPlanPath,
   [string]$ApprovedPlanPath,
-  [string]$ApprovedPlanSha256
+  [string]$ApprovedPlanSha256,
+  [string]$ApprovalEnvelopePath,
+  [string]$TrustStorePath,
+  [string]$TrustStoreSha256,
+  [string]$ChallengePath,
+  [string]$ChallengeSha256,
+  [string]$ReplayLedgerPath,
+  [switch]$RequireSignedApproval
 )
 
 $ErrorActionPreference = "Stop"
@@ -83,5 +90,12 @@ if ($Apply) {
   if ($ApprovedPlanPath) { $argsList += @('-ApprovedPlanPath', $ApprovedPlanPath) }
   if ($ApprovedPlanSha256) { $argsList += @('-ApprovedPlanSha256', $ApprovedPlanSha256) }
   if ($HumanApproved -and $workflowScript -eq 'install.ps1') { $argsList += '-HumanApproved' }
+  if ($ApprovalEnvelopePath) { $argsList += @('-ApprovalEnvelopePath', $ApprovalEnvelopePath) }
+  if ($TrustStorePath) { $argsList += @('-TrustStorePath', $TrustStorePath) }
+  if ($TrustStoreSha256) { $argsList += @('-TrustStoreSha256', $TrustStoreSha256) }
+  if ($ChallengePath) { $argsList += @('-ChallengePath', $ChallengePath) }
+  if ($ChallengeSha256) { $argsList += @('-ChallengeSha256', $ChallengeSha256) }
+  if ($ReplayLedgerPath) { $argsList += @('-ReplayLedgerPath', $ReplayLedgerPath) }
+  if ($RequireSignedApproval) { $argsList += '-RequireSignedApproval' }
 }
 & $PowerShellHost @argsList

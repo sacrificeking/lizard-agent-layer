@@ -343,11 +343,12 @@ Run-Step 'manifest diff overlay target strict' {
 }
 
 Run-Step 'upgrade preserves requested packs' {
-  $upgradeOutput = Join-Path $tmpRoot 'upgrade-output'
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts/upgrade.ps1') -TargetPath $overlayTarget -OutputDir $upgradeOutput | Out-String | Write-Host
-  $upgradePlan = Join-Path $upgradeOutput 'update-plan.json'
-  $upgradeSha = (Get-FileHash -LiteralPath $upgradePlan -Algorithm SHA256).Hash.ToLowerInvariant()
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts/upgrade.ps1') -TargetPath $overlayTarget -OutputDir $upgradeOutput -Apply -ApprovedPlanPath $upgradePlan -ApprovedPlanSha256 $upgradeSha -HumanApproved | Out-String | Write-Host
+  $upgradePreviewOutput = Join-Path $tmpRoot 'upgrade-preview-output'
+  $upgradeApplyOutput = Join-Path $tmpRoot 'upgrade-apply-output'
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts/upgrade.ps1') -TargetPath $overlayTarget -OutputDir $upgradePreviewOutput | Out-String | Write-Host
+  $upgradeApproval = New-TestUpdateApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $overlayTarget, '-OutputDir', $upgradeApplyOutput)
+  $upgradeArgs = $upgradeApproval.arguments
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts/upgrade.ps1') @upgradeArgs | Out-String | Write-Host
   $manifest = Get-Content -LiteralPath (Join-Path $overlayTarget '.agent/lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
   if (@($manifest.requested_packs) -notcontains 'project-overlay') { throw 'Upgrade did not preserve requested overlay pack.' }
   if (@($manifest.packs) -notcontains 'precision-domain') { throw 'Upgrade did not preserve expanded base pack.' }

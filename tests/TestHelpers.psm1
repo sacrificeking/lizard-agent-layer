@@ -175,7 +175,26 @@ function New-TestUpdateApprovalArguments {
   $isForce = (@($BaseArguments) -contains '-Force')
   $isForceManaged = (@($BaseArguments) -contains '-ForceManaged')
   $isRequireSigned = (@($BaseArguments) -contains '-RequireSignedApproval')
-  $policy = Get-LizardOperationApprovalPolicy -OperationKind 'update' -RiskLevel 'medium' -Force:$isForce -ForceManaged:$isForceManaged -RequireSignedApproval:$isRequireSigned
+
+  $effectiveRisk = 'medium'
+  $profilePath = Join-Path $target '.agent/project-profile.json'
+  $manifestPath = Join-Path $target '.agent/lizard-agent-layer.install.json'
+  if (Test-Path -LiteralPath $profilePath -PathType Leaf) {
+    try {
+      $pDoc = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $profilePath -Raw)
+      if ($pDoc.riskLevel) { $effectiveRisk = [string]$pDoc.riskLevel }
+    } catch {}
+  } elseif (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
+    try {
+      $mDoc = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $manifestPath -Raw)
+      if ($mDoc.risk_level) { $effectiveRisk = [string]$mDoc.risk_level }
+    } catch {}
+  }
+  if ($planDoc.intent.risk_level) {
+    $effectiveRisk = [string]$planDoc.intent.risk_level
+  }
+
+  $policy = Get-LizardOperationApprovalPolicy -OperationKind 'update' -RiskLevel $effectiveRisk -Force:$isForce -ForceManaged:$isForceManaged -RequireSignedApproval:$isRequireSigned
 
   $finalArgs = @($BaseArguments) + @('-Apply', '-ApprovedPlanPath', $planPath, '-ApprovedPlanSha256', $sha256, '-HumanApproved')
 
