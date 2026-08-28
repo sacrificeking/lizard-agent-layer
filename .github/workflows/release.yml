@@ -1,0 +1,128 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.4.1)'
+        required: true
+        type: string
+      commit_sha:
+        description: 'Exact commit SHA to release'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run (verify release readiness without tagging or publishing)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: read
+  checks: read
+
+jobs:
+  verify-release:
+    name: Verify Release Candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Candidate SHA
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 0
+
+      - name: Assert Exact SHA
+        run: |
+          ACTUAL_SHA=$(git rev-parse HEAD)
+          if [ "$ACTUAL_SHA" != "${{ inputs.commit_sha }}" ]; then
+            echo "ERROR: Checked out SHA ($ACTUAL_SHA) does not match requested SHA (${{ inputs.commit_sha }})"
+            exit 1
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run Release Readiness Checks
+        shell: pwsh
+        run: |
+          ./scripts/release-readiness.ps1 -ExpectedVersion '${{ inputs.version }}' -CandidateSha '${{ inputs.commit_sha }}' -RequireCleanWorkingTree
+
+      - name: Verify CI Run Status on Exact SHA
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Verifying CI workflow status for SHA: ${{ inputs.commit_sha }}"
+          RUNS_JSON=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=${{ inputs.commit_sha }}&workflow_id=lizard-agent-layer-ci.yml")
+          TOTAL_COUNT=$(echo "$RUNS_JSON" | jq -r '.total_count')
+          if [ "$TOTAL_COUNT" -eq 0 ]; then
+            echo "ERROR: No CI workflow runs found for commit ${{ inputs.commit_sha }}"
+            exit 1
+          fi
+          
+          # Find latest successful CI run
+          LATEST_STATUS=$(echo "$RUNS_JSON" | jq -r '.workflow_runs[0].status')
+          LATEST_CONCLUSION=$(echo "$RUNS_JSON" | jq -r '.workflow_runs[0].conclusion')
+          echo "Latest CI run status: $LATEST_STATUS, conclusion: $LATEST_CONCLUSION"
+          
+          if [ "$LATEST_STATUS" != "completed" ] || [ "$LATEST_CONCLUSION" != "success" ]; then
+            echo "ERROR: CI run for ${{ inputs.commit_sha }} is not completed and successful (status: $LATEST_STATUS, conclusion: $LATEST_CONCLUSION)"
+            exit 1
+          fi
+
+      - name: Generate Checksums
+        run: |
+          mkdir -p .tmp/release
+          find profiles templates adapters skills routing-policies scripts protocols schemas model-profiles -type f -exec sha256sum {} + | sort > .tmp/release/SHA256SUMS
+          echo "Release checksums generated."
+
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        with:
+          name: release-checksums
+          path: .tmp/release/SHA256SUMS
+
+  publish-release:
+    name: Publish Release
+    needs: verify-release
+    if: inputs.dry_run == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Candidate SHA
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 0
+
+      - name: Download Checksums
+        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
+        with:
+          name: release-checksums
+          path: .tmp/release
+
+      - name: Create Git Tag and Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="v${{ inputs.version }}"
+          echo "Tagging commit ${{ inputs.commit_sha }} as $TAG_NAME..."
+          git tag -a "$TAG_NAME" "${{ inputs.commit_sha }}" -m "Release $TAG_NAME"
+          git push origin "$TAG_NAME"
+          
+          echo "Creating GitHub Release $TAG_NAME..."
+          gh release create "$TAG_NAME" \
+            --title "$TAG_NAME" \
+            --notes-file CHANGELOG.md \
+            --target "${{ inputs.commit_sha }}" \
+            .tmp/release/SHA256SUMS

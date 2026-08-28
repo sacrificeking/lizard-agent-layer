@@ -163,11 +163,11 @@ jobs:
         include:
           - { os: ubuntu-latest, profile: minimal, harnesses: '', label: minimal }
           - { os: ubuntu-latest, profile: standard, harnesses: '', label: standard }
-          - { os: ubuntu-latest, profile: supabase-react-finance, harnesses: '', label: supabase-react-finance }
+          - { os: ubuntu-latest, profile: enterprise-fullstack, harnesses: '', label: enterprise-fullstack }
           - { os: macos-latest, profile: minimal, harnesses: '', label: minimal }
           - { os: macos-latest, profile: standard, harnesses: '', label: standard }
-          - { os: macos-latest, profile: supabase-react-finance, harnesses: 'claude-code,codex,cursor', label: 'supabase-react-finance A' }
-          - { os: macos-latest, profile: supabase-react-finance, harnesses: 'gemini,generic-agents-md,github-copilot', label: 'supabase-react-finance B' }
+          - { os: macos-latest, profile: enterprise-fullstack, harnesses: 'claude-code,codex,cursor', label: 'enterprise-fullstack A' }
+          - { os: macos-latest, profile: enterprise-fullstack, harnesses: 'gemini,generic-agents-md,github-copilot', label: 'enterprise-fullstack B' }
 
     steps:
       - *checkout-pwsh
