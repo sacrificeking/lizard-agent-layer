@@ -1,7 +1,7 @@
-param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)))
+param([string]$LayerRoot)
 
 $ErrorActionPreference = 'Stop'
-$LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
+$LayerRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $LayerRoot).Path }
 $previousSafeFsTesting = [Environment]::GetEnvironmentVariable('LIZARD_SAFEFS_TESTING', 'Process')
 [Environment]::SetEnvironmentVariable('LIZARD_SAFEFS_TESTING', '1', 'Process')
 Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force

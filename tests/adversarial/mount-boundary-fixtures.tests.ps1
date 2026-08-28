@@ -1,10 +1,10 @@
 param(
-  [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
+  [string]$LayerRoot,
   [switch]$EnablePrivilegedFixtures
 )
 
 $ErrorActionPreference = 'Stop'
-$LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
+$LayerRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $LayerRoot).Path }
 Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SafeFs.psm1') -Force
 

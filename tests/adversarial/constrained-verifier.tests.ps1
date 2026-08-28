@@ -3,7 +3,7 @@ param([string]$LayerRoot)
 $ErrorActionPreference = 'Stop'
 if (-not $LayerRoot) { $LayerRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot) }
 if (-not $LayerRoot) { $LayerRoot = (Get-Location).Path }
-$LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
+$LayerRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $LayerRoot).Path }
 Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 Import-Module (Join-Path $LayerRoot 'scripts/Lizard.ConstrainedRunner.psm1') -Force
 Import-Module (Join-Path $LayerRoot 'scripts/Lizard.LoopEvidence.psm1') -Force
