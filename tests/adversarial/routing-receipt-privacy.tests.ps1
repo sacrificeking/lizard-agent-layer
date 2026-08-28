@@ -2,18 +2,18 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeReport.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Trust.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'tests\TestTrustHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SafeReport.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Trust.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestTrustHelpers.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 $fixture = Join-Path $testRoot ("routing-receipt-privacy-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $target = Join-Path $fixture 'target'
-$routingRoot = Join-Path $target '.agent\routing'
-$decisionRoot = Join-Path $routingRoot 'receipts\decisions'
-$routeScript = Join-Path $LayerRoot 'scripts\route-task.ps1'
-$executionScript = Join-Path $LayerRoot 'scripts\record-execution.ps1'
+$routingRoot = Join-Path $target '.agent/routing'
+$decisionRoot = Join-Path $routingRoot 'receipts/decisions'
+$routeScript = Join-Path $LayerRoot 'scripts/route-task.ps1'
+$executionScript = Join-Path $LayerRoot 'scripts/record-execution.ps1'
 
 $canaries = @(
   'password=SuperSecretCanary-7788',
@@ -27,8 +27,8 @@ $canaries = @(
 
 try {
   New-Item -ItemType Directory -Path $decisionRoot -Force | Out-Null
-  Copy-Item -LiteralPath (Join-Path $LayerRoot 'routing-policies\staged-balanced.json') -Destination (Join-Path $routingRoot 'policy.json')
-  Set-Content -LiteralPath (Join-Path $target '.agent\project-profile.json') -Value (([ordered]@{ profile = 'minimal'; routingPolicy = 'staged-balanced'; modelMode = 'inherit-current' }) | ConvertTo-Json -Depth 5)
+  Copy-Item -LiteralPath (Join-Path $LayerRoot 'routing-policies/staged-balanced.json') -Destination (Join-Path $routingRoot 'policy.json')
+  Set-Content -LiteralPath (Join-Path $target '.agent/project-profile.json') -Value (([ordered]@{ profile = 'minimal'; routingPolicy = 'staged-balanced'; modelMode = 'inherit-current' }) | ConvertTo-Json -Depth 5)
 
   $probe = [ordered]@{
     artifact_kind = 'privacy-probe'
@@ -84,11 +84,11 @@ try {
   Assert-Equal 'not-required' ([string]$receipt.redaction.status) 'Benign enumerated receipt must not require redaction.'
 
   $advancedTarget = Join-Path $fixture 'advanced-target'
-  $advancedRouting = Join-Path $advancedTarget '.agent\routing'
-  $advancedDecisions = Join-Path $advancedRouting 'receipts\decisions'
-  $advancedExecutions = Join-Path $advancedRouting 'receipts\executions'
+  $advancedRouting = Join-Path $advancedTarget '.agent/routing'
+  $advancedDecisions = Join-Path $advancedRouting 'receipts/decisions'
+  $advancedExecutions = Join-Path $advancedRouting 'receipts/executions'
   New-Item -ItemType Directory -Path $advancedDecisions, $advancedExecutions -Force | Out-Null
-  Set-Content -LiteralPath (Join-Path $advancedTarget '.agent\project-profile.json') -Value (([ordered]@{ modelMode = 'inventory-routing'; modelRuntime = '.agent/routing/runtime.json' }) | ConvertTo-Json -Depth 5)
+  Set-Content -LiteralPath (Join-Path $advancedTarget '.agent/project-profile.json') -Value (([ordered]@{ modelMode = 'inventory-routing'; modelRuntime = '.agent/routing/runtime.json' }) | ConvertTo-Json -Depth 5)
   $runtime = [ordered]@{
     status = 'ready'; selection = 'per-call'; actual_model_reporting = $true; attestation = 'observed'
     executor_id = 'privacy-runtime-v1'; configuration_fingerprint = 'privacy-runtime-v1'; capability_source = 'privacy-runtime-api'

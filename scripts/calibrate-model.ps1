@@ -48,16 +48,16 @@ $calibrationChallenge = Read-LizardTrustChallenge -Path $TrustChallengePath -Exp
 $verifiedEvaluation = Test-LizardSignedEvidenceEnvelope -Envelope $evaluationEnvelope -TrustStoreRead $calibrationTrust -ChallengeRead $calibrationChallenge -ExpectedPayloadKind 'model-evaluation' -ExpectedPurpose 'model-calibration' -ExpectedSubject ([string]$evaluation.evaluation_id) -ExpectedBindingSha256 $calibrationBinding -RequiredRole 'evaluator' -Now $evaluationTime
 if ([string]$verifiedEvaluation.principal_id -eq [string]$evaluation.executor_id) { throw 'CALIBRATION_ROLE_SEPARATION_REQUIRED: evaluator and runtime executor identities must differ.' }
 
-$profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
+$profilePath = Join-Path $TargetRoot '.agent/project-profile.json'
 if (-not (Test-Path -LiteralPath $profilePath -PathType Leaf)) { throw 'CALIBRATION_PROFILE_MISSING: install the layer first.' }
 $profile = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $profilePath -Raw)
 if ([string]$profile.modelMode -ne 'inventory-routing') { throw 'CALIBRATION_INVENTORY_MODE_REQUIRED: calibration requires inventory-routing.' }
 
-$routingRoot = Resolve-SafeRoot -Path (Join-Path $TargetRoot '.agent\routing') -RequireExisting
+$routingRoot = Resolve-SafeRoot -Path (Join-Path $TargetRoot '.agent/routing') -RequireExisting
 $inventoryRelative = if ($profile.modelInventory) { [string]$profile.modelInventory } else { '.agent/routing/inventory.json' }
 $runtimeRelative = if ($profile.modelRuntime) { [string]$profile.modelRuntime } else { '.agent/routing/runtime.json' }
-$inventoryPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $inventoryRelative.Replace('/', '\'))
-$runtimePath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $runtimeRelative.Replace('/', '\'))
+$inventoryPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $inventoryRelative.Replace('/', '/'))
+$runtimePath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $runtimeRelative.Replace('/', '/'))
 foreach ($required in @($inventoryPath, $runtimePath)) { if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "CALIBRATION_INPUT_MISSING: $required" } }
 $inventory = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $inventoryPath -Raw)
 $runtime = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $runtimePath -Raw)

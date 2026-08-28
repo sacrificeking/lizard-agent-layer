@@ -8,11 +8,11 @@ if ([string]::IsNullOrWhiteSpace($LayerRoot)) {
   }
 }
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Profiles.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Json.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Profiles.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Json.psm1') -Force
 
-$ciWorkflowPath = Join-Path $LayerRoot '.github\workflows\lizard-agent-layer-ci.yml'
+$ciWorkflowPath = Join-Path $LayerRoot '.github/workflows/lizard-agent-layer-ci.yml'
 Assert-True (Test-Path -LiteralPath $ciWorkflowPath) "CI workflow must exist at $ciWorkflowPath"
 
 $canonicalProfiles = @(Get-LizardBuiltinProfileIds -LayerRoot $LayerRoot)

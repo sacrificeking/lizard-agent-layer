@@ -45,8 +45,8 @@ Import-Module (Join-Path $ScriptDir 'Lizard.Trust.psm1') -Force
 $PowerShellHost = Get-LizardPowerShellHostPath
 $PowerShellFilePrefix = Get-LizardPowerShellFilePrefix
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
-$manifestPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.install.json'
-$profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
+$manifestPath = Join-Path $TargetRoot '.agent/lizard-agent-layer.install.json'
+$profilePath = Join-Path $TargetRoot '.agent/project-profile.json'
 $versionPath = Join-Path $LayerRoot 'VERSION'
 $ApprovedUpdatePlan = $null
 
@@ -396,7 +396,7 @@ function Get-UpdatePlanInputs {
 }
 
 function Get-UpdatePlanTargetEntries {
-  $historyPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.update-history.jsonl'
+  $historyPath = Join-Path $TargetRoot '.agent/lizard-agent-layer.update-history.jsonl'
   $kind = if (Test-Path -LiteralPath $historyPath -PathType Leaf) { 'file' } elseif (Test-Path -LiteralPath $historyPath -PathType Container) { 'directory' } elseif (Test-Path -LiteralPath $historyPath) { 'other' } else { 'absent' }
   $hash = if ($kind -eq 'file') { Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path $historyPath } else { $null }
   return @([pscustomobject][ordered]@{
@@ -503,7 +503,7 @@ if ($Apply) {
     if ($LASTEXITCODE -ne 0) { throw "install.ps1 failed with exit code $LASTEXITCODE." }
     Join-LizardTransaction -TargetRoot $TargetRoot -OperationId $transactionOperationId | Out-Null
     $postDiff = Invoke-ManifestDiff -DiffOutputDir $postDiffDir -Strict
-    $historyPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.update-history.jsonl'
+    $historyPath = Join-Path $TargetRoot '.agent/lizard-agent-layer.update-history.jsonl'
     $historyEntry = [ordered]@{
       schema_version = 2
       updated_at = (Get-Date).ToUniversalTime().ToString('o')
@@ -614,7 +614,7 @@ Write-Status "Canonical approval plan: $(if ($Apply) { $ApprovedPlanPath } else 
 Write-Status "Report: $reportPath"
 if ($Apply) {
   Write-Status "Post-update manifest diff: $($postDiff.status) ($($postDiff.summary.differences) differences)"
-  Write-Status "Update history: $(Join-Path $TargetRoot '.agent\lizard-agent-layer.update-history.jsonl')"
+  Write-Status "Update history: $(Join-Path $TargetRoot '.agent/lizard-agent-layer.update-history.jsonl')"
 } else {
   Write-Status "Preview only. Review the canonical plan and independently retain its SHA-256 before using -Apply with -ApprovedPlanPath, -ApprovedPlanSha256, and -HumanApproved."
 }

@@ -2,19 +2,19 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 $fixture = Join-Path $testRoot ("uninstall-tamper-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $reports = Join-Path $fixture 'reports'
-$script = Join-Path $LayerRoot 'scripts\uninstall.ps1'
+$script = Join-Path $LayerRoot 'scripts/uninstall.ps1'
 New-Item -ItemType Directory -Path $reports -Force | Out-Null
 
 function New-UninstallFixture {
   param([string]$Name)
   $root = Join-Path $fixture $Name
-  $ownedDirectory = Join-Path $root '.agent\owned'
+  $ownedDirectory = Join-Path $root '.agent/owned'
   $ownedFile = Join-Path $ownedDirectory 'owned.txt'
   New-Item -ItemType Directory -Path $ownedDirectory -Force | Out-Null
   Set-Content -LiteralPath $ownedFile -Value 'owned canary' -Encoding UTF8
@@ -28,7 +28,7 @@ function New-UninstallFixture {
       [ordered]@{ path = '.agent/owned/owned.txt'; kind = 'file'; lifecycle = 'active'; ownership = 'layer-owned'; state = 'layer-owned'; source_version = '2.0.0'; installed_hash = $hash; current_hash = $hash; adapter_aliases = @() }
     )
   }
-  Set-Content -LiteralPath (Join-Path $root '.agent\lizard-agent-layer.install.json') -Value ($manifest | ConvertTo-Json -Depth 10) -Encoding UTF8
+  Set-Content -LiteralPath (Join-Path $root '.agent/lizard-agent-layer.install.json') -Value ($manifest | ConvertTo-Json -Depth 10) -Encoding UTF8
   return [pscustomobject]@{ root = $root; owned_directory = $ownedDirectory; owned_file = $ownedFile; hash = $hash }
 }
 
@@ -61,7 +61,7 @@ try {
   Assert-True (Test-Path -LiteralPath $unknownFile -PathType Leaf) 'Unexpected user content must never be deleted.'
   Assert-True (Test-Path -LiteralPath $unknown.owned_file -PathType Leaf) 'Failed directory removal must roll back the previously deleted owned file.'
   Assert-Equal $unknown.hash ((Get-FileHash -LiteralPath $unknown.owned_file -Algorithm SHA256).Hash.ToLowerInvariant()) 'Rollback must restore the owned file exactly.'
-  Assert-True (Test-Path -LiteralPath (Join-Path $unknown.root '.agent\lizard-agent-layer.install.json') -PathType Leaf) 'Rollback must restore the install manifest.'
+  Assert-True (Test-Path -LiteralPath (Join-Path $unknown.root '.agent/lizard-agent-layer.install.json') -PathType Leaf) 'Rollback must restore the install manifest.'
   Assert-False (Test-Path -LiteralPath (Join-Path $unknown.root '.lizard-agent-layer.lock')) 'Rollback must clean the transaction lock.'
   Assert-False (Test-Path -LiteralPath (Join-Path $unknown.root '.lizard-agent-layer-transactions')) 'Rollback must clean transaction metadata.'
 

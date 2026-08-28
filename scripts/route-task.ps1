@@ -34,8 +34,8 @@ Import-Module (Join-Path $ScriptDir 'Lizard.SafeReport.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Trust.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Plan.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
-$profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
-$policyPath = Join-Path $TargetRoot '.agent\routing\policy.json'
+$profilePath = Join-Path $TargetRoot '.agent/project-profile.json'
+$policyPath = Join-Path $TargetRoot '.agent/routing/policy.json'
 
 foreach ($requiredPath in @($profilePath, $policyPath)) {
   if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) { throw "ROUTING_NOT_INSTALLED: Missing $requiredPath" }
@@ -231,7 +231,7 @@ if ($decision -eq 'route') {
       $inventoryRelative = if ($profile.PSObject.Properties.Name -contains 'modelInventory' -and -not [string]::IsNullOrWhiteSpace([string]$profile.modelInventory)) { [string]$profile.modelInventory } else { [string]$policy.model_selection.inventory_path }
       $runtimeRelative = if ($profile.PSObject.Properties.Name -contains 'modelRuntime' -and -not [string]::IsNullOrWhiteSpace([string]$profile.modelRuntime)) { [string]$profile.modelRuntime } else { [string]$policy.model_selection.runtime_path }
       try {
-        $runtimePath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $runtimeRelative.Replace('/', '\'))
+        $runtimePath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $runtimeRelative.Replace('/', '/'))
         if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf)) { throw "runtime capability file is missing: $runtimeRelative" }
         $runtime = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $runtimePath -Raw)
         $runtimeSourceSha256 = Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path $runtimePath
@@ -240,7 +240,7 @@ if ($decision -eq 'route') {
         $runtimeAttestation = [string]$runtime.attestation
         $runtimeExecutor = [string]$runtime.executor_id
         $runtimeConfigurationFingerprint = [string]$runtime.configuration_fingerprint
-        $inventoryPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $inventoryRelative.Replace('/', '\'))
+        $inventoryPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $inventoryRelative.Replace('/', '/'))
         if (-not (Test-Path -LiteralPath $inventoryPath -PathType Leaf)) { throw "inventory file is missing: $inventoryRelative" }
         $inventory = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $inventoryPath -Raw)
         $inventorySha256 = Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path $inventoryPath
@@ -383,7 +383,7 @@ if ($Apply) {
   Assert-PathOutsideRoot -Path $RouterPrivateKeyPath -ExcludedRoot $TargetRoot -Label 'RouterPrivateKeyPath'
   $persistedDocument = New-LizardSignedEvidenceEnvelope -Payload ([pscustomobject]$receipt) -PayloadKind 'route-decision' -Purpose 'routing' -Subject $ReceiptId -BindingSha256 $routeTrustBinding -ChallengePath $TrustChallengePath -ChallengeSha256 $TrustChallengeSha256 -PrivateKeyPath $RouterPrivateKeyPath -PrivateKeySha256 $RouterPrivateKeySha256
   if ([string]$persistedDocument.principal_id -ne $effectiveRouterId) { throw 'ROUTE_ROUTER_IDENTITY_MISMATCH: router_id must equal the authenticated signing principal.' }
-  $receiptsRootPath = Join-Path $TargetRoot '.agent\routing\receipts\decisions'
+  $receiptsRootPath = Join-Path $TargetRoot '.agent/routing/receipts/decisions'
   $receiptsRoot = Resolve-SafeRoot -Path $receiptsRootPath -RequireExisting
   $destination = if ([string]::IsNullOrWhiteSpace($OutputPath)) { Join-Path $receiptsRoot "$ReceiptId.json" } elseif ([System.IO.Path]::IsPathRooted($OutputPath)) { $OutputPath } else { Join-Path $receiptsRoot $OutputPath }
   $destination = Resolve-SafeTargetDestination -AuthorizedRoot $receiptsRoot -DestinationPath $destination

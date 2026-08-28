@@ -2,9 +2,9 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 
-$runner = Join-Path $LayerRoot 'tests\run-focused.ps1'
+$runner = Join-Path $LayerRoot 'tests/run-focused.ps1'
 
 function Get-ListedFocusedTests {
   param([int]$ShardIndex = 1, [int]$ShardCount = 1)

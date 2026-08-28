@@ -1,7 +1,7 @@
 Set-StrictMode -Version 2.0
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-Import-Module (Join-Path $repoRoot 'scripts\Lizard.Trust.psm1')
+Import-Module (Join-Path $repoRoot 'scripts/Lizard.Trust.psm1')
 
 function Write-LizardTestJson {
   param([string]$Path, $Value)

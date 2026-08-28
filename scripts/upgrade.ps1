@@ -22,8 +22,8 @@ Import-Module (Join-Path $ScriptDir 'Lizard.Host.psm1') -Force
 $PowerShellHost = Get-LizardPowerShellHostPath
 $PowerShellFilePrefix = Get-LizardPowerShellFilePrefix
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
-$manifestPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.install.json'
-$profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
+$manifestPath = Join-Path $TargetRoot '.agent/lizard-agent-layer.install.json'
+$profilePath = Join-Path $TargetRoot '.agent/project-profile.json'
 
 if (-not (Test-Path -LiteralPath $manifestPath) -and -not (Test-Path -LiteralPath $profilePath)) {
   throw "Target is not installed yet. Run scripts\install.ps1 first."

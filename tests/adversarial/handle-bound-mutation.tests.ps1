@@ -4,10 +4,10 @@ $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $previousSafeFsTesting = [Environment]::GetEnvironmentVariable('LIZARD_SAFEFS_TESTING', 'Process')
 [Environment]::SetEnvironmentVariable('LIZARD_SAFEFS_TESTING', '1', 'Process')
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SafeFs.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 $fixture = Join-Path $testRoot ("handle-bound-mutation-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $authorized = Join-Path $fixture 'authorized'

@@ -2,9 +2,9 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 $fixture = Join-Path $testRoot ("public-readiness-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $freshTarget = Join-Path $fixture 'fresh-target'
@@ -12,7 +12,7 @@ $existingTarget = Join-Path $fixture 'existing-target'
 New-Item -ItemType Directory -Path $freshTarget -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $existingTarget '.github') -Force | Out-Null
 $existingInstruction = '# Organization-owned Copilot instructions'
-Set-Content -LiteralPath (Join-Path $existingTarget '.github\copilot-instructions.md') -Value $existingInstruction -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $existingTarget '.github/copilot-instructions.md') -Value $existingInstruction -Encoding UTF8
 
 try {
   foreach ($document in @('README.md', 'INSTALL.md', 'UNINSTALL.md', 'SECURITY.md', 'docs/getting-started.md', 'docs/enterprise-usage.md', 'docs/dependencies.md')) {
@@ -30,7 +30,7 @@ try {
   }
   Assert-False ($uninstallGuide -match 'Remove-Item\s+[^\r\n]*-Recurse') 'UNINSTALL.md must not prescribe a generic recursive deletion command.'
 
-  $dependencies = Get-Content -LiteralPath (Join-Path $LayerRoot 'docs\dependencies.md') -Raw
+  $dependencies = Get-Content -LiteralPath (Join-Path $LayerRoot 'docs/dependencies.md') -Raw
   Assert-True ($dependencies -match 'zero known vulnerabilities') 'Dependency snapshot must record the completed live audit.'
   Assert-True ($dependencies -match 'no outdated packages') 'Dependency snapshot must record the completed outdated check.'
   Assert-False ($dependencies -match 'blocked the final live') 'Dependency snapshot must not retain a resolved release blocker.'
@@ -53,7 +53,7 @@ try {
     Assert-False (Test-Path -LiteralPath (Join-Path $LayerRoot $removed)) "Internal or superseded artifact remains: $removed."
   }
 
-  $workflow = Get-Content -LiteralPath (Join-Path $LayerRoot '.github\workflows\lizard-agent-layer-ci.yml') -Raw
+  $workflow = Get-Content -LiteralPath (Join-Path $LayerRoot '.github/workflows/lizard-agent-layer-ci.yml') -Raw
   Assert-Equal 2 ([regex]::Matches($workflow, 'actions/checkout@[a-f0-9]{40}')).Count 'Every checkout use must be pinned to a full commit SHA.'
   Assert-Equal 2 ([regex]::Matches($workflow, 'actions/setup-node@[a-f0-9]{40}')).Count 'Every setup-node use must be pinned to a full commit SHA.'
   Assert-Equal 2 ([regex]::Matches($workflow, 'persist-credentials:\s*false')).Count 'Every checkout must disable persisted credentials.'
@@ -81,26 +81,26 @@ try {
   $networkHits = @(Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'scripts') -File -Recurse | Select-String -Pattern $networkPatterns)
   Assert-Equal 0 $networkHits.Count 'Repository scripts must not contain undeclared HTTP clients or transfer commands.'
 
-  $installPath = Join-Path $LayerRoot 'scripts\install.ps1'
+  $installPath = Join-Path $LayerRoot 'scripts/install.ps1'
   $freshApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $freshTarget, '-Profile', 'minimal', '-Harnesses', 'github-copilot')
   $freshInstall = Invoke-TestPowerShell -ScriptPath $installPath -Arguments $freshApproval.arguments
   Assert-Equal 0 $freshInstall.exit_code "Fresh GitHub Copilot installation failed: $($freshInstall.output)"
-  $freshInstruction = Join-Path $freshTarget '.github\copilot-instructions.md'
+  $freshInstruction = Join-Path $freshTarget '.github/copilot-instructions.md'
   Assert-True (Test-Path -LiteralPath $freshInstruction -PathType Leaf) 'Fresh target must receive Copilot repository instructions.'
   Assert-True ((Get-Content -LiteralPath $freshInstruction -Raw) -match 'lizard-agent-layer') 'Fresh Copilot instructions must identify the layer.'
 
   $existingApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $existingTarget, '-Profile', 'minimal', '-Harnesses', 'github-copilot')
   $existingInstall = Invoke-TestPowerShell -ScriptPath $installPath -Arguments $existingApproval.arguments
   Assert-Equal 0 $existingInstall.exit_code "Existing GitHub Copilot installation failed: $($existingInstall.output)"
-  Assert-Equal $existingInstruction ((Get-Content -LiteralPath (Join-Path $existingTarget '.github\copilot-instructions.md') -Raw).Trim()) 'Existing organization-owned Copilot instructions must remain unchanged.'
-  Assert-True (Test-Path -LiteralPath (Join-Path $existingTarget '.github\copilot-instructions.lizard-agent-layer.md') -PathType Leaf) 'Existing target must receive a reviewable Copilot sidecar.'
+  Assert-Equal $existingInstruction ((Get-Content -LiteralPath (Join-Path $existingTarget '.github/copilot-instructions.md') -Raw).Trim()) 'Existing organization-owned Copilot instructions must remain unchanged.'
+  Assert-True (Test-Path -LiteralPath (Join-Path $existingTarget '.github/copilot-instructions.lizard-agent-layer.md') -PathType Leaf) 'Existing target must receive a reviewable Copilot sidecar.'
 
-  $manifestPath = Join-Path $existingTarget '.agent\lizard-agent-layer.install.json'
+  $manifestPath = Join-Path $existingTarget '.agent/lizard-agent-layer.install.json'
   $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-LizardJson
   Assert-Equal $version ([string]$manifest.layer_version) 'Installed manifest must record the current public version.'
   Assert-True (@($manifest.harnesses) -contains 'github-copilot') 'Installed manifest must record the Copilot harness.'
 
-  $doctor = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\doctor.ps1') -Arguments @('-TargetPath', $existingTarget, '-Strict')
+  $doctor = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts/doctor.ps1') -Arguments @('-TargetPath', $existingTarget, '-Strict')
   Assert-Equal 0 $doctor.exit_code "Doctor must accept the sidecar installation: $($doctor.output)"
 
   Write-Host 'PASS tests\integration\public-readiness.tests.ps1'

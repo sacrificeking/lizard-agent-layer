@@ -47,7 +47,7 @@ function Test-RelativeFile {
   param([string]$Relative, [string]$Label)
   if ([string]::IsNullOrWhiteSpace($Relative)) { Add-Failure "$Label path is empty."; return $false }
   if ([System.IO.Path]::IsPathRooted($Relative) -or $Relative -match '^[A-Za-z]:') { Add-Failure "$Label path must be relative: $Relative"; return $false }
-  $path = Join-Path $TargetRoot ($Relative.Replace('/', '\'))
+  $path = Join-Path $TargetRoot ($Relative.Replace('/', '/'))
   if (Test-Path -LiteralPath $path) { Add-Pass "$Label exists: $Relative"; return $true }
   Add-Failure "$Label is missing: $Relative"
   return $false
@@ -55,7 +55,7 @@ function Test-RelativeFile {
 
 $versionPath = Join-Path $LayerRoot 'VERSION'
 $currentVersion = if (Test-Path -LiteralPath $versionPath) { (Get-Content -LiteralPath $versionPath -Raw).Trim() } else { '0.0.0-dev' }
-$manifestPath = Join-Path $TargetRoot '.agent\loops\lizard-agent-layer.loop-install.json'
+$manifestPath = Join-Path $TargetRoot '.agent/loops/lizard-agent-layer.loop-install.json'
 $manifest = $null
 if (Test-Path -LiteralPath $manifestPath) {
   $manifest = Read-JsonFile $manifestPath

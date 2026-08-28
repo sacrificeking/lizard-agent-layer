@@ -2,18 +2,18 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 $fixture = Join-Path $testRoot ("version-gates-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $target = Join-Path $fixture 'target'
-$installScript = Join-Path $LayerRoot 'scripts\install.ps1'
-$updateScript = Join-Path $LayerRoot 'scripts\update-target.ps1'
+$installScript = Join-Path $LayerRoot 'scripts/install.ps1'
+$updateScript = Join-Path $LayerRoot 'scripts/update-target.ps1'
 New-Item -ItemType Directory -Path $target -Force | Out-Null
 
-function Read-Manifest { Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson }
-function Write-Manifest { param($Manifest) $Manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Encoding UTF8 }
+function Read-Manifest { Get-Content -LiteralPath (Join-Path $target '.agent/lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson }
+function Write-Manifest { param($Manifest) $Manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $target '.agent/lizard-agent-layer.install.json') -Encoding UTF8 }
 
 try {
   $installApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Profile', 'minimal')
@@ -22,7 +22,7 @@ try {
   $manifest = Read-Manifest
   $manifest.layer_version = '99.0.0'
   Write-Manifest $manifest
-  $manifestPath = Join-Path $target '.agent\lizard-agent-layer.install.json'
+  $manifestPath = Join-Path $target '.agent/lizard-agent-layer.install.json'
   $before = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash
 
   $previewDir = Join-Path $fixture 'preview'

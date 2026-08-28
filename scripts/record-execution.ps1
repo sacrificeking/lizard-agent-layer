@@ -47,9 +47,9 @@ Assert-LizardOpaqueIdentifier -Value $ActualProvider -ErrorCode 'EXECUTION_PROVI
 Assert-LizardOpaqueIdentifier -Value $Harness -ErrorCode 'EXECUTION_HARNESS_INVALID' -MaximumLength 63
 if (-not $Apply -and -not [string]::IsNullOrWhiteSpace($OutputPath)) { throw 'EXECUTION_RECEIPT_APPLY_REQUIRED: -OutputPath requires -Apply.' }
 
-$profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
-$decisionRoot = Resolve-SafeRoot -Path (Join-Path $TargetRoot '.agent\routing\receipts\decisions') -RequireExisting
-$executionRoot = Resolve-SafeRoot -Path (Join-Path $TargetRoot '.agent\routing\receipts\executions') -RequireExisting
+$profilePath = Join-Path $TargetRoot '.agent/project-profile.json'
+$decisionRoot = Resolve-SafeRoot -Path (Join-Path $TargetRoot '.agent/routing/receipts/decisions') -RequireExisting
+$executionRoot = Resolve-SafeRoot -Path (Join-Path $TargetRoot '.agent/routing/receipts/executions') -RequireExisting
 $decisionPath = Resolve-SafeTargetDestination -AuthorizedRoot $decisionRoot -DestinationPath (Join-Path $decisionRoot "$RouteDecisionId.json")
 if (-not (Test-Path -LiteralPath $profilePath -PathType Leaf)) { throw 'EXECUTION_PROFILE_MISSING: project profile is missing.' }
 if (-not (Test-Path -LiteralPath $decisionPath -PathType Leaf)) { throw "EXECUTION_ROUTE_DECISION_MISSING: $RouteDecisionId" }
@@ -70,7 +70,7 @@ $verifiedRoute = Test-LizardSignedEvidenceEnvelope -Envelope $decisionEnvelope -
 if ([string]$verifiedRoute.principal_id -ne [string]$decision.router_id) { throw 'EXECUTION_ROUTER_IDENTITY_MISMATCH: route signer does not match router_id.' }
 
 $runtimeRelative = if ($profile.modelRuntime) { [string]$profile.modelRuntime } else { '.agent/routing/runtime.json' }
-$runtimePath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $runtimeRelative.Replace('/', '\'))
+$runtimePath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $runtimeRelative.Replace('/', '/'))
 if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf)) { throw 'EXECUTION_RUNTIME_MISSING: runtime capability file is missing.' }
 $runtime = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $runtimePath -Raw)
 if ([string]$runtime.status -ne 'ready' -or $runtime.actual_model_reporting -ne $true) { throw 'EXECUTION_RUNTIME_NOT_READY: runtime cannot attest actual model execution.' }

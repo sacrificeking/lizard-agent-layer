@@ -77,10 +77,10 @@ function New-TestInstallApprovalArguments {
   )
   if (@($BaseArguments) -contains '-Apply') { throw 'TEST_PLAN_ARGUMENTS_INVALID: BaseArguments must describe preview, not apply.' }
   $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-  $planRoot = Join-Path $LayerRoot '.tmp\tests\approved-plans'
+  $planRoot = Join-Path $LayerRoot '.tmp/tests/approved-plans'
   New-Item -ItemType Directory -Path $planRoot -Force | Out-Null
   $planPath = Join-Path $planRoot ("install-{0}.json" -f ([Guid]::NewGuid().ToString('N')))
-  $installScript = Join-Path $LayerRoot 'scripts\install.ps1'
+  $installScript = Join-Path $LayerRoot 'scripts/install.ps1'
   $previewArguments = @($BaseArguments) + @('-CanonicalPlanPath', $planPath)
   $preview = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $previewArguments
   if ($preview.exit_code -ne 0) { throw "TEST_PLAN_PREVIEW_FAILED: $($preview.output)" }
@@ -89,7 +89,7 @@ function New-TestInstallApprovalArguments {
   $planDoc = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $planPath -Raw)
   $target = [string]$planDoc.intent.target_root
   
-  Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Plan.psm1') -Global -Force
+  Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Plan.psm1') -Global -Force
   $targetIdentity = Get-LizardPlanRootHash -TargetRoot $target
   
   $riskLevel = 'low'
@@ -107,10 +107,10 @@ function New-TestInstallApprovalArguments {
   $finalArgs = @($BaseArguments) + @('-Apply', '-ApprovedPlanPath', $planPath, '-ApprovedPlanSha256', $sha256, '-HumanApproved')
 
   if ($policy.signed_approval_required) {
-    Import-Module (Join-Path $LayerRoot 'tests\TestTrustHelpers.psm1') -Global -Force
-    Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Trust.psm1') -Global -Force
+    Import-Module (Join-Path $LayerRoot 'tests/TestTrustHelpers.psm1') -Global -Force
+    Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Trust.psm1') -Global -Force
 
-    $trustRoot = Join-Path $LayerRoot ('.tmp\tests\trust-' + [Guid]::NewGuid().ToString('N'))
+    $trustRoot = Join-Path $LayerRoot ('.tmp/tests/trust-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $trustRoot -Force | Out-Null
     $now = [DateTimeOffset]::UtcNow
     $purpose = 'install-apply-approval'
@@ -157,10 +157,10 @@ function New-TestUpdateApprovalArguments {
   )
   if (@($BaseArguments) -contains '-Apply') { throw 'TEST_PLAN_ARGUMENTS_INVALID: BaseArguments must describe preview, not apply.' }
   $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-  $planRoot = Join-Path $LayerRoot '.tmp\tests\approved-plans'
+  $planRoot = Join-Path $LayerRoot '.tmp/tests/approved-plans'
   New-Item -ItemType Directory -Path $planRoot -Force | Out-Null
   $planPath = Join-Path $planRoot ("update-{0}.json" -f ([Guid]::NewGuid().ToString('N')))
-  $updateScript = Join-Path $LayerRoot 'scripts\update-target.ps1'
+  $updateScript = Join-Path $LayerRoot 'scripts/update-target.ps1'
   $preview = Invoke-TestPowerShell -ScriptPath $updateScript -Arguments (@($BaseArguments) + @('-CanonicalPlanPath', $planPath))
   if ($preview.exit_code -ne 0) { throw "TEST_UPDATE_PLAN_PREVIEW_FAILED: $($preview.output)" }
   if (-not (Test-Path -LiteralPath $planPath -PathType Leaf)) { throw "TEST_UPDATE_PLAN_MISSING: $planPath" }
@@ -169,7 +169,7 @@ function New-TestUpdateApprovalArguments {
   $planDoc = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $planPath -Raw)
   $target = [string]$planDoc.intent.target_root
   
-  Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Plan.psm1') -Global -Force
+  Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Plan.psm1') -Global -Force
   $targetIdentity = Get-LizardPlanRootHash -TargetRoot $target
 
   $isForce = (@($BaseArguments) -contains '-Force')
@@ -180,10 +180,10 @@ function New-TestUpdateApprovalArguments {
   $finalArgs = @($BaseArguments) + @('-Apply', '-ApprovedPlanPath', $planPath, '-ApprovedPlanSha256', $sha256, '-HumanApproved')
 
   if ($policy.signed_approval_required) {
-    Import-Module (Join-Path $LayerRoot 'tests\TestTrustHelpers.psm1') -Global -Force
-    Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Trust.psm1') -Global -Force
+    Import-Module (Join-Path $LayerRoot 'tests/TestTrustHelpers.psm1') -Global -Force
+    Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Trust.psm1') -Global -Force
 
-    $trustRoot = Join-Path $LayerRoot ('.tmp\tests\trust-' + [Guid]::NewGuid().ToString('N'))
+    $trustRoot = Join-Path $LayerRoot ('.tmp/tests/trust-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $trustRoot -Force | Out-Null
     $now = [DateTimeOffset]::UtcNow
     $purpose = 'update-apply-approval'
@@ -245,13 +245,13 @@ function New-TestUninstallApprovalArguments {
 
   $previewArgs = @($BaseArguments)
   if ([string]::IsNullOrWhiteSpace($planPath)) {
-    $planRoot = Join-Path $LayerRoot '.tmp\tests\approved-plans'
+    $planRoot = Join-Path $LayerRoot '.tmp/tests/approved-plans'
     New-Item -ItemType Directory -Path $planRoot -Force | Out-Null
     $planPath = Join-Path $planRoot ("uninstall-{0}.json" -f ([Guid]::NewGuid().ToString('N')))
     $previewArgs += @('-CanonicalPlanPath', $planPath)
   }
   
-  $uninstallScript = Join-Path $LayerRoot 'scripts\uninstall.ps1'
+  $uninstallScript = Join-Path $LayerRoot 'scripts/uninstall.ps1'
   $preview = Invoke-TestPowerShell -ScriptPath $uninstallScript -Arguments $previewArgs
   if ($preview.exit_code -ne 0) { throw "TEST_UNINSTALL_PLAN_PREVIEW_FAILED: $($preview.output)" }
 
@@ -263,7 +263,7 @@ function New-TestUninstallApprovalArguments {
   $target = [string]$planDoc.intent.target_root
   $scope = [string]$planDoc.intent.options.scope
   
-  Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Plan.psm1') -Global -Force
+  Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Plan.psm1') -Global -Force
   $targetIdentity = Get-LizardPlanRootHash -TargetRoot $target
 
   $isRequireSigned = (@($BaseArguments) -contains '-RequireSignedApproval')
@@ -272,10 +272,10 @@ function New-TestUninstallApprovalArguments {
   $finalArgs = @($BaseArguments) + @('-Apply', '-ApprovedPlanPath', $canonicalJsonPath, '-ApprovedPlanSha256', $sha256, '-HumanApproved')
 
   if ($policy.signed_approval_required) {
-    Import-Module (Join-Path $LayerRoot 'tests\TestTrustHelpers.psm1') -Global -Force
-    Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Trust.psm1') -Global -Force
+    Import-Module (Join-Path $LayerRoot 'tests/TestTrustHelpers.psm1') -Global -Force
+    Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Trust.psm1') -Global -Force
 
-    $trustRoot = Join-Path $LayerRoot ('.tmp\tests\trust-' + [Guid]::NewGuid().ToString('N'))
+    $trustRoot = Join-Path $LayerRoot ('.tmp/tests/trust-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $trustRoot -Force | Out-Null
     $now = [DateTimeOffset]::UtcNow
     $purpose = 'uninstall-apply-approval'
@@ -330,7 +330,7 @@ function Assert-JsonSchemaValid {
     throw "SCHEMA_TEST_INSTANCE_OUTSIDE_ROOT: $resolvedInstance"
   }
   $relativeInstance = $resolvedInstance.Substring($rootPrefix.Length).Replace('\', '/')
-  $validatorPath = Join-Path $resolvedRoot 'tools\schema-validator\validate.mjs'
+  $validatorPath = Join-Path $resolvedRoot 'tools/schema-validator/validate.mjs'
   $node = Get-Command node -ErrorAction SilentlyContinue
   if (-not $node) { throw 'SCHEMA_TEST_NODE_MISSING: Node.js is required for executable contract tests.' }
   $output = & $node.Source $validatorPath --root $resolvedRoot --schema $SchemaPath --instance $relativeInstance 2>&1 | Out-String
@@ -350,8 +350,8 @@ function Clear-TestDirectory {
 }
 
 $layerRootForJson = Split-Path -Parent $PSScriptRoot
-if (Test-Path (Join-Path $layerRootForJson 'scripts\Lizard.Json.psm1')) {
-  Import-Module (Join-Path $layerRootForJson 'scripts\Lizard.Json.psm1') -Force
+if (Test-Path (Join-Path $layerRootForJson 'scripts/Lizard.Json.psm1')) {
+  Import-Module (Join-Path $layerRootForJson 'scripts/Lizard.Json.psm1') -Force
 }
 
 function ConvertFrom-TestJson {

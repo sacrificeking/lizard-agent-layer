@@ -2,12 +2,12 @@ param([string]$LayerRoot)
 
 $ErrorActionPreference = 'Stop'
 $RepoRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $LayerRoot).Path }
-Import-Module (Join-Path $RepoRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.SafeFs.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Transaction.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Json.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Transaction.psm1') -Force
 
-$fixtureRoot = Join-Path $RepoRoot '.tmp\tests\transactions'
+$fixtureRoot = Join-Path $RepoRoot '.tmp/tests/transactions'
 if (Test-Path -LiteralPath $fixtureRoot) { Clear-TestDirectory -Path $fixtureRoot -AllowedRoot (Join-Path $RepoRoot '.tmp') }
 New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
 
@@ -30,13 +30,13 @@ function Assert-NoTransactionMetadata {
   Assert-False (Test-Path -LiteralPath (Join-Path $Target '.lizard-agent-layer-transactions')) 'Transaction store must be removed when empty.'
 }
 
-$installScript = Join-Path $RepoRoot 'scripts\install.ps1'
-$updateScript = Join-Path $RepoRoot 'scripts\update-target.ps1'
-$recoverScript = Join-Path $RepoRoot 'scripts\transaction-recover.ps1'
-$doctorScript = Join-Path $RepoRoot 'scripts\doctor.ps1'
-$modulePath = Join-Path $RepoRoot 'scripts\Lizard.Transaction.psm1'
-$loopInitScript = Join-Path $RepoRoot 'scripts\loop-init.ps1'
-$loopSyncScript = Join-Path $RepoRoot 'scripts\loop-sync.ps1'
+$installScript = Join-Path $RepoRoot 'scripts/install.ps1'
+$updateScript = Join-Path $RepoRoot 'scripts/update-target.ps1'
+$recoverScript = Join-Path $RepoRoot 'scripts/transaction-recover.ps1'
+$doctorScript = Join-Path $RepoRoot 'scripts/doctor.ps1'
+$modulePath = Join-Path $RepoRoot 'scripts/Lizard.Transaction.psm1'
+$loopInitScript = Join-Path $RepoRoot 'scripts/loop-init.ps1'
+$loopSyncScript = Join-Path $RepoRoot 'scripts/loop-sync.ps1'
 
 try {
   $schemaTarget = Join-Path $fixtureRoot 'journal-schema'
@@ -156,7 +156,7 @@ try {
   $successApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $successTarget, '-Profile', 'minimal')
   $successfulInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $successApproval.arguments
   Assert-Equal 0 $successfulInstall.exit_code "Successful transaction install failed: $($successfulInstall.output)"
-  $manifest = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $successTarget '.agent\lizard-agent-layer.install.json') -Raw)
+  $manifest = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $successTarget '.agent/lizard-agent-layer.install.json') -Raw)
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$manifest.transaction_operation_id)) 'Install manifest must bind to its transaction operation ID.'
   Assert-NoTransactionMetadata $successTarget
 
@@ -245,7 +245,7 @@ Set-LizardTransactionalContent -Path (Join-Path `$Target 'same.txt') -Value 'lat
   Assert-True ($firstRepeatRecovery.output -match 'TRANSACTION_RECOVERY_FAULT_INJECTED') 'Recovery interruption must expose a stable code.'
   Assert-True ((Get-Content -LiteralPath (Join-Path $repeatTarget 'same.txt') -Raw) -match '^middle') 'First recovery pass must restore only the latest mutation.'
   $repeatLock = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $repeatTarget '.lizard-agent-layer.lock') -Raw)
-  $repeatJournalPath = Join-Path $repeatTarget ([string]$repeatLock.journal_path).Replace('/', '\')
+  $repeatJournalPath = Join-Path $repeatTarget ([string]$repeatLock.journal_path).Replace('/', '/')
   $repeatJournal = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $repeatJournalPath -Raw)
   Assert-Equal '1,2' ((@($repeatJournal.mutations | ForEach-Object { [string]$_.sequence })) -join ',') 'Recovery must preserve chronological journal order.'
   Assert-Equal 'applied,rolled-back' ((@($repeatJournal.mutations | ForEach-Object { [string]$_.status })) -join ',') 'Recovery must persist a rolled-back highest-sequence suffix.'

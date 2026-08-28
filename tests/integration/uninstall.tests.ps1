@@ -2,15 +2,15 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 $fixture = Join-Path $testRoot ("uninstall-preview-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $target = Join-Path $fixture 'target'
 $reports = Join-Path $fixture 'reports'
-$script = Join-Path $LayerRoot 'scripts\uninstall.ps1'
-New-Item -ItemType Directory -Path (Join-Path $target '.agent\owned'), $reports -Force | Out-Null
+$script = Join-Path $LayerRoot 'scripts/uninstall.ps1'
+New-Item -ItemType Directory -Path (Join-Path $target '.agent/owned'), $reports -Force | Out-Null
 
 function Write-TestManifest {
   param([string]$InstalledHash, [string]$ArtifactPath = '.agent/owned/owned.txt')
@@ -30,11 +30,11 @@ function Write-TestManifest {
       [ordered]@{ path = $ArtifactPath; kind = 'file'; lifecycle = 'active'; ownership = 'layer-owned'; state = 'layer-owned'; source_version = '2.0.0'; installed_hash = $InstalledHash; current_hash = $InstalledHash; adapter_aliases = @() }
     )
   }
-  Set-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Value ($manifest | ConvertTo-Json -Depth 10) -Encoding UTF8
+  Set-Content -LiteralPath (Join-Path $target '.agent/lizard-agent-layer.install.json') -Value ($manifest | ConvertTo-Json -Depth 10) -Encoding UTF8
 }
 
 try {
-  $owned = Join-Path $target '.agent\owned\owned.txt'
+  $owned = Join-Path $target '.agent/owned/owned.txt'
   Set-Content -LiteralPath $owned -Value 'owned canary' -Encoding UTF8
   $ownedHash = (Get-FileHash -LiteralPath $owned -Algorithm SHA256).Hash.ToLowerInvariant()
   Write-TestManifest -InstalledHash $ownedHash
@@ -79,12 +79,12 @@ try {
 
   $interruptedTarget = Join-Path $fixture 'interrupted'
   $target = $interruptedTarget
-  New-Item -ItemType Directory -Path (Join-Path $target '.agent\owned') -Force | Out-Null
-  $owned = Join-Path $target '.agent\owned\owned.txt'
+  New-Item -ItemType Directory -Path (Join-Path $target '.agent/owned') -Force | Out-Null
+  $owned = Join-Path $target '.agent/owned/owned.txt'
   Set-Content -LiteralPath $owned -Value 'interruption canary' -Encoding UTF8
   $ownedHash = (Get-FileHash -LiteralPath $owned -Algorithm SHA256).Hash.ToLowerInvariant()
   Write-TestManifest -InstalledHash $ownedHash
-  $manifestBeforeInterruption = Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw
+  $manifestBeforeInterruption = Get-Content -LiteralPath (Join-Path $target '.agent/lizard-agent-layer.install.json') -Raw
   $interruptedPlanPath = Join-Path $reports 'interrupted.md'
   $interruptedPreview = Invoke-TestPowerShell -ScriptPath $script -Arguments @('-TargetPath', $target, '-PlanPath', $interruptedPlanPath, '-TestFailAfterMutation', '1')
   Assert-Equal 0 $interruptedPreview.exit_code "Fault-injected uninstall preview must succeed: $($interruptedPreview.output)"
@@ -94,7 +94,7 @@ try {
   Assert-False ($interruptedApply.exit_code -eq 0) 'Fault injection after the first removal must abort uninstall.'
   Assert-True ($interruptedApply.output -match 'TRANSACTION_FAULT_INJECTED') 'Interrupted uninstall must expose the stable transaction fault code.'
   Assert-Equal $ownedHash ((Get-FileHash -LiteralPath $owned -Algorithm SHA256).Hash.ToLowerInvariant()) 'Interrupted uninstall rollback must restore deleted file bytes exactly.'
-  Assert-Equal $manifestBeforeInterruption (Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw) 'Interrupted uninstall rollback must preserve the exact manifest bytes.'
+  Assert-Equal $manifestBeforeInterruption (Get-Content -LiteralPath (Join-Path $target '.agent/lizard-agent-layer.install.json') -Raw) 'Interrupted uninstall rollback must preserve the exact manifest bytes.'
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.lizard-agent-layer.lock')) 'Interrupted uninstall rollback must remove the transaction lock.'
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.lizard-agent-layer-transactions')) 'Interrupted uninstall rollback must remove transaction metadata.'
   $retryPlanPath = Join-Path $reports 'interrupted-retry.md'
@@ -108,8 +108,8 @@ try {
 
   $modifiedTarget = Join-Path $fixture 'modified'
   $target = $modifiedTarget
-  New-Item -ItemType Directory -Path (Join-Path $target '.agent\owned') -Force | Out-Null
-  $owned = Join-Path $target '.agent\owned\owned.txt'
+  New-Item -ItemType Directory -Path (Join-Path $target '.agent/owned') -Force | Out-Null
+  $owned = Join-Path $target '.agent/owned/owned.txt'
   Set-Content -LiteralPath $owned -Value 'owned canary' -Encoding UTF8
   $ownedHash = (Get-FileHash -LiteralPath $owned -Algorithm SHA256).Hash.ToLowerInvariant()
   Write-TestManifest -InstalledHash $ownedHash
@@ -126,8 +126,8 @@ try {
   $modifiedApply = Invoke-TestPowerShell -ScriptPath $script -Arguments @('-TargetPath', $target, '-Apply', '-ApprovedPlanPath', $canonicalPath, '-ApprovedPlanSha256', $modifiedSha, '-HumanApproved', '-Json')
   Assert-Equal 0 $modifiedApply.exit_code "Managed-only partial uninstall must succeed without losing ownership evidence: $($modifiedApply.output)"
   Assert-True (Test-Path -LiteralPath $owned -PathType Leaf) 'Managed-only partial uninstall must preserve the modified file.'
-  Assert-True (Test-Path -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -PathType Leaf) 'Managed-only partial uninstall must retain the install manifest.'
-  $residualManifest = Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
+  Assert-True (Test-Path -LiteralPath (Join-Path $target '.agent/lizard-agent-layer.install.json') -PathType Leaf) 'Managed-only partial uninstall must retain the install manifest.'
+  $residualManifest = Get-Content -LiteralPath (Join-Path $target '.agent/lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal 'active' ([string](@($residualManifest.artifacts | Where-Object { $_.path -eq '.agent/owned/owned.txt' })[0].lifecycle)) 'Preserved modified content must retain active ownership evidence.'
   $modifiedReceipt = Get-Content -LiteralPath ([System.IO.Path]::ChangeExtension($planPath, '.receipt.json')) -Raw | ConvertFrom-LizardJson
   Assert-Equal 'partial' ([string]$modifiedReceipt.status) 'Receipt must report a partial uninstall when residue is preserved.'
@@ -151,8 +151,8 @@ try {
 
   $exportTarget = Join-Path $fixture 'export-target'
   $target = $exportTarget
-  New-Item -ItemType Directory -Path (Join-Path $target '.agent\owned') -Force | Out-Null
-  $owned = Join-Path $target '.agent\owned\owned.txt'
+  New-Item -ItemType Directory -Path (Join-Path $target '.agent/owned') -Force | Out-Null
+  $owned = Join-Path $target '.agent/owned/owned.txt'
   Set-Content -LiteralPath $owned -Value 'export canary original' -Encoding UTF8
   $ownedHash = (Get-FileHash -LiteralPath $owned -Algorithm SHA256).Hash.ToLowerInvariant()
   Write-TestManifest -InstalledHash $ownedHash
@@ -168,7 +168,7 @@ try {
   Assert-True ([bool]$exportPlan.intent.options.confirm_export_may_contain_sensitive_data) 'Export plan must bind the sensitive-data confirmation.'
   $exportApply = Invoke-TestPowerShell -ScriptPath $script -Arguments ($exportApproval.arguments + @('-Json'))
   Assert-Equal 0 $exportApply.exit_code "Approved export-then-complete apply must succeed: $($exportApply.output)"
-  $exportedFile = Join-Path $exportRoot '.agent\owned\owned.txt'
+  $exportedFile = Join-Path $exportRoot '.agent/owned/owned.txt'
   Assert-True (Test-Path -LiteralPath $exportedFile -PathType Leaf) 'Export must recreate the selected relative path under the approved export root.'
   Assert-Equal $exportSourceHash ((Get-FileHash -LiteralPath $exportedFile -Algorithm SHA256).Hash.ToLowerInvariant()) 'Exported bytes must match the approved source hash.'
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.agent')) 'Successful export-then-complete must remove the residue-free target tree.'

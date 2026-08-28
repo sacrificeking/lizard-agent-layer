@@ -2,10 +2,10 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SafeFs.psm1') -Force
 
-$fixtureRoot = Join-Path $LayerRoot '.tmp\tests\analyzer-hardening'
+$fixtureRoot = Join-Path $LayerRoot '.tmp/tests/analyzer-hardening'
 $allowedRoot = Join-Path $LayerRoot '.tmp'
 $links = New-Object System.Collections.Generic.List[string]
 if (Test-Path -LiteralPath $fixtureRoot) { Clear-TestDirectory -Path $fixtureRoot -AllowedRoot $allowedRoot }
@@ -13,16 +13,16 @@ New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
 
 function Invoke-AnalyzerJson {
   param([string]$Target, [string[]]$Extra = @())
-  $result = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\analyze-target.ps1') -Arguments (@('-TargetPath', $Target, '-Json') + @($Extra))
+  $result = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts/analyze-target.ps1') -Arguments (@('-TargetPath', $Target, '-Json') + @($Extra))
   if ($result.exit_code -ne 0) { throw "ANALYZER_TEST_EXECUTION_FAILED: $($result.output)" }
   return $result.output | ConvertFrom-LizardJson
 }
 
 try {
   $negative = Join-Path $fixtureRoot 'negative'
-  New-Item -ItemType Directory -Path (Join-Path $negative 'src\refinance') -Force | Out-Null
+  New-Item -ItemType Directory -Path (Join-Path $negative 'src/refinance') -Force | Out-Null
   Set-Content -LiteralPath (Join-Path $negative 'README.md') -Value 'finance market supabase react words are prose, not executable project evidence' -Encoding UTF8
-  Set-Content -LiteralPath (Join-Path $negative 'src\refinance\application.txt') -Value 'not a financial product marker' -Encoding UTF8
+  Set-Content -LiteralPath (Join-Path $negative 'src/refinance/application.txt') -Value 'not a financial product marker' -Encoding UTF8
   $negativeResult = Invoke-AnalyzerJson -Target $negative
   Assert-Equal 'minimal' ([string]$negativeResult.recommendedProfile) 'Prose and partial-token paths must not create a false positive profile.'
   Assert-False (@($negativeResult.signals) -contains 'finance') 'A refinance path must not match the bounded finance token rule.'
@@ -32,7 +32,7 @@ try {
   foreach ($path in @('supabase\functions', 'supabase\migrations', 'src\finance\dca', '.github')) { New-Item -ItemType Directory -Path (Join-Path $positive $path) -Force | Out-Null }
   Set-Content -LiteralPath (Join-Path $positive 'package.json') -Value '{"dependencies":{"@supabase/supabase-js":"1","react":"1"},"devDependencies":{"typescript":"1","vite":"1"}}' -Encoding UTF8
   Set-Content -LiteralPath (Join-Path $positive 'CLAUDE.md') -Value '# untrusted target instructions' -Encoding UTF8
-  Set-Content -LiteralPath (Join-Path $positive 'src\finance\dca\index.ts') -Value 'export {}' -Encoding UTF8
+  Set-Content -LiteralPath (Join-Path $positive 'src/finance/dca/index.ts') -Value 'export {}' -Encoding UTF8
   $positiveResult = Invoke-AnalyzerJson -Target $positive -Extra @('-ApprovedHarnesses', 'github-copilot,codex')
   Assert-Equal 'enterprise-fullstack' ([string]$positiveResult.recommendedProfile) 'Strong manifest and directory evidence must identify the rich fixture.'
   Assert-Equal 'high' ([string]$positiveResult.calibration.confidence) 'Strong complete evidence must produce high rule confidence.'
@@ -48,10 +48,10 @@ try {
   Assert-True (@($positiveResult.negativeSignals) -contains 'precision-path-groups-below-threshold') 'Single finance marker must record negative precision signal.'
 
   $precisionTarget = Join-Path $fixtureRoot 'precision-multi'
-  New-Item -ItemType Directory -Path (Join-Path $precisionTarget 'src\finance\dca') -Force | Out-Null
-  New-Item -ItemType Directory -Path (Join-Path $precisionTarget 'src\lib\ledger\entry') -Force | Out-Null
-  Set-Content -LiteralPath (Join-Path $precisionTarget 'src\finance\dca\calc.ts') -Value 'export {}' -Encoding UTF8
-  Set-Content -LiteralPath (Join-Path $precisionTarget 'src\lib\ledger\entry\audit.ts') -Value 'export {}' -Encoding UTF8
+  New-Item -ItemType Directory -Path (Join-Path $precisionTarget 'src/finance/dca') -Force | Out-Null
+  New-Item -ItemType Directory -Path (Join-Path $precisionTarget 'src/lib/ledger/entry') -Force | Out-Null
+  Set-Content -LiteralPath (Join-Path $precisionTarget 'src/finance/dca/calc.ts') -Value 'export {}' -Encoding UTF8
+  Set-Content -LiteralPath (Join-Path $precisionTarget 'src/lib/ledger/entry/audit.ts') -Value 'export {}' -Encoding UTF8
   $precisionResult = Invoke-AnalyzerJson -Target $precisionTarget
   Assert-True (@($precisionResult.signals) -contains 'precision') 'Two distinct precision/finance path markers must emit precision signal.'
   Assert-True (@($precisionResult.recommendedPacks) -contains 'precision-domain') 'Precision signal must recommend precision-domain pack.'
@@ -71,7 +71,7 @@ try {
   $link = Join-Path $linkedTarget 'linked'
   New-DirectoryLink -Path $link -Target $outside
   $links.Add($link) | Out-Null
-  $linkedResult = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\analyze-target.ps1') -Arguments @('-TargetPath', $linkedTarget, '-Json')
+  $linkedResult = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts/analyze-target.ps1') -Arguments @('-TargetPath', $linkedTarget, '-Json')
   Assert-True ($linkedResult.exit_code -ne 0) 'A linked scan entry must fail closed.'
   Assert-True ($linkedResult.output -match 'SAFEFS_REPARSE_POINT') 'A linked scan entry must return the stable SafeFs code.'
 

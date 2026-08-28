@@ -1,7 +1,7 @@
 Set-StrictMode -Version 2.0
 
 if (-not ('Lizard.AgentLayer.Native.WindowsHandleFs' -as [type])) {
-  Add-Type -Path (Join-Path $PSScriptRoot 'native\Lizard.WindowsHandleFs.cs')
+  Add-Type -Path (Join-Path $PSScriptRoot 'native/Lizard.WindowsHandleFs.cs')
 }
 
 function Get-LizardWindowsHandleCapability {

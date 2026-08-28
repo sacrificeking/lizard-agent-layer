@@ -2,10 +2,10 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SafeFs.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 $fixture = Join-Path $testRoot ("safe-fs-unit-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $authorized = Join-Path $fixture 'authorized root'
@@ -27,7 +27,7 @@ try {
   Assert-Equal (ConvertTo-LizardFullPath -Path '/var/folders/fixture') (ConvertTo-LizardCanonicalTemporaryPath -Path '/var/folders/fixture' -HostId 'linux-pwsh') 'Linux temporary paths must not receive the macOS alias policy.'
   Assert-Equal (ConvertTo-LizardCanonicalTemporaryPath -Path ([System.IO.Path]::GetTempPath())) (Resolve-LizardSafeTemporaryRoot) 'The current host temporary root must resolve through SafeFs using the same host canonicalization policy.'
 
-  $nested = Join-Path $authorized 'missing\nested\file.txt'
+  $nested = Join-Path $authorized 'missing/nested/file.txt'
   $resolved = Resolve-SafeTargetDestination -AuthorizedRoot $authorized -DestinationPath $nested
   Assert-Equal ([System.IO.Path]::GetFullPath($nested)) $resolved 'Ordinary missing nested destinations must remain valid.'
 
@@ -35,7 +35,7 @@ try {
   $allowedRoot = Resolve-SafeTargetDestination -AuthorizedRoot $authorized -DestinationPath $authorized -AllowRoot
   Assert-Equal ([System.IO.Path]::GetFullPath($authorized)) $allowedRoot 'AllowRoot must permit exact root equality.'
 
-  $escape = Join-Path $authorized '..\outside\escape.txt'
+  $escape = Join-Path $authorized '../outside/escape.txt'
   Assert-ThrowsCode { Resolve-SafeTargetDestination -AuthorizedRoot $authorized -DestinationPath $escape | Out-Null } 'SAFEFS_OUTSIDE_ROOT' 'Parent traversal must not escape the root.'
 
   New-DirectoryLink -Path $link -Target $outside

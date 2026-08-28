@@ -8,10 +8,10 @@ if ([string]::IsNullOrWhiteSpace($LayerRoot)) {
   }
 }
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Json.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Json.psm1') -Force
 
-$readinessScript = Join-Path $LayerRoot 'scripts\release-readiness.ps1'
+$readinessScript = Join-Path $LayerRoot 'scripts/release-readiness.ps1'
 
 # 1. Test positive readiness run
 $positiveResult = Invoke-TestPowerShell -ScriptPath $readinessScript -Arguments @('-LayerRoot', $LayerRoot, '-Json')

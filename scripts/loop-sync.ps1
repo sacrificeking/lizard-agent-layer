@@ -74,7 +74,7 @@ function Write-RuntimeIfMissing {
 
 $versionPath = Join-Path $LayerRoot 'VERSION'
 $currentVersion = if (Test-Path -LiteralPath $versionPath) { (Get-Content -LiteralPath $versionPath -Raw).Trim() } else { '0.0.0-dev' }
-$manifestPath = Join-Path $TargetRoot '.agent\loops\lizard-agent-layer.loop-install.json'
+$manifestPath = Join-Path $TargetRoot '.agent/loops/lizard-agent-layer.loop-install.json'
 if (-not (Test-Path -LiteralPath $manifestPath)) { throw 'Missing loop install manifest. Run loop-init.ps1 first.' }
 $manifest = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $manifestPath -Raw)
 $patternName = if (-not [string]::IsNullOrWhiteSpace($Pattern)) { $Pattern } elseif ($manifest.pattern) { [string]$manifest.pattern } else { 'daily-triage' }
@@ -116,7 +116,7 @@ if ($verifierRel) { Copy-Template 'templates\loops\loop-verifier-report.md' $ver
 $runtimeNow = (Get-Date).ToUniversalTime()
 $runtimeState = [ordered]@{ schema_version = 1; pattern = [string]$patternDoc.name; readiness_level = [string]$patternDoc.readinessLevel; revision = 0; status = 'idle'; active_run_id = $null; last_run_id = $null; updated_at = $runtimeNow.ToString('o'); budget_window = [ordered]@{ date = $runtimeNow.ToString('yyyy-MM-dd'); runs_started = 0; tokens_used = 0 }; items = @(); runs = @() }
 $runtimeLease = [ordered]@{ schema_version = 1; pattern = [string]$patternDoc.name; status = 'available'; run_id = $null; owner = $null; acquired_at = $null; expires_at = $null; released_at = $null }
-Write-RuntimeIfMissing $runtimeBudgetRel (Get-Content -LiteralPath (Join-Path $LayerRoot 'templates\loops\loop-runtime-budget.json') -Raw)
+Write-RuntimeIfMissing $runtimeBudgetRel (Get-Content -LiteralPath (Join-Path $LayerRoot 'templates/loops/loop-runtime-budget.json') -Raw)
 Write-RuntimeIfMissing $runtimeStateRel ($runtimeState | ConvertTo-Json -Depth 12)
 Write-RuntimeIfMissing $runtimeEventsRel ''
 Write-RuntimeIfMissing $runtimeLeaseRel ($runtimeLease | ConvertTo-Json -Depth 8)

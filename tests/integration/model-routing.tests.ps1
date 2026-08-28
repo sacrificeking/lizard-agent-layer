@@ -2,13 +2,13 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Manifest.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Trust.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'tests\TestTrustHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Manifest.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Trust.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestTrustHelpers.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 $fixture = Join-Path $testRoot ("staged-execution-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $target = Join-Path $fixture 'target'
@@ -16,11 +16,11 @@ $advancedTarget = Join-Path $fixture 'advanced-target'
 $missingInventoryTarget = Join-Path $fixture 'missing-inventory-target'
 $missingRuntimeTarget = Join-Path $fixture 'missing-runtime-target'
 $canaryTarget = Join-Path $fixture 'canary-target'
-$installScript = Join-Path $LayerRoot 'scripts\install.ps1'
-$routeScript = Join-Path $LayerRoot 'scripts\route-task.ps1'
-$recordExecutionScript = Join-Path $LayerRoot 'scripts\record-execution.ps1'
-$calibrateModelScript = Join-Path $LayerRoot 'scripts\calibrate-model.ps1'
-$doctorScript = Join-Path $LayerRoot 'scripts\doctor.ps1'
+$installScript = Join-Path $LayerRoot 'scripts/install.ps1'
+$routeScript = Join-Path $LayerRoot 'scripts/route-task.ps1'
+$recordExecutionScript = Join-Path $LayerRoot 'scripts/record-execution.ps1'
+$calibrateModelScript = Join-Path $LayerRoot 'scripts/calibrate-model.ps1'
+$doctorScript = Join-Path $LayerRoot 'scripts/doctor.ps1'
 foreach ($path in @($target, $advancedTarget, $missingInventoryTarget, $missingRuntimeTarget, $canaryTarget)) { New-Item -ItemType Directory -Path $path -Force | Out-Null }
 
 function Invoke-Route {
@@ -45,10 +45,10 @@ try {
     '.agent\protocols\context-hygiene.md',
     '.agent\skills\staged-execution\SKILL.md'
   )) { Assert-True (Test-Path -LiteralPath (Join-Path $target $relative)) "Expected installed staged execution artifact $relative." }
-  Assert-False (Test-Path -LiteralPath (Join-Path $target '.agent\routing\models')) 'Portable install must not create a stale built-in model catalog.'
-  Assert-False (Test-Path -LiteralPath (Join-Path $target '.agent\routing\inventory.json')) 'Portable install must not fabricate model availability.'
+  Assert-False (Test-Path -LiteralPath (Join-Path $target '.agent/routing/models')) 'Portable install must not create a stale built-in model catalog.'
+  Assert-False (Test-Path -LiteralPath (Join-Path $target '.agent/routing/inventory.json')) 'Portable install must not fabricate model availability.'
 
-  $manifestPath = Join-Path $target '.agent\lizard-agent-layer.install.json'
+  $manifestPath = Join-Path $target '.agent/lizard-agent-layer.install.json'
   $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-LizardJson
   Assert-Equal 'staged-balanced' ([string]$manifest.routing_policy) 'Manifest must record the staged execution policy.'
   Assert-Equal 'inherit-current' ([string]$manifest.model_mode) 'Portable manifest must inherit the active model.'
@@ -57,7 +57,7 @@ try {
   $portableDoctor = Invoke-TestPowerShell -ScriptPath $doctorScript -Arguments @('-TargetPath', $target, '-Strict')
   Assert-Equal 0 $portableDoctor.exit_code "Portable staged execution doctor must pass: $($portableDoctor.output)"
 
-  $policyPath = Join-Path $target '.agent\routing\policy.json'
+  $policyPath = Join-Path $target '.agent/routing/policy.json'
   $policyHash = Get-LizardSha256 $policyPath
   $rerunApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Profile', 'standard', '-Harnesses', 'codex')
   $rerun = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $rerunApproval.arguments
@@ -120,7 +120,7 @@ try {
   $persistedPreview = Invoke-Route -Root $target -Arguments $persistedBase
   $persistedTrust = New-LizardTestTrustMaterial -Root (Join-Path $fixture 'persisted-route-trust') -BindingSha256 ([string]$persistedPreview.trust_binding_sha256) -Subject 'persisted' -Now ([DateTimeOffset]::UtcNow) -PrincipalId 'portable-router' -Roles @('router') -Purpose 'routing' -PayloadKind 'route-decision'
   $receipt = Invoke-Route -Root $target -Arguments ($persistedBase + @('-Apply', '-TrustChallengePath', $persistedTrust.challenge_path, '-TrustChallengeSha256', $persistedTrust.challenge_sha256, '-RouterPrivateKeyPath', $persistedTrust.private_key_path, '-RouterPrivateKeySha256', $persistedTrust.private_key_sha256))
-  $receiptPath = Join-Path $target '.agent\routing\receipts\decisions\persisted.json'
+  $receiptPath = Join-Path $target '.agent/routing/receipts/decisions/persisted.json'
   Assert-True (Test-Path -LiteralPath $receiptPath) 'Apply must write a metadata-only receipt.'
   Assert-Equal $false ([bool]$receipt.raw_prompt_stored) 'Receipts must never claim to store raw prompts.'
   Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/route-receipt.schema.json' -InstancePath $receiptPath -Message 'Persisted route receipt must satisfy schema.'
@@ -133,7 +133,7 @@ try {
   Assert-True ($missingInventory.output -match 'Recommended for normal IDE use') 'Missing Advanced configuration must explain the beginner-friendly fallback.'
   Assert-False (Test-Path -LiteralPath (Join-Path $missingInventoryTarget '.agent')) 'Failed Advanced preflight must not mutate the target.'
 
-  $advancedRoutingRoot = Join-Path $advancedTarget '.agent\routing'
+  $advancedRoutingRoot = Join-Path $advancedTarget '.agent/routing'
   New-Item -ItemType Directory -Path $advancedRoutingRoot -Force | Out-Null
   $inventoryPath = Join-Path $advancedRoutingRoot 'inventory.json'
   @'
@@ -188,12 +188,12 @@ try {
 '@ | Set-Content -LiteralPath $inventoryPath -Encoding UTF8
   Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/model-inventory.schema.json' -InstancePath $inventoryPath -Message 'Arbitrary-provider inventory must satisfy schema.'
 
-  $missingRuntimeRoot = Join-Path $missingRuntimeTarget '.agent\routing'
+  $missingRuntimeRoot = Join-Path $missingRuntimeTarget '.agent/routing'
   New-Item -ItemType Directory -Path $missingRuntimeRoot -Force | Out-Null
   Copy-Item -LiteralPath $inventoryPath -Destination (Join-Path $missingRuntimeRoot 'inventory.json')
   $missingRuntime = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $missingRuntimeTarget, '-Profile', 'standard', '-Harnesses', 'codex', '-ModelMode', 'inventory-routing')
   Assert-False ($missingRuntime.exit_code -eq 0) 'Advanced install must fail closed when runtime capability evidence is missing.'
-  Assert-False (Test-Path -LiteralPath (Join-Path $missingRuntimeTarget '.agent\project-profile.json')) 'Missing runtime preflight must not install target artifacts.'
+  Assert-False (Test-Path -LiteralPath (Join-Path $missingRuntimeTarget '.agent/project-profile.json')) 'Missing runtime preflight must not install target artifacts.'
 
   $runtimePath = Join-Path $advancedRoutingRoot 'runtime.json'
   @'
@@ -218,7 +218,7 @@ try {
   Assert-False ($harnessMismatch.exit_code -eq 0) 'Advanced install must require runtime coverage for every selected harness.'
   $advancedPreview = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $advancedTarget, '-Profile', 'standard', '-Harnesses', 'codex', '-ModelMode', 'inventory-routing')
   Assert-Equal 0 $advancedPreview.exit_code "Advanced inventory preview must succeed: $($advancedPreview.output)"
-  Assert-False (Test-Path -LiteralPath (Join-Path $advancedTarget '.agent\project-profile.json')) 'Advanced preview must not install target artifacts.'
+  Assert-False (Test-Path -LiteralPath (Join-Path $advancedTarget '.agent/project-profile.json')) 'Advanced preview must not install target artifacts.'
   $advancedApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $advancedTarget, '-Profile', 'standard', '-Harnesses', 'codex', '-ModelMode', 'inventory-routing')
   $advancedInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $advancedApproval.arguments
   Assert-Equal 0 $advancedInstall.exit_code "Advanced inventory install must succeed: $($advancedInstall.output)"
@@ -239,7 +239,7 @@ try {
   Assert-False ([string]$advanced.recommended_model -eq 'expired-provider/old-perfect') 'Expired calibration evidence must remain ineligible.'
   Assert-False ([string]$advanced.recommended_model -eq 'wrong-runtime/misleading-perfect') 'Calibration from a different runtime configuration must remain ineligible.'
 
-  $advancedEnvelope = Get-Content -LiteralPath (Join-Path $advancedTarget '.agent\routing\receipts\decisions\advanced.json') -Raw | ConvertFrom-LizardJson
+  $advancedEnvelope = Get-Content -LiteralPath (Join-Path $advancedTarget '.agent/routing/receipts/decisions/advanced.json') -Raw | ConvertFrom-LizardJson
   $executionBinding = Get-LizardExecutionTrustBinding -TargetRoot $advancedTarget -ReceiptId 'advanced-execution' -RouteDecisionId 'advanced' -RoutePayloadSha256 ([string]$advancedEnvelope.payload_sha256) -ExecutorId 'fixture/codex-runtime-v1' -ConfigurationFingerprint 'fixture-codex-config-v1' -ActualModel 'vendor-zeta/build-plus@2026-07' -ActualProvider 'vendor-zeta'
   $runtimeTrust = New-LizardTestTrustMaterial -Root (Join-Path $fixture 'advanced-runtime-trust') -BindingSha256 $executionBinding -Subject 'advanced-execution' -Now ([DateTimeOffset]::UtcNow) -PrincipalId 'fixture/codex-runtime-v1' -Roles @('runtime') -Purpose 'execution-attestation' -PayloadKind 'execution-receipt'
   $execution = Invoke-TestPowerShell -ScriptPath $recordExecutionScript -Arguments @(
@@ -264,7 +264,7 @@ try {
   Assert-Equal 'execution-receipt' ([string]$executionDoc.artifact_kind) 'Actual execution must be a separate receipt.'
   Assert-Equal 'vendor-zeta/build-plus@2026-07' ([string]$executionDoc.actual_model) 'Execution receipt must contain actual runtime identity.'
   Assert-Equal 'fixture-codex-config-v1' ([string]$executionDoc.configuration_fingerprint) 'Execution receipt must preserve the attested runtime configuration.'
-  $executionPath = Join-Path $advancedTarget '.agent\routing\receipts\executions\advanced-execution.json'
+  $executionPath = Join-Path $advancedTarget '.agent/routing/receipts/executions/advanced-execution.json'
   Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/execution-receipt.schema.json' -InstancePath $executionPath -Message 'Execution receipt must satisfy schema.'
 
   $mismatchExecution = Invoke-TestPowerShell -ScriptPath $recordExecutionScript -Arguments @('-TargetPath', $advancedTarget, '-RouteDecisionId', 'advanced', '-ActualModel', 'different/model', '-ActualProvider', 'vendor-zeta', '-Harness', 'codex', '-StartedAt', '2026-07-19T12:00:00Z', '-RouteTrustStorePath', $advancedRouteTrust.trust_store_path, '-RouteTrustStoreSha256', $advancedRouteTrust.trust_store_sha256, '-RouteTrustChallengePath', $advancedRouteTrust.challenge_path, '-RouteTrustChallengeSha256', $advancedRouteTrust.challenge_sha256, '-Apply')
@@ -314,10 +314,10 @@ try {
   Assert-Equal 'calibrated' ([string]$promoted.evidence.state) 'Attested evaluation must promote the matching inventory model.'
   Assert-Equal 0.81 ([double]$promoted.evidence.role_scores.standardExecutor) 'Calibration must derive the role score from evaluation cases.'
   Assert-Equal 'fixture-codex-config-v1' ([string]$promoted.evidence.configuration_fingerprint) 'Promoted evidence must bind to the runtime configuration.'
-  Assert-True (Test-Path -LiteralPath (Join-Path $advancedRoutingRoot 'calibration\future-model-promotion.json')) 'Calibration apply must write a metadata-only audit record.'
+  Assert-True (Test-Path -LiteralPath (Join-Path $advancedRoutingRoot 'calibration/future-model-promotion.json')) 'Calibration apply must write a metadata-only audit record.'
   Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/model-inventory.schema.json' -InstancePath $inventoryPath -Message 'Promoted inventory must remain schema-valid.'
 
-  $canaryPolicyRoot = Join-Path $canaryTarget '.agent\routing'
+  $canaryPolicyRoot = Join-Path $canaryTarget '.agent/routing'
   New-Item -ItemType Directory -Path $canaryPolicyRoot -Force | Out-Null
   $canaryPolicyPath = Join-Path $canaryPolicyRoot 'policy.json'
   Set-Content -LiteralPath $canaryPolicyPath -Value '{"project":"owned-canary"}' -Encoding UTF8
@@ -326,7 +326,7 @@ try {
   $canaryInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $canaryApproval.arguments
   Assert-Equal 0 $canaryInstall.exit_code 'Install with existing target routing policy must succeed.'
   Assert-Equal $canaryHash (Get-LizardSha256 $canaryPolicyPath) 'Installer must not clobber an existing target routing policy.'
-  $canaryManifest = Get-Content -LiteralPath (Join-Path $canaryTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
+  $canaryManifest = Get-Content -LiteralPath (Join-Path $canaryTarget '.agent/lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
   $canaryArtifact = @($canaryManifest.artifacts | Where-Object { $_.path -eq '.agent/routing/policy.json' } | Select-Object -First 1)
   Assert-Equal 'user-owned' ([string]$canaryArtifact[0].ownership) 'Existing routing policy must remain user-owned.'
 

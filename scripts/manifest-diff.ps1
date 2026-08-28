@@ -15,12 +15,12 @@ Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Manifest.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
-if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp\manifest-diff' }
+if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp/manifest-diff' }
 if (-not $AllowTargetReportWrite) { Assert-PathOutsideRoot -Path $OutputDir -ExcludedRoot $TargetRoot -Label 'OutputDir' }
 $OutputDir = Initialize-SafeDirectory -Path $OutputDir
 
-$manifestPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.install.json'
-$profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
+$manifestPath = Join-Path $TargetRoot '.agent/lizard-agent-layer.install.json'
+$profilePath = Join-Path $TargetRoot '.agent/project-profile.json'
 if (-not (Test-Path -LiteralPath $manifestPath)) { throw "Missing install manifest: $manifestPath" }
 if (-not (Test-Path -LiteralPath $profilePath)) { throw "Missing installed project profile: $profilePath" }
 
@@ -134,9 +134,9 @@ if ($manifestMemoryMode -notin @('curated', 'private-episodic', 'off')) { Add-Di
 elseif ($profileMemoryMode -ne $manifestMemoryMode) { Add-Diff 'memory-mode-mismatch' $profileMemoryMode "Installed project profile must match manifest mode $manifestMemoryMode." }
 if ($manifestMemoryMode -eq 'off') {
   foreach ($relative in @('.agent/memory', '.agent/protocols/memory-policy.md')) {
-    if (Test-Path -LiteralPath (Join-Path $TargetRoot $relative.Replace('/', '\'))) { Add-Diff 'memory-mode-off-residue' $relative 'Physical memory artifact is forbidden while memory mode is off.' }
+    if (Test-Path -LiteralPath (Join-Path $TargetRoot $relative.Replace('/', '/'))) { Add-Diff 'memory-mode-off-residue' $relative 'Physical memory artifact is forbidden while memory mode is off.' }
   }
-} elseif ($manifestMemoryMode -eq 'curated' -and (Test-Path -LiteralPath (Join-Path $TargetRoot '.agent\memory\episodic'))) {
+} elseif ($manifestMemoryMode -eq 'curated' -and (Test-Path -LiteralPath (Join-Path $TargetRoot '.agent/memory/episodic'))) {
   Add-Diff 'memory-mode-curated-residue' '.agent/memory/episodic' 'Episodic content is not part of curated mode.'
 }
 

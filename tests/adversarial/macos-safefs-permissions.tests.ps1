@@ -8,8 +8,8 @@ if ([string]::IsNullOrWhiteSpace($LayerRoot)) {
   }
 }
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SafeFs.psm1') -Force
 
 # 1. Test canonical macOS temporary path resolutions
 $varPath = ConvertTo-LizardCanonicalTemporaryPath -Path '/var/folders/xx/123/T' -HostId 'macos-pwsh'
@@ -25,7 +25,7 @@ $nonAliased = ConvertTo-LizardCanonicalTemporaryPath -Path '/Users/runner/work' 
 Assert-Equal '/Users/runner/work' $nonAliased 'Non-aliased macOS paths must remain unchanged'
 
 # 2. Test SafeFs file creation and reading across local environment
-$fixtureRoot = Join-Path $LayerRoot '.tmp\tests\safefs-perm-test'
+$fixtureRoot = Join-Path $LayerRoot '.tmp/tests/safefs-perm-test'
 if (Test-Path -LiteralPath $fixtureRoot) { Clear-TestDirectory -Path $fixtureRoot -AllowedRoot (Join-Path $LayerRoot '.tmp') }
 New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
 

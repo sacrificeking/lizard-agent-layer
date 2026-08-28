@@ -2,14 +2,14 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Manifest.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Manifest.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 $fixture = Join-Path $testRoot ("manifest-v3-{0}" -f ([Guid]::NewGuid().ToString('N')))
-$installScript = Join-Path $LayerRoot 'scripts\install.ps1'
-$diffScript = Join-Path $LayerRoot 'scripts\manifest-diff.ps1'
+$installScript = Join-Path $LayerRoot 'scripts/install.ps1'
+$diffScript = Join-Path $LayerRoot 'scripts/manifest-diff.ps1'
 New-Item -ItemType Directory -Path $fixture -Force | Out-Null
 
 function New-Target {
@@ -21,7 +21,7 @@ function New-Target {
 
 function Read-Manifest {
   param([string]$Target)
-  Get-Content -LiteralPath (Join-Path $Target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
+  Get-Content -LiteralPath (Join-Path $Target '.agent/lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
 }
 
 function Find-Artifact {
@@ -31,7 +31,7 @@ function Find-Artifact {
 
 try {
   $ownedTarget = New-Target 'ownership'
-  $protocolRoot = Join-Path $ownedTarget '.agent\protocols'
+  $protocolRoot = Join-Path $ownedTarget '.agent/protocols'
   New-Item -ItemType Directory -Path $protocolRoot -Force | Out-Null
   $userFile = Join-Path $protocolRoot 'permissions.md'
   Set-Content -LiteralPath $userFile -Value 'project-owned-canary' -Encoding UTF8
@@ -40,7 +40,7 @@ try {
   Assert-Equal 0 $install.exit_code 'Fresh v3 install with a pre-existing file must succeed.'
   $manifest = Read-Manifest $ownedTarget
   Assert-Equal 4 ([int]$manifest.schema_version) 'Installer must emit manifest schema v4.'
-  Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/install-manifest.schema.json' -InstancePath (Join-Path $ownedTarget '.agent\lizard-agent-layer.install.json') -Message 'Fresh installer output must satisfy manifest schema v4.'
+  Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/install-manifest.schema.json' -InstancePath (Join-Path $ownedTarget '.agent/lizard-agent-layer.install.json') -Message 'Fresh installer output must satisfy manifest schema v4.'
   $userArtifact = Find-Artifact $manifest '.agent/protocols/permissions.md'
   Assert-Equal 'user-owned' ([string]$userArtifact.ownership) 'Pre-existing files must remain user-owned.'
   $layerArtifact = Find-Artifact $manifest '.agent/protocols/secret-handling.md'
@@ -63,9 +63,9 @@ try {
   Assert-Equal 'codex' ([string]$manifest.adapters[0]) 'Codex must win declared AGENTS.md precedence.'
   Assert-True (@($manifest.adapter_aliases | Where-Object { $_.adapter -eq 'generic-agents-md' -and $_.satisfied_by -eq 'codex' }).Count -eq 1) 'Generic adapter must be recorded as a Codex compatibility alias.'
 
-  $tamperedPath = Join-Path $tamperTarget '.agent\protocols\handoff.md'
+  $tamperedPath = Join-Path $tamperTarget '.agent/protocols/handoff.md'
   $tamperedInstructionPath = Join-Path $tamperTarget 'AGENTS.md'
-  $tamperedMirrorPath = Join-Path $tamperTarget '.agents\skills\git-safety\SKILL.md'
+  $tamperedMirrorPath = Join-Path $tamperTarget '.agents/skills/git-safety/SKILL.md'
   Add-Content -LiteralPath $tamperedPath -Value 'tamper' -Encoding UTF8
   Add-Content -LiteralPath $tamperedInstructionPath -Value 'tamper' -Encoding UTF8
   Add-Content -LiteralPath $tamperedMirrorPath -Value 'tamper' -Encoding UTF8
@@ -96,14 +96,14 @@ try {
     requested_packs = @($v3.requested_packs); packs = @($v3.packs); harnesses = @($v3.harnesses); skills = @($v3.skills)
     managed_paths = @($v3.managed_paths); owned_paths = @($v3.owned_paths); risk_level = [string]$v3.risk_level
   }
-  $legacyManifestPath = Join-Path $legacyTarget '.agent\lizard-agent-layer.install.json'
+  $legacyManifestPath = Join-Path $legacyTarget '.agent/lizard-agent-layer.install.json'
   $v2 | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $legacyManifestPath -Encoding UTF8
   $legacyDiffDir = Join-Path $fixture 'legacy-diff'
   $legacyDiff = Invoke-TestPowerShell -ScriptPath $diffScript -Arguments @('-TargetPath', $legacyTarget, '-LayerRoot', $LayerRoot, '-OutputDir', $legacyDiffDir, '-Strict')
   Assert-False ($legacyDiff.exit_code -eq 0) 'Legacy manifests must never pass strict integrity checks.'
   $legacyDiffReport = Get-Content -LiteralPath (Join-Path $legacyDiffDir 'manifest-diff.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal 'integrity-unknown' ([string]$legacyDiffReport.status) 'Legacy strict diff must report integrity-unknown.'
-  $legacyFile = Join-Path $legacyTarget '.agent\protocols\permissions.md'
+  $legacyFile = Join-Path $legacyTarget '.agent/protocols/permissions.md'
   Set-Content -LiteralPath $legacyFile -Value 'legacy-customization' -Encoding UTF8
   $migrationApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $legacyTarget, '-Profile', 'minimal', '-ForceManaged')
   $migration = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $migrationApproval.arguments

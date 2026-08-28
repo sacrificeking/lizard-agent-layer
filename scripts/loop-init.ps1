@@ -133,7 +133,7 @@ $Planned = New-Object System.Collections.Generic.List[string]
 $Written = New-Object System.Collections.Generic.List[string]
 $Skipped = New-Object System.Collections.Generic.List[string]
 $Managed = New-Object System.Collections.Generic.List[string]
-$loopsRoot = Join-Path $TargetRoot '.agent\loops'
+$loopsRoot = Join-Path $TargetRoot '.agent/loops'
 
 $stateFileRel = Assert-SafeRelativeTargetPath -Path ([string]$PatternDoc.stateFile) -Label 'stateFile'
 $budgetFileRel = Assert-SafeRelativeTargetPath -Path ([string]$PatternDoc.budgetFile) -Label 'budgetFile'
@@ -167,15 +167,15 @@ if (-not (Test-Path -LiteralPath $loopsRoot)) {
   Add-Unique $Skipped '.agent\loops'
 }
 
-Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\LOOP.md') (Join-Path $loopsRoot 'LOOP.md')
-Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\loop-budget.md') (Join-Path $TargetRoot $budgetFileRel)
-Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\loop-run-log.md') (Join-Path $TargetRoot $runLogFileRel)
-Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\loop-constraints.md') (Join-Path $TargetRoot $constraintsFileRel)
-Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\loop-state.md') (Join-Path $TargetRoot $stateFileRel)
-Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\loop-state.md') (Join-Path $loopsRoot 'loop-state.md')
-if ($worktreePolicyRel) { Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\worktree-policy.md') (Join-Path $TargetRoot $worktreePolicyRel) }
-if ($assistedPlanRel) { Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\assisted-fix-plan.md') (Join-Path $TargetRoot $assistedPlanRel) }
-if ($verifierRel) { Copy-Or-Skip (Join-Path $LayerRoot 'templates\loops\loop-verifier-report.md') (Join-Path $TargetRoot $verifierRel) }
+Copy-Or-Skip (Join-Path $LayerRoot 'templates/loops/LOOP.md') (Join-Path $loopsRoot 'LOOP.md')
+Copy-Or-Skip (Join-Path $LayerRoot 'templates/loops/loop-budget.md') (Join-Path $TargetRoot $budgetFileRel)
+Copy-Or-Skip (Join-Path $LayerRoot 'templates/loops/loop-run-log.md') (Join-Path $TargetRoot $runLogFileRel)
+Copy-Or-Skip (Join-Path $LayerRoot 'templates/loops/loop-constraints.md') (Join-Path $TargetRoot $constraintsFileRel)
+Copy-Or-Skip (Join-Path $LayerRoot 'templates/loops/loop-state.md') (Join-Path $TargetRoot $stateFileRel)
+Copy-Or-Skip (Join-Path $LayerRoot 'templates/loops/loop-state.md') (Join-Path $loopsRoot 'loop-state.md')
+if ($worktreePolicyRel) { Copy-Or-Skip (Join-Path $LayerRoot 'templates/loops/worktree-policy.md') (Join-Path $TargetRoot $worktreePolicyRel) }
+if ($assistedPlanRel) { Copy-Or-Skip (Join-Path $LayerRoot 'templates/loops/assisted-fix-plan.md') (Join-Path $TargetRoot $assistedPlanRel) }
+if ($verifierRel) { Copy-Or-Skip (Join-Path $LayerRoot 'templates/loops/loop-verifier-report.md') (Join-Path $TargetRoot $verifierRel) }
 
 $runtimeNow = (Get-Date).ToUniversalTime()
 $runtimeState = [ordered]@{
@@ -192,7 +192,7 @@ $runtimeState = [ordered]@{
   runs = @()
 }
 $runtimeLease = [ordered]@{ schema_version = 1; pattern = [string]$PatternDoc.name; status = 'available'; run_id = $null; owner = $null; acquired_at = $null; expires_at = $null; released_at = $null }
-Write-RuntimeIfMissing (Join-Path $TargetRoot $runtimeBudgetRel) (Get-Content -LiteralPath (Join-Path $LayerRoot 'templates\loops\loop-runtime-budget.json') -Raw)
+Write-RuntimeIfMissing (Join-Path $TargetRoot $runtimeBudgetRel) (Get-Content -LiteralPath (Join-Path $LayerRoot 'templates/loops/loop-runtime-budget.json') -Raw)
 Write-RuntimeIfMissing (Join-Path $TargetRoot $runtimeStateRel) ($runtimeState | ConvertTo-Json -Depth 12)
 Write-RuntimeIfMissing (Join-Path $TargetRoot $runtimeEventsRel) ''
 Write-RuntimeIfMissing (Join-Path $TargetRoot $runtimeLeaseRel) ($runtimeLease | ConvertTo-Json -Depth 8)

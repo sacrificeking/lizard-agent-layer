@@ -2,14 +2,14 @@ param([string]$LayerRoot)
 
 $ErrorActionPreference = 'Stop'
 $RepoRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $LayerRoot).Path }
-Import-Module (Join-Path $RepoRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Plan.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Json.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Plan.psm1') -Force
 
-$fixtureRoot = Join-Path $RepoRoot '.tmp\tests\install-plan-tamper'
+$fixtureRoot = Join-Path $RepoRoot '.tmp/tests/install-plan-tamper'
 if (Test-Path -LiteralPath $fixtureRoot) { Clear-TestDirectory -Path $fixtureRoot -AllowedRoot (Join-Path $RepoRoot '.tmp') }
 New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
-$installScript = Join-Path $RepoRoot 'scripts\install.ps1'
+$installScript = Join-Path $RepoRoot 'scripts/install.ps1'
 
 function Write-TamperedPlan {
   param($Plan, [string]$Path)
@@ -65,7 +65,7 @@ try {
   }
   Assert-False ($actionResult.exit_code -eq 0) 'Canonically redigested target-action tampering must fail closed.'
   Assert-True ($actionResult.output -match 'PLAN_BINDING_INTENT_MISMATCH') 'Target-action tampering must expose an intent mismatch.'
-  Assert-False (Test-Path -LiteralPath (Join-Path $fixtureRoot 'action-tamper\.lizard-agent-layer.lock')) 'Target-action rejection must occur before lock acquisition.'
+  Assert-False (Test-Path -LiteralPath (Join-Path $fixtureRoot 'action-tamper/.lizard-agent-layer.lock')) 'Target-action rejection must occur before lock acquisition.'
 
   $ownershipResult = Invoke-TamperedInstallPlan -Target (Join-Path $fixtureRoot 'ownership-tamper') -CaseName 'ownership-tamper' -Mutate {
     param($plan)

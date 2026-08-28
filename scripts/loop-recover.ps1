@@ -19,7 +19,7 @@ Import-Module (Join-Path $ScriptDir 'Lizard.LoopRuntime.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 $context = Resolve-LizardLoopRuntimeContext -TargetPath $TargetPath -Pattern $Pattern
 if (-not [string]::IsNullOrWhiteSpace($TestNowUtc)) {
-  $testRoot = Join-Path $LayerRoot '.tmp\tests'
+  $testRoot = Join-Path $LayerRoot '.tmp/tests'
   if (-not (Test-Path -LiteralPath $testRoot -PathType Container) -or -not (Test-LizardPathWithinRoot -Path $context.target_root -AuthorizedRoot $testRoot -AllowRoot)) { throw 'LOOP_TEST_CLOCK_FORBIDDEN: TestNowUtc is restricted to LayerRoot/.tmp/tests fixtures.' }
 }
 $now = ConvertTo-LizardLoopUtc -NowUtc $TestNowUtc

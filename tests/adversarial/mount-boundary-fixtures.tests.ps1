@@ -5,8 +5,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SafeFs.psm1') -Force
 
 if (Test-LizardWindows) {
   Write-Host 'SKIP tests\adversarial\mount-boundary-fixtures.tests.ps1: Unix mount fixtures are not applicable on Windows.'

@@ -2,19 +2,19 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 $fixture = Join-Path $testRoot ("regulated-approval-{0}" -f ([Guid]::NewGuid().ToString('N')))
-$routeScript = Join-Path $LayerRoot 'scripts\route-task.ps1'
+$routeScript = Join-Path $LayerRoot 'scripts/route-task.ps1'
 
 try {
   foreach ($modelMode in @('inherit-current', 'inventory-routing')) {
     $target = Join-Path $fixture "$modelMode-target"
-    New-Item -ItemType Directory -Path (Join-Path $target '.agent\routing') -Force | Out-Null
-    Copy-Item -LiteralPath (Join-Path $LayerRoot 'routing-policies\staged-balanced.json') -Destination (Join-Path $target '.agent\routing\policy.json')
+    New-Item -ItemType Directory -Path (Join-Path $target '.agent/routing') -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $LayerRoot 'routing-policies/staged-balanced.json') -Destination (Join-Path $target '.agent/routing/policy.json')
     $profile = [ordered]@{ profile = 'minimal'; routingPolicy = 'staged-balanced'; modelMode = $modelMode }
-    Set-Content -LiteralPath (Join-Path $target '.agent\project-profile.json') -Value ($profile | ConvertTo-Json -Depth 5)
+    Set-Content -LiteralPath (Join-Path $target '.agent/project-profile.json') -Value ($profile | ConvertTo-Json -Depth 5)
 
     foreach ($phase in @('strategy', 'execution', 'verification')) {
       foreach ($risk in @('low', 'medium', 'high')) {
@@ -42,12 +42,12 @@ try {
   }
 
   $invalidTarget = Join-Path $fixture 'invalid-policy-target'
-  New-Item -ItemType Directory -Path (Join-Path $invalidTarget '.agent\routing') -Force | Out-Null
-  $invalidPolicy = Get-Content -LiteralPath (Join-Path $LayerRoot 'routing-policies\staged-balanced.json') -Raw | ConvertFrom-LizardJson
+  New-Item -ItemType Directory -Path (Join-Path $invalidTarget '.agent/routing') -Force | Out-Null
+  $invalidPolicy = Get-Content -LiteralPath (Join-Path $LayerRoot 'routing-policies/staged-balanced.json') -Raw | ConvertFrom-LizardJson
   $invalidPolicy.regulated_data.default_decision = 'route'
-  Set-Content -LiteralPath (Join-Path $invalidTarget '.agent\routing\policy.json') -Value ($invalidPolicy | ConvertTo-Json -Depth 20)
-  Set-Content -LiteralPath (Join-Path $invalidTarget '.agent\project-profile.json') -Value (([ordered]@{ profile = 'minimal'; routingPolicy = 'staged-balanced'; modelMode = 'inherit-current' }) | ConvertTo-Json -Depth 5)
-  $doctor = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\doctor.ps1') -Arguments @('-TargetPath', $invalidTarget, '-Strict')
+  Set-Content -LiteralPath (Join-Path $invalidTarget '.agent/routing/policy.json') -Value ($invalidPolicy | ConvertTo-Json -Depth 20)
+  Set-Content -LiteralPath (Join-Path $invalidTarget '.agent/project-profile.json') -Value (([ordered]@{ profile = 'minimal'; routingPolicy = 'staged-balanced'; modelMode = 'inherit-current' }) | ConvertTo-Json -Depth 5)
+  $doctor = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts/doctor.ps1') -Arguments @('-TargetPath', $invalidTarget, '-Strict')
   Assert-False ($doctor.exit_code -eq 0) 'Doctor must reject a policy that weakens the regulated-data default.'
   Assert-True ($doctor.output -match 'REGULATED_POLICY_INVALID') 'Doctor must expose the stable regulated-policy failure code.'
 

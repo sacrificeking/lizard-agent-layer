@@ -10,7 +10,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
-if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp\packs' }
+if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp/packs' }
 $OutputDir = Initialize-SafeDirectory -Path $OutputDir
 
 $Failures = New-Object System.Collections.Generic.List[string]

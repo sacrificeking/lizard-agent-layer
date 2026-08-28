@@ -2,8 +2,8 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Json.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Json.psm1') -Force
 
 $json = '{"created_at":"2026-08-09T14:46:30.1234567Z","nested":{"expires_at":"2026-08-09T15:16:30.1234567+00:00"},"integer":42,"enabled":true,"empty":null}'
 $document = ConvertFrom-LizardJson -InputObject $json

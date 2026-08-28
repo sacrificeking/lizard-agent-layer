@@ -358,7 +358,7 @@ if ($EffectiveModelMode -eq 'inventory-routing') {
   }
   if ([System.IO.Path]::IsPathRooted($EffectiveModelInventory) -or $EffectiveModelInventory -match '(^|[\\/])\.\.([\\/]|$)') { throw "Invalid model inventory path '$EffectiveModelInventory'." }
   Set-DocProperty $ProfileDoc 'modelInventory' $EffectiveModelInventory.Replace('\\', '/')
-  $inventoryTargetPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $EffectiveModelInventory.Replace('/', '\'))
+  $inventoryTargetPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $EffectiveModelInventory.Replace('/', '/'))
   if (-not (Test-Path -LiteralPath $inventoryTargetPath -PathType Leaf)) {
     Write-Output "Recommended for normal IDE use: omit '-ModelMode inventory-routing' and keep the default inherit-current mode; no model-picker changes are required."
     throw "MODEL_INVENTORY_REQUIRED: Advanced automatic routing is not configured because '$EffectiveModelInventory' is missing. Only a routing administrator or automatic runtime adapter should create this inventory."
@@ -377,7 +377,7 @@ if ($EffectiveModelMode -eq 'inventory-routing') {
   }
   if ([System.IO.Path]::IsPathRooted($EffectiveModelRuntime) -or $EffectiveModelRuntime -match '(^|[\\/])\.\.([\\/]|$)') { throw "Invalid model runtime path '$EffectiveModelRuntime'." }
   Set-DocProperty $ProfileDoc 'modelRuntime' $EffectiveModelRuntime.Replace('\\', '/')
-  $runtimeTargetPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $EffectiveModelRuntime.Replace('/', '\'))
+  $runtimeTargetPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $EffectiveModelRuntime.Replace('/', '/'))
   if (-not (Test-Path -LiteralPath $runtimeTargetPath -PathType Leaf)) {
     Write-Output "Recommended for normal IDE use: omit '-ModelMode inventory-routing' and keep the default inherit-current mode."
     throw "MODEL_RUNTIME_REQUIRED: Advanced automatic routing is not configured because '$EffectiveModelRuntime' is missing. Only enable Advanced mode after an automatic runtime can select and report models without user interaction."
@@ -471,7 +471,7 @@ function Assert-MemoryModeTargetPathAllowed {
   param([string]$Path)
   if ($EffectiveMemoryMode -ne 'off') { return }
   $full = [System.IO.Path]::GetFullPath($Path)
-  $memoryRoot = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot '.agent\memory')).TrimEnd([char[]]@('\', '/'))
+  $memoryRoot = [System.IO.Path]::GetFullPath((Join-Path $TargetRoot '.agent/memory')).TrimEnd([char[]]@('/', '/'))
   if ((Get-LizardPathComparer).Equals($full.TrimEnd([char[]]@('\', '/')), $memoryRoot) -or $full.StartsWith($memoryRoot + [System.IO.Path]::DirectorySeparatorChar, (Get-LizardPathComparison))) {
     throw 'MEMORY_MODE_OFF_WRITE_DENIED: Managed writes under .agent/memory are disabled.'
   }
@@ -617,7 +617,7 @@ function Get-PhysicalMemoryTransitionItems {
     $roots.Add('.agent/memory/episodic') | Out-Null
   }
   foreach ($relativeRoot in @($roots.ToArray())) {
-    $absoluteRoot = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relativeRoot.Replace('/', '\'))
+    $absoluteRoot = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relativeRoot.Replace('/', '/'))
     if (-not (Test-Path -LiteralPath $absoluteRoot)) { continue }
     $queue = New-Object 'System.Collections.Generic.Queue[string]'
     $queue.Enqueue($absoluteRoot)
@@ -766,7 +766,7 @@ function Register-RetiredArtifacts {
     $relative = ConvertTo-LizardArtifactPath ([string]$existing.path)
     $kind = [string]$existing.kind
     if ($kind -notin @('file', 'directory')) { throw "MANIFEST_ARTIFACT_KIND_INVALID: $relative" }
-    $dest = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', '\'))
+    $dest = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', '/'))
     $pathExists = Test-Path -LiteralPath $dest
     $exists = if ($kind -eq 'directory') { Test-Path -LiteralPath $dest -PathType Container } else { Test-Path -LiteralPath $dest -PathType Leaf }
     if ($pathExists -and -not $exists) { throw "MANIFEST_ARTIFACT_KIND_MISMATCH: $relative expected $kind but another filesystem object exists." }
@@ -813,7 +813,7 @@ function Assert-MemoryModePostcondition {
   if (-not $Apply) { return }
   if ($EffectiveMemoryMode -eq 'off') {
     foreach ($relative in @('.agent/memory', '.agent/protocols/memory-policy.md')) {
-      $absolute = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', '\'))
+      $absolute = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', '/'))
       if (Test-Path -LiteralPath $absolute) { throw "MEMORY_MODE_OFF_RESIDUE: Physical artifact remains after transition: $relative" }
     }
     foreach ($record in @($ArtifactRecords.Values)) {
@@ -823,7 +823,7 @@ function Assert-MemoryModePostcondition {
       }
       if ([string]$record.kind -ne 'file' -or [string]$record.lifecycle -ne 'active') { continue }
       if (-not $record.adapter_id -and -not $relative.StartsWith('.agent/protocols/', [System.StringComparison]::OrdinalIgnoreCase)) { continue }
-      $absolute = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', '\'))
+      $absolute = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', '/'))
       if (-not (Test-Path -LiteralPath $absolute -PathType Leaf)) { continue }
       $content = Get-SafeContent -AuthorizedRoot $TargetRoot -Path $absolute
       if ($content -match '(?i)\.agent[/\\]memory|memory[/\\](?:personal|semantic|working|episodic)') {
@@ -831,7 +831,7 @@ function Assert-MemoryModePostcondition {
       }
     }
   } elseif ($EffectiveMemoryMode -eq 'curated') {
-    $episodic = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot '.agent\memory\episodic')
+    $episodic = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot '.agent/memory/episodic')
     if (Test-Path -LiteralPath $episodic) { throw 'MEMORY_MODE_CURATED_RESIDUE: Episodic content remains after transition.' }
   }
 }
@@ -1013,7 +1013,7 @@ function Get-InstallPlanInputs {
   foreach ($adapterName in @($SelectedHarnesses)) { Add-LayerTree -RelativeRoot ("adapters\{0}" -f $adapterName) }
   foreach ($skillName in @($ProfileDoc.skills)) { Add-LayerTree -RelativeRoot ("skills\{0}" -f $skillName) }
   Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot $AgentGitignoreSource) -DisplayPath $AgentGitignoreSource
-  Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot 'templates\operator-card.md') -DisplayPath 'templates/operator-card.md'
+  Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot 'templates/operator-card.md') -DisplayPath 'templates/operator-card.md'
   foreach ($spec in @($MemoryFileSpecs.ToArray())) {
     Add-InputFile -Scope layer -Root $LayerRoot -Path (Join-Path $LayerRoot ([string]$spec.source)) -DisplayPath ([string]$spec.source)
   }
@@ -1348,7 +1348,7 @@ function Assert-ApprovedInstallPlanCurrent {
 }
 
 function Get-CurrentInstallProbePlan {
-  $probeRoot = Initialize-SafeDirectory -Path (Join-Path $LayerRoot '.tmp\plan-probes')
+  $probeRoot = Initialize-SafeDirectory -Path (Join-Path $LayerRoot '.tmp/plan-probes')
   $probePath = Join-Path $probeRoot ("lizard-install-plan-probe-{0}.json" -f ([Guid]::NewGuid().ToString('N')))
   $probeDigestPath = "$probePath.sha256"
   $hostPath = Get-LizardPowerShellHostPath
@@ -1400,13 +1400,13 @@ function Assert-ApprovedInstallCriticalBindingsCurrent {
   if (-not $Apply) { return }
   foreach ($inputRecord in @($ApprovedPlan.intent.inputs)) {
     $root = if ([string]$inputRecord.scope -eq 'target') { $TargetRoot } else { $LayerRoot }
-    $path = Resolve-SafeTargetDestination -AuthorizedRoot $root -DestinationPath (Join-Path $root ([string]$inputRecord.path).Replace('/', '\'))
+    $path = Resolve-SafeTargetDestination -AuthorizedRoot $root -DestinationPath (Join-Path $root ([string]$inputRecord.path).Replace('/', '/'))
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "PLAN_BINDING_INPUT_MISMATCH: Bound input is missing: $($inputRecord.scope):$($inputRecord.path)" }
     $currentHash = Get-SafeFileHash -AuthorizedRoot $root -Path $path
     if ($currentHash -ne [string]$inputRecord.sha256) { throw "PLAN_BINDING_INPUT_MISMATCH: Bound input changed: $($inputRecord.scope):$($inputRecord.path)" }
   }
   foreach ($entry in @($ApprovedPlan.intent.target_entries)) {
-    $path = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot ([string]$entry.path).Replace('/', '\'))
+    $path = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot ([string]$entry.path).Replace('/', '/'))
     $kind = if (Test-Path -LiteralPath $path -PathType Leaf) { 'file' } elseif (Test-Path -LiteralPath $path -PathType Container) { 'directory' } elseif (Test-Path -LiteralPath $path) { 'other' } else { 'absent' }
     if ($kind -ne [string]$entry.precondition_kind) { throw "PLAN_BINDING_TARGET_MISMATCH: Target kind changed: $($entry.path)" }
     if ($kind -eq 'file') {
@@ -1469,7 +1469,7 @@ Ensure-Dir (Join-Path $TargetRoot ".agent\routing\receipts\decisions")
 Ensure-Dir (Join-Path $TargetRoot ".agent\routing\receipts\executions")
 
 Copy-IfMissing (Join-Path $LayerRoot $AgentGitignoreSource) (Join-Path $TargetRoot ".agent\.gitignore")
-Copy-IfMissing (Join-Path $LayerRoot 'templates\operator-card.md') (Join-Path $TargetRoot ".agent\USING.md")
+Copy-IfMissing (Join-Path $LayerRoot 'templates/operator-card.md') (Join-Path $TargetRoot ".agent\USING.md")
 if ($SelectedPacks.Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($MemoryMode) -or $null -ne $existingInstallManifest -or -not [string]::IsNullOrWhiteSpace($RoutingPolicy) -or -not [string]::IsNullOrWhiteSpace($ModelMode) -or -not [string]::IsNullOrWhiteSpace($ModelInventory) -or -not [string]::IsNullOrWhiteSpace($ModelRuntime)) {
   Write-IfMissing -Dest (Join-Path $TargetRoot ".agent\project-profile.json") -Content ($ProfileDoc | ConvertTo-Json -Depth 10) -SourcePath 'generated:project-profile'
 } else {

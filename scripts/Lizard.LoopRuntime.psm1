@@ -48,7 +48,7 @@ function Resolve-LizardLoopRuntimeContext {
   [CmdletBinding()]
   param([Parameter(Mandatory = $true)][string]$TargetPath, [string]$Pattern)
   $targetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
-  $manifestPath = Resolve-SafeTargetDestination -AuthorizedRoot $targetRoot -DestinationPath (Join-Path $targetRoot '.agent\loops\lizard-agent-layer.loop-install.json')
+  $manifestPath = Resolve-SafeTargetDestination -AuthorizedRoot $targetRoot -DestinationPath (Join-Path $targetRoot '.agent/loops/lizard-agent-layer.loop-install.json')
   $manifest = Read-LizardLoopJson -Path $manifestPath -Code 'LOOP_MANIFEST_INVALID'
   $patternName = if ([string]::IsNullOrWhiteSpace($Pattern)) { [string]$manifest.pattern } else { $Pattern }
   if ([string]::IsNullOrWhiteSpace($patternName) -or $patternName -ne [string]$manifest.pattern) {

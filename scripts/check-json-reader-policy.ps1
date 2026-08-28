@@ -11,12 +11,12 @@ $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 
 $exemptFiles = New-Object System.Collections.Generic.HashSet[string]
 # The canonical wrapper itself is exempt
-$exemptFiles.Add((Join-Path $LayerRoot 'scripts\Lizard.Json.psm1')) | Out-Null
+$exemptFiles.Add((Join-Path $LayerRoot 'scripts/Lizard.Json.psm1')) | Out-Null
 # This policy linter itself
-$exemptFiles.Add((Join-Path $LayerRoot 'scripts\check-json-reader-policy.ps1')) | Out-Null
+$exemptFiles.Add((Join-Path $LayerRoot 'scripts/check-json-reader-policy.ps1')) | Out-Null
 # Unit tests testing the policy linter or ConvertFrom-LizardJson internals
-$exemptFiles.Add((Join-Path $LayerRoot 'tests\unit\json-reader-policy.tests.ps1')) | Out-Null
-$exemptFiles.Add((Join-Path $LayerRoot 'tests\unit\json.tests.ps1')) | Out-Null
+$exemptFiles.Add((Join-Path $LayerRoot 'tests/unit/json-reader-policy.tests.ps1')) | Out-Null
+$exemptFiles.Add((Join-Path $LayerRoot 'tests/unit/json.tests.ps1')) | Out-Null
 
 $scanDirs = @('scripts', 'tests')
 $violations = New-Object System.Collections.Generic.List[object]

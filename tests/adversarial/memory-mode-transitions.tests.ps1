@@ -2,12 +2,12 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 $fixture = Join-Path $testRoot ("memory-mode-transitions-{0}" -f ([Guid]::NewGuid().ToString('N')))
-$installScript = Join-Path $LayerRoot 'scripts\install.ps1'
-$doctorScript = Join-Path $LayerRoot 'scripts\doctor.ps1'
+$installScript = Join-Path $LayerRoot 'scripts/install.ps1'
+$doctorScript = Join-Path $LayerRoot 'scripts/doctor.ps1'
 New-Item -ItemType Directory -Path $fixture -Force | Out-Null
 
 function Invoke-ApprovedMode {
@@ -30,7 +30,7 @@ function New-InstalledModeTarget {
 
 function Assert-ManifestMode {
   param([string]$Target, [string]$Mode)
-  $manifest = Get-Content -LiteralPath (Join-Path $Target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
+  $manifest = Get-Content -LiteralPath (Join-Path $Target '.agent/lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal $Mode ([string]$manifest.memory_mode) "Manifest must remain in mode $Mode."
   return $manifest
 }
@@ -52,7 +52,7 @@ try {
   $toOff = Invoke-ApprovedMode -Target $roundtrip -Mode 'off'
   Assert-Equal 0 $toOff.apply.exit_code "curated -> off must succeed: $($toOff.apply.output)"
   $offManifest = Assert-ManifestMode -Target $roundtrip -Mode 'off'
-  Assert-False (Test-Path -LiteralPath (Join-Path $roundtrip '.agent\memory')) 'curated -> off must remove the physical memory namespace.'
+  Assert-False (Test-Path -LiteralPath (Join-Path $roundtrip '.agent/memory')) 'curated -> off must remove the physical memory namespace.'
   Assert-True (@($offManifest.artifacts | Where-Object { ([string]$_.path).StartsWith('.agent/memory') -and $_.lifecycle -eq 'removed' }).Count -gt 0) 'Off manifest must retain non-executable removed tombstones.'
   $offPlan = Get-Content -LiteralPath $toOff.approval.plan_path -Raw | ConvertFrom-LizardJson
   foreach ($entry in @($offPlan.intent.target_entries | Where-Object { $_.action -eq 'remove' })) {
@@ -64,22 +64,22 @@ try {
   $toPrivate = Invoke-ApprovedMode -Target $roundtrip -Mode 'private-episodic'
   Assert-Equal 0 $toPrivate.apply.exit_code "off -> private-episodic must succeed: $($toPrivate.apply.output)"
   $null = Assert-ManifestMode -Target $roundtrip -Mode 'private-episodic'
-  Assert-True (Test-Path -LiteralPath (Join-Path $roundtrip '.agent\memory\episodic\EPISODES.md') -PathType Leaf) 'Private episodic seed must be reactivated.'
+  Assert-True (Test-Path -LiteralPath (Join-Path $roundtrip '.agent/memory/episodic/EPISODES.md') -PathType Leaf) 'Private episodic seed must be reactivated.'
 
   $toCurated = Invoke-ApprovedMode -Target $roundtrip -Mode 'curated'
   Assert-Equal 0 $toCurated.apply.exit_code "private-episodic -> curated must succeed for unchanged seed: $($toCurated.apply.output)"
   $null = Assert-ManifestMode -Target $roundtrip -Mode 'curated'
-  Assert-False (Test-Path -LiteralPath (Join-Path $roundtrip '.agent\memory\episodic')) 'Curated transition must remove unchanged episodic namespace.'
+  Assert-False (Test-Path -LiteralPath (Join-Path $roundtrip '.agent/memory/episodic')) 'Curated transition must remove unchanged episodic namespace.'
 
   $modified = New-InstalledModeTarget -Name 'modified' -Mode 'curated'
-  Add-Content -LiteralPath (Join-Path $modified '.agent\memory\personal\PREFERENCES.md') -Value 'local preference'
+  Add-Content -LiteralPath (Join-Path $modified '.agent/memory/personal/PREFERENCES.md') -Value 'local preference'
   $modifiedPreview = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $modified, '-Profile', 'minimal', '-Harnesses', 'codex', '-MemoryMode', 'off')
   Assert-True ($modifiedPreview.exit_code -ne 0) 'Modified curated content must block transition to off.'
   Assert-True ($modifiedPreview.output -match 'MEMORY_TRANSITION_MODIFIED_CONTENT') "Modified transition must expose stable code: $($modifiedPreview.output)"
   $null = Assert-ManifestMode -Target $modified -Mode 'curated'
 
   $unknown = New-InstalledModeTarget -Name 'unknown' -Mode 'private-episodic'
-  Set-Content -LiteralPath (Join-Path $unknown '.agent\memory\episodic\private-note.md') -Value 'private note'
+  Set-Content -LiteralPath (Join-Path $unknown '.agent/memory/episodic/private-note.md') -Value 'private note'
   $unknownPreview = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $unknown, '-Profile', 'minimal', '-Harnesses', 'codex', '-MemoryMode', 'off')
   Assert-True ($unknownPreview.exit_code -ne 0) 'Unknown episodic content must block transition to off.'
   Assert-True ($unknownPreview.output -match 'MEMORY_TRANSITION_USER_CONTENT') "Unknown transition must expose stable code: $($unknownPreview.output)"
@@ -88,7 +88,7 @@ try {
   $inserted = New-InstalledModeTarget -Name 'inserted-after-preview' -Mode 'curated'
   $insertedBase = @('-TargetPath', $inserted, '-Profile', 'minimal', '-Harnesses', 'codex', '-MemoryMode', 'off')
   $insertedApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments $insertedBase
-  Set-Content -LiteralPath (Join-Path $inserted '.agent\memory\inserted-after-preview.md') -Value 'late content'
+  Set-Content -LiteralPath (Join-Path $inserted '.agent/memory/inserted-after-preview.md') -Value 'late content'
   $insertedApply = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $insertedApproval.arguments
   Assert-True ($insertedApply.exit_code -ne 0) 'Content inserted after preview must invalidate apply.'
   Assert-True ($insertedApply.output -match 'MEMORY_TRANSITION_USER_CONTENT|PLAN_BINDING_PROBE_FAILED') "Late insertion must fail closed: $($insertedApply.output)"
@@ -108,7 +108,7 @@ try {
   Assert-True ($fault.apply.exit_code -ne 0) 'Injected transition failure must fail apply.'
   Assert-True ($fault.apply.output -match 'TRANSACTION_FAULT_INJECTED') "Fault injection must expose transaction code: $($fault.apply.output)"
   $null = Assert-ManifestMode -Target $rollback -Mode 'curated'
-  Assert-True (Test-Path -LiteralPath (Join-Path $rollback '.agent\memory\personal\PREFERENCES.md') -PathType Leaf) 'Rollback must restore removed memory bytes.'
+  Assert-True (Test-Path -LiteralPath (Join-Path $rollback '.agent/memory/personal/PREFERENCES.md') -PathType Leaf) 'Rollback must restore removed memory bytes.'
   $recovery = Invoke-ApprovedMode -Target $rollback -Mode 'off'
   Assert-Equal 0 $recovery.apply.exit_code "Fresh transition after rollback must succeed: $($recovery.apply.output)"
 

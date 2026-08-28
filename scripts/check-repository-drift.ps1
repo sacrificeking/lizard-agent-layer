@@ -9,10 +9,10 @@ if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
 }
 $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 
-$jsonModule = Join-Path $RepoRoot 'scripts\Lizard.Json.psm1'
-$safeFsModule = Join-Path $RepoRoot 'scripts\Lizard.SafeFs.psm1'
-$profilesModule = Join-Path $RepoRoot 'scripts\Lizard.Profiles.psm1'
-$hostModule = Join-Path $RepoRoot 'scripts\Lizard.Host.psm1'
+$jsonModule = Join-Path $RepoRoot 'scripts/Lizard.Json.psm1'
+$safeFsModule = Join-Path $RepoRoot 'scripts/Lizard.SafeFs.psm1'
+$profilesModule = Join-Path $RepoRoot 'scripts/Lizard.Profiles.psm1'
+$hostModule = Join-Path $RepoRoot 'scripts/Lizard.Host.psm1'
 
 Import-Module $jsonModule -Force
 Import-Module $safeFsModule -Force
@@ -43,7 +43,7 @@ foreach ($profileFile in $profileFiles) {
 }
 
 # 2. CI Matrix Consistency Verification
-$ciWorkflowPath = Join-Path $RepoRoot '.github\workflows\lizard-agent-layer-ci.yml'
+$ciWorkflowPath = Join-Path $RepoRoot '.github/workflows/lizard-agent-layer-ci.yml'
 if (Test-Path -LiteralPath $ciWorkflowPath -PathType Leaf) {
   $ciContent = Get-Content -LiteralPath $ciWorkflowPath -Raw
   if ($ciContent -match 'supabase-react-finance') {
@@ -65,7 +65,7 @@ if (Test-Path -LiteralPath $ciWorkflowPath -PathType Leaf) {
 }
 
 # 3. JSON Reader Policy Linter
-$policyChecker = Join-Path $RepoRoot 'scripts\check-json-reader-policy.ps1'
+$policyChecker = Join-Path $RepoRoot 'scripts/check-json-reader-policy.ps1'
 if (Test-Path -LiteralPath $policyChecker -PathType Leaf) {
   $policyOutput = & $PowerShellHost @PowerShellFilePrefix $policyChecker -LayerRoot $RepoRoot 2>&1 | Out-String
   if ($LASTEXITCODE -ne 0) {
@@ -76,12 +76,12 @@ if (Test-Path -LiteralPath $policyChecker -PathType Leaf) {
 }
 
 # 4. Schema Validator Bindings Verification
-$validatorScript = Join-Path $RepoRoot 'tools\schema-validator\validate.mjs'
-$bindingsFile = Join-Path $RepoRoot 'tools\schema-validator\bindings.json'
+$validatorScript = Join-Path $RepoRoot 'tools/schema-validator/validate.mjs'
+$bindingsFile = Join-Path $RepoRoot 'tools/schema-validator/bindings.json'
 if (Test-Path -LiteralPath $bindingsFile -PathType Leaf) {
   $bindingsDoc = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $bindingsFile -Raw)
   foreach ($binding in @($bindingsDoc.bindings)) {
-    $schemaPath = Join-Path $RepoRoot ([string]$binding.schema).Replace('/', '\')
+    $schemaPath = Join-Path $RepoRoot ([string]$binding.schema).Replace('/', '/')
     if (-not (Test-Path -LiteralPath $schemaPath -PathType Leaf)) {
       $errors.Add("DRIFT: Binding references missing schema file '$($binding.schema)'.")
     }

@@ -2,18 +2,18 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'tests\TestTrustHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.LoopEvidence.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Trust.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestTrustHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.LoopEvidence.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Trust.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 $fixture = Join-Path $testRoot ("signed-loop-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $target = Join-Path $fixture 'target'; $operation = ('1' * 32); $now = [DateTimeOffset]'2026-08-22T10:00:00Z'
-function Invoke-Run { param([string[]]$Arguments, [string]$Name) Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\loop-run.ps1') -Arguments (@('-LayerRoot', $LayerRoot, '-TargetPath', $target, '-OutputDir', (Join-Path $fixture $Name)) + $Arguments) }
+function Invoke-Run { param([string[]]$Arguments, [string]$Name) Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts/loop-run.ps1') -Arguments (@('-LayerRoot', $LayerRoot, '-TargetPath', $target, '-OutputDir', (Join-Path $fixture $Name)) + $Arguments) }
 try {
   New-Item -ItemType Directory -Path $target -Force | Out-Null
-  $init = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\loop-init.ps1') -Arguments @('-LayerRoot', $LayerRoot, '-TargetPath', $target, '-Pattern', 'minimal-fix-assist', '-Apply', '-OutputDir', (Join-Path $fixture 'init'))
+  $init = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts/loop-init.ps1') -Arguments @('-LayerRoot', $LayerRoot, '-TargetPath', $target, '-Pattern', 'minimal-fix-assist', '-Apply', '-OutputDir', (Join-Path $fixture 'init'))
   Assert-Equal 0 $init.exit_code "Loop init failed: $($init.output)"
   $start = Invoke-Run @('-Action','Start','-RunId','signed-1','-ItemId','fix','-Owner','implementer-01','-OperationId',$operation,'-TokenEstimate','10','-TestNowUtc',$now.ToString('o'),'-Apply') 'start'
   Assert-Equal 0 $start.exit_code "Signed loop start failed: $($start.output)"

@@ -8,8 +8,8 @@ if ([string]::IsNullOrWhiteSpace($LayerRoot)) {
   }
 }
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Plan.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Plan.psm1') -Force
 
 # 1. Test low-risk minimal profile policy
 $lowRisk = Get-LizardOperationApprovalPolicy -OperationKind 'install' -RiskLevel 'low' -Profile 'minimal'

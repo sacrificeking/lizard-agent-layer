@@ -2,8 +2,8 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot
 
 $ErrorActionPreference = 'Stop'
 $RepoRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $LayerRoot).Path }
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Trust.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Json.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Trust.psm1') -Force
 
 function Assert-True { param([bool]$Condition, [string]$Message) if (-not $Condition) { throw "ASSERT_TRUE_FAILED: $Message" } }
 function Assert-ThrowsCode {
@@ -14,7 +14,7 @@ function Assert-ThrowsCode {
 }
 function Write-Json { param([string]$Path, $Value) Set-Content -LiteralPath $Path -Value ($Value | ConvertTo-Json -Depth 20) -Encoding UTF8 }
 
-$testRoot = Join-Path $RepoRoot ('.tmp\tests\signed-evidence-' + [Guid]::NewGuid().ToString('N'))
+$testRoot = Join-Path $RepoRoot ('.tmp/tests/signed-evidence-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 try {
   $rsa = [Security.Cryptography.RSA]::Create()

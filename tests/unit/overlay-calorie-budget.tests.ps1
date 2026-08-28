@@ -4,10 +4,10 @@ $ErrorActionPreference = 'Stop'
 if (-not $LayerRoot) { $LayerRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot) }
 if (-not $LayerRoot) { $LayerRoot = (Get-Location).Path }
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 
-$promptTrustPath = Join-Path $LayerRoot 'protocols\prompt-trust.md'
-$permissionsPath = Join-Path $LayerRoot 'protocols\permissions.md'
+$promptTrustPath = Join-Path $LayerRoot 'protocols/prompt-trust.md'
+$permissionsPath = Join-Path $LayerRoot 'protocols/permissions.md'
 $promptTrustLines = (Get-Content -LiteralPath $promptTrustPath).Count
 $permissionsLines = (Get-Content -LiteralPath $permissionsPath).Count
 
@@ -39,12 +39,12 @@ foreach ($adapter in $adapters) {
 }
 
 # 4. Cursor MDC verification: alwaysApply must be false, no global catch-all glob
-$cursorMdc = Get-Content -LiteralPath (Join-Path $LayerRoot 'adapters\cursor\lizard-agent-layer.mdc') -Raw
+$cursorMdc = Get-Content -LiteralPath (Join-Path $LayerRoot 'adapters/cursor/lizard-agent-layer.mdc') -Raw
 Assert-True ($cursorMdc -match 'alwaysApply:\s*false') "Cursor MDC must set alwaysApply: false."
 Assert-False ($cursorMdc -match 'globs:\s*\["\*\*/\*"\]') "Cursor MDC must not use global catch-all globs."
 
 # 5. Standard & Enterprise profile skill list verification
-$standardProfile = Get-Content -LiteralPath (Join-Path $LayerRoot 'profiles\standard.json') -Raw | ConvertFrom-LizardJson
+$standardProfile = Get-Content -LiteralPath (Join-Path $LayerRoot 'profiles/standard.json') -Raw | ConvertFrom-LizardJson
 $skills = @($standardProfile.skills)
 Assert-Equal 6 $skills.Count "Standard profile must default to the 6 core matching skills."
 Assert-True ($skills -contains 'git-safety') "Standard profile must include git-safety."
@@ -54,7 +54,7 @@ Assert-True ($skills -contains 'project-decision-harvest') "Standard profile mus
 Assert-True ($skills -contains 'repo-grounded-change') "Standard profile must include repo-grounded-change."
 Assert-True ($skills -contains 'premortem') "Standard profile must include premortem."
 
-$enterpriseProfile = Get-Content -LiteralPath (Join-Path $LayerRoot 'profiles\enterprise-fullstack.json') -Raw | ConvertFrom-LizardJson
+$enterpriseProfile = Get-Content -LiteralPath (Join-Path $LayerRoot 'profiles/enterprise-fullstack.json') -Raw | ConvertFrom-LizardJson
 $enterpriseSkills = @($enterpriseProfile.skills)
 Assert-Equal 6 $enterpriseSkills.Count "Enterprise profile must default to the 6 core matching skills (diet)."
 

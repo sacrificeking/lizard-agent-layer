@@ -25,7 +25,7 @@ $fileRows = @()
 function Add-Failure { param([string]$Message) $script:failures += $Message }
 function Get-FirstHeading {
   param([string]$Relative)
-  $resolved = Join-Path $TargetRoot ($Relative.Replace('/', '\'))
+  $resolved = Join-Path $TargetRoot ($Relative.Replace('/', '/'))
   if (-not (Test-Path -LiteralPath $resolved)) { return $null }
   $lines = @(Get-Content -LiteralPath $resolved -TotalCount 40)
   foreach ($line in $lines) {
@@ -40,7 +40,7 @@ function Add-FileStatus {
     $script:fileRows += [pscustomobject]@{ label = $Label; path = ''; exists = $false; heading = $null }
     return
   }
-  $path = Join-Path $TargetRoot ($Relative.Replace('/', '\'))
+  $path = Join-Path $TargetRoot ($Relative.Replace('/', '/'))
   $exists = Test-Path -LiteralPath $path
   $heading = $null
   if ($exists) { $heading = [string](Get-FirstHeading -Relative $Relative) }
@@ -48,7 +48,7 @@ function Add-FileStatus {
   if (-not $exists) { Add-Failure "$Label missing: $Relative" }
 }
 
-$manifestPath = Join-Path $TargetRoot '.agent\loops\lizard-agent-layer.loop-install.json'
+$manifestPath = Join-Path $TargetRoot '.agent/loops/lizard-agent-layer.loop-install.json'
 $manifest = $null
 $runtime = $null
 if (Test-Path -LiteralPath $manifestPath) {
@@ -85,7 +85,7 @@ $fleetSummary = [ordered]@{
   installed_patterns = @()
   total_events = 0
 }
-$runtimeBase = Join-Path $TargetRoot '.agent\loops\runtime'
+$runtimeBase = Join-Path $TargetRoot '.agent/loops/runtime'
 if (Test-Path -LiteralPath $runtimeBase) {
   $runtimeDirs = @(Get-ChildItem -LiteralPath $runtimeBase -Directory -ErrorAction SilentlyContinue)
   foreach ($rDir in $runtimeDirs) {

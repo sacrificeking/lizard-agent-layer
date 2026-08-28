@@ -14,7 +14,7 @@ Import-Module (Join-Path $ScriptDir 'Lizard.Host.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.QualityEvidence.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
-if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp\quality' }
+if ([string]::IsNullOrWhiteSpace($OutputDir)) { $OutputDir = Join-Path $LayerRoot '.tmp/quality' }
 $OutputDir = Initialize-SafeDirectory -Path $OutputDir
 
 function Read-JsonFile { param([string]$Path) ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $LayerRoot -Path $Path -Raw) }
@@ -186,7 +186,7 @@ function Measure-Adapter {
   param([System.IO.DirectoryInfo]$Directory, [object]$RiskSignals)
   $manifestPath = Join-Path $Directory.FullName 'adapter.json'
   $adapter = Read-JsonFile $manifestPath
-  $instructionPath = Join-Path $Directory.FullName ([string]$adapter.instruction.src).Replace('/', '\')
+  $instructionPath = Join-Path $Directory.FullName ([string]$adapter.instruction.src).Replace('/', '/')
   $text = if (Test-Path -LiteralPath $instructionPath) { Get-Content -LiteralPath $instructionPath -Raw } else { '' }
   $dimensions = New-Object System.Collections.Generic.List[object]
   $metadata = 0
@@ -271,12 +271,12 @@ function Measure-Profile {
   }
 }
 
-$rubric = Read-JsonFile (Join-Path $LayerRoot 'registry\quality-rubric.json')
-$riskSignals = Read-JsonFile (Join-Path $LayerRoot 'registry\risk-signals.json')
-$maturityLevels = Read-JsonFile (Join-Path $LayerRoot 'registry\maturity-levels.json')
-$behavioralPolicy = Read-JsonFile (Join-Path $LayerRoot 'registry\behavioral-readiness.json')
+$rubric = Read-JsonFile (Join-Path $LayerRoot 'registry/quality-rubric.json')
+$riskSignals = Read-JsonFile (Join-Path $LayerRoot 'registry/risk-signals.json')
+$maturityLevels = Read-JsonFile (Join-Path $LayerRoot 'registry/maturity-levels.json')
+$behavioralPolicy = Read-JsonFile (Join-Path $LayerRoot 'registry/behavioral-readiness.json')
 if ([string]::IsNullOrWhiteSpace($FocusedReportPath)) {
-  $focusedReportPath = Join-Path $LayerRoot '.tmp\tests\focused-test-report.json'
+  $focusedReportPath = Join-Path $LayerRoot '.tmp/tests/focused-test-report.json'
 } else {
   $focusedReportCandidate = if ([System.IO.Path]::IsPathRooted($FocusedReportPath)) { $FocusedReportPath } else { Join-Path $LayerRoot $FocusedReportPath }
   $focusedReportPath = Resolve-SafeTargetDestination -AuthorizedRoot $LayerRoot -DestinationPath $focusedReportCandidate

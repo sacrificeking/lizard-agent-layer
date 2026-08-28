@@ -2,22 +2,22 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 $fixture = Join-Path $testRoot ("install-uninstall-roundtrip-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $target = Join-Path $fixture 'target'
 $reports = Join-Path $fixture 'reports'
-$install = Join-Path $LayerRoot 'scripts\install.ps1'
-$uninstall = Join-Path $LayerRoot 'scripts\uninstall.ps1'
+$install = Join-Path $LayerRoot 'scripts/install.ps1'
+$uninstall = Join-Path $LayerRoot 'scripts/uninstall.ps1'
 New-Item -ItemType Directory -Path $target, $reports -Force | Out-Null
 
 try {
   $installApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Profile', 'minimal', '-Harnesses', 'codex')
   $installApply = Invoke-TestPowerShell -ScriptPath $install -Arguments $installApproval.arguments
   Assert-Equal 0 $installApply.exit_code "Real installer apply failed: $($installApply.output)"
-  $manifestPath = Join-Path $target '.agent\lizard-agent-layer.install.json'
+  $manifestPath = Join-Path $target '.agent/lizard-agent-layer.install.json'
   Assert-True (Test-Path -LiteralPath $manifestPath -PathType Leaf) 'Real installation must produce a schema-v4 manifest.'
   $installedManifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-LizardJson
   foreach ($nestedDirectory in @('.agent/memory', '.agents', '.agent/skills/research-audit/references', '.agent/skills/research-audit/tests')) {
@@ -27,7 +27,7 @@ try {
     Assert-Equal 'layer-owned' ([string]$directoryRecord[0].ownership) "New nested skill directories must remain removable layer-owned artifacts: $nestedDirectory"
   }
 
-  $modifiedPath = Join-Path $target '.agent\memory\personal\PREFERENCES.md'
+  $modifiedPath = Join-Path $target '.agent/memory/personal/PREFERENCES.md'
   Add-Content -LiteralPath $modifiedPath -Value 'local preference canary' -Encoding UTF8
   $modifiedHash = (Get-FileHash -LiteralPath $modifiedPath -Algorithm SHA256).Hash.ToLowerInvariant()
   

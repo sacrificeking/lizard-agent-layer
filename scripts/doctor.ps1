@@ -67,8 +67,8 @@ try {
   Add-Fail "TRANSACTION_EVIDENCE_INVALID: $($_.Exception.Message)"
 }
 
-$profilePath = Join-Path $TargetRoot '.agent\project-profile.json'
-$manifestPath = Join-Path $TargetRoot '.agent\lizard-agent-layer.install.json'
+$profilePath = Join-Path $TargetRoot '.agent/project-profile.json'
+$manifestPath = Join-Path $TargetRoot '.agent/lizard-agent-layer.install.json'
 $profile = $null
 $manifest = $null
 $harnesses = @()
@@ -109,7 +109,7 @@ if ($null -ne $manifest -and $manifestSchema -ge 3 -and $manifestSchema -le 4) {
   catch { Add-Fail $_.Exception.Message }
   foreach ($artifact in @($manifest.artifacts)) {
     $relative = ConvertTo-LizardArtifactPath ([string]$artifact.path)
-    try { $artifactPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', '\')) }
+    try { $artifactPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $relative.Replace('/', '/')) }
     catch { Add-Fail "unsafe artifact path ${relative}: $($_.Exception.Message)"; continue }
     try { $lifecycle = Get-LizardArtifactLifecycle -Record $artifact }
     catch { Add-Fail $_.Exception.Message; continue }
@@ -168,7 +168,7 @@ foreach ($file in $expectedFiles) {
   Check-File $file -Required | Out-Null
 }
 
-$skillManifestPath = Join-Path $TargetRoot '.agent\skills\_manifest.jsonl'
+$skillManifestPath = Join-Path $TargetRoot '.agent/skills/_manifest.jsonl'
 if (Test-Path -LiteralPath $skillManifestPath -PathType Leaf) {
   try {
     $skillRecords = @{}
@@ -180,7 +180,7 @@ if (Test-Path -LiteralPath $skillManifestPath -PathType Leaf) {
       foreach ($name in $required) { if ($names -notcontains $name) { throw "skill manifest record is missing '$name'." } }
       foreach ($name in $names) { if ($required -notcontains $name) { throw "skill manifest record contains unsupported '$name'." } }
       if ([int64]$record.schema_version -ne 1 -or [string]$record.status -ne 'active' -or $skillRecords.ContainsKey([string]$record.name)) { throw "skill manifest record '$($record.name)' has invalid schema, status, or duplicate name." }
-      $package = Read-LizardSkillPackage -SkillsRoot (Join-Path $TargetRoot '.agent\skills') -Name ([string]$record.name) -LayerVersion ([string]$manifest.layer_version)
+      $package = Read-LizardSkillPackage -SkillsRoot (Join-Path $TargetRoot '.agent/skills') -Name ([string]$record.name) -LayerVersion ([string]$manifest.layer_version)
       if ([string]$record.version -ne [string]$package.metadata.version -or [string]$record.source -ne ".agent/skills/$($record.name)/SKILL.md" -or [string]$record.metadata -ne ".agent/skills/$($record.name)/skill.json") { throw "skill manifest record '$($record.name)' does not match its installed package." }
       $actualMetadataHash = (Get-FileHash -LiteralPath $package.metadata_path -Algorithm SHA256).Hash.ToLowerInvariant()
       if ([string]$record.metadata_sha256 -ne $actualMetadataHash) { throw "skill manifest metadata hash differs for '$($record.name)'." }
@@ -200,11 +200,11 @@ if (Test-Path -LiteralPath $skillManifestPath -PathType Leaf) {
   } catch { Add-Fail "SKILL_MANIFEST_INVALID: $($_.Exception.Message)" }
 }
 
-$memoryRoot = Join-Path $TargetRoot '.agent\memory'
+$memoryRoot = Join-Path $TargetRoot '.agent/memory'
 if ($effectiveMemoryMode -eq 'off') {
   if (Test-Path -LiteralPath $memoryRoot) { Add-Fail 'MEMORY_MODE_OFF_RESIDUE: .agent/memory exists while persistence is off.' }
   else { Add-Ok 'memory namespace absent for off mode' }
-  if (Test-Path -LiteralPath (Join-Path $TargetRoot '.agent\protocols\memory-policy.md')) { Add-Fail 'MEMORY_MODE_OFF_RESIDUE: memory-policy.md remains installed.' }
+  if (Test-Path -LiteralPath (Join-Path $TargetRoot '.agent/protocols/memory-policy.md')) { Add-Fail 'MEMORY_MODE_OFF_RESIDUE: memory-policy.md remains installed.' }
   if ($null -ne $manifest) {
     foreach ($artifact in @($manifest.artifacts)) {
       $artifactPath = [string]$artifact.path
@@ -222,7 +222,7 @@ if ($effectiveMemoryMode -eq 'off') {
     }
   }
   foreach ($relative in @($instructionPaths | Sort-Object)) {
-    $path = Join-Path $TargetRoot $relative.Replace('/', '\')
+    $path = Join-Path $TargetRoot $relative.Replace('/', '/')
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
     $content = Get-SafeContent -AuthorizedRoot $TargetRoot -Path $path -Raw
     if ($content -match '(?i)\.agent[/\\]memory|memory[/\\](?:personal|semantic|working|episodic)|working-memory') { Add-Fail "MEMORY_MODE_OFF_REFERENCE: $relative contains an operational memory path." }
@@ -234,7 +234,7 @@ if ($effectiveMemoryMode -eq 'off') {
   Check-File '.agent\protocols\memory-policy.md' -Required | Out-Null
   if ($effectiveMemoryMode -eq 'private-episodic') {
     Check-File '.agent\memory\episodic\EPISODES.md' -Required | Out-Null
-    $ignorePath = Join-Path $TargetRoot '.agent\.gitignore'
+    $ignorePath = Join-Path $TargetRoot '.agent/.gitignore'
     if ((Test-Path -LiteralPath $ignorePath -PathType Leaf) -and (Get-Content -LiteralPath $ignorePath -Raw) -notmatch '(?m)^memory/episodic/\*\*$') { Add-Fail 'MEMORY_MODE_PRIVATE_IGNORE_MISSING: episodic content is not ignored recursively.' }
   } elseif (Test-Path -LiteralPath (Join-Path $memoryRoot 'episodic')) {
     Add-Fail 'MEMORY_MODE_CURATED_RESIDUE: episodic content exists in curated mode.'
@@ -245,7 +245,7 @@ $routingPolicy = $null
 if ($null -ne $profile) {
   if ([string]::IsNullOrWhiteSpace([string]$profile.routingPolicy)) { Add-Fail 'project profile has no routingPolicy.' }
   else {
-    $routingPolicyPath = Join-Path $TargetRoot '.agent\routing\policy.json'
+    $routingPolicyPath = Join-Path $TargetRoot '.agent/routing/policy.json'
     if (Test-Path -LiteralPath $routingPolicyPath -PathType Leaf) {
       try {
         $routingPolicy = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $routingPolicyPath -Raw)
@@ -273,8 +273,8 @@ if ($null -ne $profile) {
     $inventoryRelative = if ($profile.PSObject.Properties.Name -contains 'modelInventory' -and -not [string]::IsNullOrWhiteSpace([string]$profile.modelInventory)) { [string]$profile.modelInventory } else { '.agent/routing/inventory.json' }
     $runtimeRelative = if ($profile.PSObject.Properties.Name -contains 'modelRuntime' -and -not [string]::IsNullOrWhiteSpace([string]$profile.modelRuntime)) { [string]$profile.modelRuntime } else { '.agent/routing/runtime.json' }
     try {
-      $inventoryPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $inventoryRelative.Replace('/', '\'))
-      $runtimePath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $runtimeRelative.Replace('/', '\'))
+      $inventoryPath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $inventoryRelative.Replace('/', '/'))
+      $runtimePath = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot $runtimeRelative.Replace('/', '/'))
       if (-not (Test-Path -LiteralPath $inventoryPath -PathType Leaf)) { throw "inventory-routing requires $inventoryRelative." }
       if (-not (Test-Path -LiteralPath $runtimePath -PathType Leaf)) { throw "inventory-routing requires $runtimeRelative." }
       $runtime = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $runtimePath -Raw)
@@ -334,7 +334,7 @@ if ($null -ne $profile) {
   foreach ($skill in $activeSkills) {
     Check-File ".agent\skills\$skill\SKILL.md" -Required | Out-Null
   }
-  $skillsLocalDir = Join-Path $TargetRoot '.agent\skills-local'
+  $skillsLocalDir = Join-Path $TargetRoot '.agent/skills-local'
   if (Test-Path -LiteralPath $skillsLocalDir -PathType Container) {
     $localSkillDirs = @(Get-ChildItem -LiteralPath $skillsLocalDir -Directory -ErrorAction SilentlyContinue)
     foreach ($localDir in $localSkillDirs) {
@@ -364,7 +364,7 @@ foreach ($harness in $harnesses) {
     $identityArtifacts = @($manifest.artifacts | Where-Object { (Get-LizardArtifactLifecycle -Record $_) -eq 'active' -and [string]$_.adapter_id -eq $effectiveAdapter -and [string]$_.mirror_group -like 'adapter-instruction:*' })
     $identityValid = $false
     foreach ($identity in $identityArtifacts) {
-      $identityPath = Join-Path $TargetRoot ([string]$identity.path).Replace('/', '\')
+      $identityPath = Join-Path $TargetRoot ([string]$identity.path).Replace('/', '/')
       if ((Test-Path -LiteralPath $identityPath -PathType Leaf) -and (Get-LizardSha256 $identityPath) -eq [string]$identity.source_hash) { $identityValid = $true; break }
     }
     if ($identityValid) {

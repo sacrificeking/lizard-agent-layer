@@ -2,13 +2,13 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 $fixture = Join-Path $testRoot ("memory-mode-update-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $target = Join-Path $fixture 'target'
-$installScript = Join-Path $LayerRoot 'scripts\install.ps1'
-$updateScript = Join-Path $LayerRoot 'scripts\update-target.ps1'
+$installScript = Join-Path $LayerRoot 'scripts/install.ps1'
+$updateScript = Join-Path $LayerRoot 'scripts/update-target.ps1'
 New-Item -ItemType Directory -Path $target -Force | Out-Null
 
 try {
@@ -27,7 +27,7 @@ try {
   Assert-Equal 'off' ([string]$preserveChild.intent.options.memory_mode) 'Nested install plan must bind preserved off mode.'
   $preserveApply = Invoke-TestPowerShell -ScriptPath $updateScript -Arguments $preserveApproval.arguments
   Assert-Equal 0 $preserveApply.exit_code "Mode-preserving update must succeed: $($preserveApply.output)"
-  $manifest = Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
+  $manifest = Get-Content -LiteralPath (Join-Path $target '.agent/lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal 'off' ([string]$manifest.memory_mode) 'Mode-preserving update must leave manifest off.'
 
   $transitionOutput = Join-Path $fixture 'transition-output'
@@ -42,10 +42,10 @@ try {
   Assert-Equal 'off->private-episodic' ([string]$transitionChild.intent.options.memory_transition) 'Nested plan must bind transition direction.'
   $transitionApply = Invoke-TestPowerShell -ScriptPath $updateScript -Arguments $transitionApproval.arguments
   Assert-Equal 0 $transitionApply.exit_code "Update memory transition must succeed: $($transitionApply.output)"
-  $manifest = Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
+  $manifest = Get-Content -LiteralPath (Join-Path $target '.agent/lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal 'private-episodic' ([string]$manifest.memory_mode) 'Transition update must persist destination mode.'
-  Assert-True (Test-Path -LiteralPath (Join-Path $target '.agent\memory\episodic\EPISODES.md') -PathType Leaf) 'Transition update must install private episodic seed.'
-  $history = @(Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.update-history.jsonl') | ForEach-Object { $_ | ConvertFrom-LizardJson })
+  Assert-True (Test-Path -LiteralPath (Join-Path $target '.agent/memory/episodic/EPISODES.md') -PathType Leaf) 'Transition update must install private episodic seed.'
+  $history = @(Get-Content -LiteralPath (Join-Path $target '.agent/lizard-agent-layer.update-history.jsonl') | ForEach-Object { $_ | ConvertFrom-LizardJson })
   $last = $history[-1]
   Assert-Equal 'off' ([string]$last.previous_memory_mode) 'Update history must record source mode.'
   Assert-Equal 'private-episodic' ([string]$last.memory_mode) 'Update history must record destination mode.'

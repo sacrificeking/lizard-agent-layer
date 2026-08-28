@@ -2,17 +2,17 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'tests\TestTrustHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Trust.psm1') -Force
-$testRoot = Join-Path $LayerRoot '.tmp\tests'; $fixture = Join-Path $testRoot ("signed-calibration-{0}" -f ([Guid]::NewGuid().ToString('N')))
-$target = Join-Path $fixture 'target'; $routing = Join-Path $target '.agent\routing'; $script = Join-Path $LayerRoot 'scripts\calibrate-model.ps1'
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestTrustHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Trust.psm1') -Force
+$testRoot = Join-Path $LayerRoot '.tmp/tests'; $fixture = Join-Path $testRoot ("signed-calibration-{0}" -f ([Guid]::NewGuid().ToString('N')))
+$target = Join-Path $fixture 'target'; $routing = Join-Path $target '.agent/routing'; $script = Join-Path $LayerRoot 'scripts/calibrate-model.ps1'
 try {
   New-Item -ItemType Directory -Path $routing -Force | Out-Null
-  Set-Content -LiteralPath (Join-Path $target '.agent\project-profile.json') -Value '{"modelMode":"inventory-routing","modelInventory":".agent/routing/inventory.json","modelRuntime":".agent/routing/runtime.json"}'
-  Copy-Item -LiteralPath (Join-Path $LayerRoot 'tests\schema\fixtures\model-inventory.valid.json') -Destination (Join-Path $routing 'inventory.json')
-  Copy-Item -LiteralPath (Join-Path $LayerRoot 'tests\schema\fixtures\routing-runtime.valid.json') -Destination (Join-Path $routing 'runtime.json')
-  $payload = Get-Content -LiteralPath (Join-Path $LayerRoot 'tests\schema\fixtures\model-evaluation.valid.json') -Raw | ConvertFrom-LizardJson
+  Set-Content -LiteralPath (Join-Path $target '.agent/project-profile.json') -Value '{"modelMode":"inventory-routing","modelInventory":".agent/routing/inventory.json","modelRuntime":".agent/routing/runtime.json"}'
+  Copy-Item -LiteralPath (Join-Path $LayerRoot 'tests/schema/fixtures/model-inventory.valid.json') -Destination (Join-Path $routing 'inventory.json')
+  Copy-Item -LiteralPath (Join-Path $LayerRoot 'tests/schema/fixtures/routing-runtime.valid.json') -Destination (Join-Path $routing 'runtime.json')
+  $payload = Get-Content -LiteralPath (Join-Path $LayerRoot 'tests/schema/fixtures/model-evaluation.valid.json') -Raw | ConvertFrom-LizardJson
   $binding = Get-LizardCalibrationTrustBinding -TargetRoot $target -EvaluationId $payload.evaluation_id -ModelId $payload.model_id -Provider $payload.provider -ExecutorId $payload.executor_id -ConfigurationFingerprint $payload.configuration_fingerprint -Cases @($payload.cases)
   $now = [DateTimeOffset]::UtcNow
   $trust = New-LizardTestTrustMaterial -Root (Join-Path $fixture 'trust') -BindingSha256 $binding -Subject $payload.evaluation_id -Now $now -PrincipalId 'independent-evaluator' -Roles @('evaluator') -Purpose 'model-calibration' -PayloadKind 'model-evaluation'

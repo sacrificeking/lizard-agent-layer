@@ -222,7 +222,7 @@ if ($failures.Count -eq 0 -and $EffectiveWorktreePath) {
   } catch { $failures = Add-ResultItem $failures "Unable to capture final git evidence: $($_.Exception.Message)" }
 }
 
-$manifestPath = Join-Path $TargetRoot '.agent\loops\lizard-agent-layer.loop-install.json'
+$manifestPath = Join-Path $TargetRoot '.agent/loops/lizard-agent-layer.loop-install.json'
 $verifierRel = '.agent/loops/loop-verifier-report.md'
 if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
   try {

@@ -25,7 +25,7 @@ $writtenPath = $null
 $writtenSha256 = $null
 if ($WritePlan) {
   if ([string]::IsNullOrWhiteSpace($OutputPath)) {
-    $planDir = Initialize-SafeDirectory -Path (Join-Path $LayerRoot '.tmp\verification-plans')
+    $planDir = Initialize-SafeDirectory -Path (Join-Path $LayerRoot '.tmp/verification-plans')
     $OutputPath = Join-Path $planDir ("verification-{0}.json" -f $plan.plan_id)
   } else {
     $OutputPath = if ([System.IO.Path]::IsPathRooted($OutputPath)) { [System.IO.Path]::GetFullPath($OutputPath) } else { [System.IO.Path]::GetFullPath((Join-Path (Get-Location).Path $OutputPath)) }

@@ -11,63 +11,63 @@ if ($ShardIndex -gt $ShardCount) { throw "FOCUSED_SHARD_INVALID: ShardIndex $Sha
 if (-not $LayerRoot) { $LayerRoot = Split-Path -Parent $PSScriptRoot }
 if (-not $LayerRoot) { $LayerRoot = (Get-Location).Path }
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Host.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Host.psm1') -Force
 
 $tests = @(
-  'tests\unit\json.tests.ps1',
-  'tests\unit\json-reader-policy.tests.ps1',
-  'tests\unit\safe-fs.tests.ps1',
-  'tests\unit\mount-boundary.tests.ps1',
-  'tests\unit\host.tests.ps1',
-  'tests\unit\plan.tests.ps1',
-  'tests\unit\overlay-calorie-budget.tests.ps1',
-  'tests\unit\focused-sharding.tests.ps1',
-  'tests\unit\transaction-primitives.tests.ps1',
-  'tests\unit\manifest-version-consistency.tests.ps1',
-  'tests\adversarial\install-plan-tamper.tests.ps1',
-  'tests\adversarial\install-containment.tests.ps1',
-  'tests\adversarial\report-privacy.tests.ps1',
-  'tests\adversarial\quality-evidence.tests.ps1',
-  'tests\adversarial\contract-governance.tests.ps1',
-  'tests\adversarial\version-gates.tests.ps1',
-  'tests\adversarial\loop-evidence.tests.ps1',
-  'tests\adversarial\handle-bound-mutation.tests.ps1',
-  'tests\adversarial\worktree-external-mutator.tests.ps1',
-  'tests\adversarial\uninstall-tamper.tests.ps1',
-  'tests\adversarial\memory-mode-transitions.tests.ps1',
-  'tests\adversarial\regulated-approval.tests.ps1',
-  'tests\adversarial\routing-receipt-privacy.tests.ps1',
-  'tests\adversarial\prompt-trust.tests.ps1',
-  'tests\adversarial\constrained-verifier.tests.ps1',
-  'tests\adversarial\signed-evidence.tests.ps1',
-  'tests\adversarial\signed-loop-completion.tests.ps1',
-  'tests\adversarial\signed-calibration.tests.ps1',
-  'tests\adversarial\analyzer-hardening.tests.ps1',
-  'tests\adversarial\git-ref-validation.tests.ps1',
-  'tests\adversarial\signed-apply-approval.tests.ps1',
-  'tests\adversarial\approval-policy.tests.ps1',
-  'tests\adversarial\macos-safefs-permissions.tests.ps1',
-  'tests\adversarial\transaction-poststate.tests.ps1',
-  'tests\integration\manifest-v3.tests.ps1',
-  'tests\integration\manifest-lifecycle.tests.ps1',
-  'tests\integration\install-plan-binding.tests.ps1',
-  'tests\integration\update-plan-binding.tests.ps1',
-  'tests\integration\transaction.tests.ps1',
-  'tests\integration\documentation-recovery.tests.ps1',
-  'tests\integration\public-readiness.tests.ps1',
-  'tests\integration\model-routing.tests.ps1',
-  'tests\integration\loop-runtime.tests.ps1',
-  'tests\integration\uninstall.tests.ps1',
-  'tests\integration\uninstall-install-roundtrip.tests.ps1',
-  'tests\integration\memory-modes.tests.ps1',
-  'tests\integration\memory-mode-update.tests.ps1',
-  'tests\integration\skill-lifecycle.tests.ps1',
-  'tests\integration\records-lifecycle.tests.ps1',
-  'tests\integration\ci-matrix-consistency.tests.ps1',
-  'tests\integration\repository-drift.tests.ps1',
-  'tests\release\release-readiness.tests.ps1'
+  'tests/unit/json.tests.ps1',
+  'tests/unit/json-reader-policy.tests.ps1',
+  'tests/unit/safe-fs.tests.ps1',
+  'tests/unit/mount-boundary.tests.ps1',
+  'tests/unit/host.tests.ps1',
+  'tests/unit/plan.tests.ps1',
+  'tests/unit/overlay-calorie-budget.tests.ps1',
+  'tests/unit/focused-sharding.tests.ps1',
+  'tests/unit/transaction-primitives.tests.ps1',
+  'tests/unit/manifest-version-consistency.tests.ps1',
+  'tests/adversarial/install-plan-tamper.tests.ps1',
+  'tests/adversarial/install-containment.tests.ps1',
+  'tests/adversarial/report-privacy.tests.ps1',
+  'tests/adversarial/quality-evidence.tests.ps1',
+  'tests/adversarial/contract-governance.tests.ps1',
+  'tests/adversarial/version-gates.tests.ps1',
+  'tests/adversarial/loop-evidence.tests.ps1',
+  'tests/adversarial/handle-bound-mutation.tests.ps1',
+  'tests/adversarial/worktree-external-mutator.tests.ps1',
+  'tests/adversarial/uninstall-tamper.tests.ps1',
+  'tests/adversarial/memory-mode-transitions.tests.ps1',
+  'tests/adversarial/regulated-approval.tests.ps1',
+  'tests/adversarial/routing-receipt-privacy.tests.ps1',
+  'tests/adversarial/prompt-trust.tests.ps1',
+  'tests/adversarial/constrained-verifier.tests.ps1',
+  'tests/adversarial/signed-evidence.tests.ps1',
+  'tests/adversarial/signed-loop-completion.tests.ps1',
+  'tests/adversarial/signed-calibration.tests.ps1',
+  'tests/adversarial/analyzer-hardening.tests.ps1',
+  'tests/adversarial/git-ref-validation.tests.ps1',
+  'tests/adversarial/signed-apply-approval.tests.ps1',
+  'tests/adversarial/approval-policy.tests.ps1',
+  'tests/adversarial/macos-safefs-permissions.tests.ps1',
+  'tests/adversarial/transaction-poststate.tests.ps1',
+  'tests/integration/manifest-v3.tests.ps1',
+  'tests/integration/manifest-lifecycle.tests.ps1',
+  'tests/integration/install-plan-binding.tests.ps1',
+  'tests/integration/update-plan-binding.tests.ps1',
+  'tests/integration/transaction.tests.ps1',
+  'tests/integration/documentation-recovery.tests.ps1',
+  'tests/integration/public-readiness.tests.ps1',
+  'tests/integration/model-routing.tests.ps1',
+  'tests/integration/loop-runtime.tests.ps1',
+  'tests/integration/uninstall.tests.ps1',
+  'tests/integration/uninstall-install-roundtrip.tests.ps1',
+  'tests/integration/memory-modes.tests.ps1',
+  'tests/integration/memory-mode-update.tests.ps1',
+  'tests/integration/skill-lifecycle.tests.ps1',
+  'tests/integration/records-lifecycle.tests.ps1',
+  'tests/integration/ci-matrix-consistency.tests.ps1',
+  'tests/integration/repository-drift.tests.ps1',
+  'tests/release/release-readiness.tests.ps1'
 )
 $tests = @(
   for ($index = 0; $index -lt $tests.Count; $index++) {
@@ -98,7 +98,7 @@ foreach ($relative in $tests) {
   if ($result.output) { Write-Host $result.output.Trim() }
 }
 
-$reportDir = Initialize-SafeDirectory -Path (Join-Path $LayerRoot '.tmp\tests')
+$reportDir = Initialize-SafeDirectory -Path (Join-Path $LayerRoot '.tmp/tests')
 $reportName = if ($ShardCount -eq 1) { 'focused-test-report.json' } else { 'focused-test-report-shard-{0:D2}-of-{1:D2}.json' -f $ShardIndex, $ShardCount }
 $reportPath = Join-Path $reportDir $reportName
 $report = [ordered]@{

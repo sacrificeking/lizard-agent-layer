@@ -2,12 +2,12 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.LoopEvidence.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'tests\TestTrustHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Trust.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.LoopEvidence.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestTrustHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Trust.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 $fixture = Join-Path $testRoot ("worktree-external-mutator-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $target = Join-Path $fixture 'target'
@@ -15,8 +15,8 @@ $worktree = Join-Path $fixture 'worktree'
 $output = Join-Path $fixture 'output'
 $cleanupOutput = Join-Path $fixture 'cleanup-output'
 $branch = 'lizard/l2/external-mutator-test'
-$worktreeScript = Join-Path $LayerRoot 'scripts\loop-worktree.ps1'
-$cleanupScript = Join-Path $LayerRoot 'scripts\loop-worktree-cleanup.ps1'
+$worktreeScript = Join-Path $LayerRoot 'scripts/loop-worktree.ps1'
+$cleanupScript = Join-Path $LayerRoot 'scripts/loop-worktree-cleanup.ps1'
 $operationId = ('2' * 32)
 
 function Assert-GitSuccess {

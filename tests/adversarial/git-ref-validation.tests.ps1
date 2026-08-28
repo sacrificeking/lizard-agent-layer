@@ -2,10 +2,10 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Git.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Git.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 $fixture = Join-Path $testRoot ("git-ref-validation-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $target = Join-Path $fixture 'target'
 $output = Join-Path $fixture 'output'
@@ -31,7 +31,7 @@ try {
     Assert-ThrowsCode { Assert-LizardGitBaseReference -BaseRef $baseRef | Out-Null } $(if ($baseRef.StartsWith('-') -or $baseRef -match '\s') { 'GIT_REF_INVALID' } else { 'GIT_BASE_REF_INVALID' }) "Invalid base ref '$baseRef' must fail closed."
   }
 
-  $script = Join-Path $LayerRoot 'scripts\loop-worktree.ps1'
+  $script = Join-Path $LayerRoot 'scripts/loop-worktree.ps1'
   $optionBranch = Invoke-TestPowerShell -ScriptPath $script -Arguments @('-TargetPath', $target, '-Branch', '--help', '-WorktreePath', (Join-Path $fixture 'worktree'), '-OutputDir', $output)
   Assert-False ($optionBranch.exit_code -eq 0) 'Option-like branch must fail before Git inspection.'
   Assert-True ($optionBranch.output -match 'GIT_REF_INVALID') 'Option-like branch must expose the stable validation code.'

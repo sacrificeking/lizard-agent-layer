@@ -2,16 +2,16 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Plan.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Plan.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot ('.tmp\tests\skill-lifecycle-' + [Guid]::NewGuid().ToString('N'))
+$testRoot = Join-Path $LayerRoot ('.tmp/tests/skill-lifecycle-' + [Guid]::NewGuid().ToString('N'))
 $target = Join-Path $testRoot 'target'
 $faultTarget = Join-Path $testRoot 'fault-target'
 $plans = Join-Path $testRoot 'plans'
 New-Item -ItemType Directory -Path $target, $faultTarget, $plans -Force | Out-Null
-$script = Join-Path $LayerRoot 'scripts\skill-lifecycle.ps1'
+$script = Join-Path $LayerRoot 'scripts/skill-lifecycle.ps1'
 
 function Invoke-Lifecycle {
   param([string]$SelectedTarget, [string]$Action, [string]$Skill = 'git-safety', [switch]$Apply, [string]$PlanPath, [string]$Sha256, [int]$FailAfterMutation = 0, [switch]$HumanApproved)
@@ -46,8 +46,8 @@ try {
   Assert-True ($withoutApproval.exit_code -ne 0 -and $withoutApproval.output -match 'SKILL_APPROVAL_REQUIRED') 'Apply must require explicit human approval.'
   $install = Invoke-Lifecycle -SelectedTarget $target -Action Install -Apply -PlanPath $installPlan -Sha256 $installSha -HumanApproved
   Assert-Equal 0 $install.exit_code "Approved install must succeed. $($install.output)"
-  $packageRoot = Join-Path $target '.agent\skills\git-safety'
-  $statePath = Join-Path $target '.agent\skill-lifecycle\git-safety.json'
+  $packageRoot = Join-Path $target '.agent/skills/git-safety'
+  $statePath = Join-Path $target '.agent/skill-lifecycle/git-safety.json'
   Assert-True (Test-Path -LiteralPath (Join-Path $packageRoot 'SKILL.md') -PathType Leaf) 'Install must copy SKILL.md.'
   Assert-True (Test-Path -LiteralPath (Join-Path $packageRoot 'skill.json') -PathType Leaf) 'Install must copy version metadata.'
   $state = Get-SafeContent -AuthorizedRoot $target -Path $statePath -Raw | ConvertFrom-LizardJson
@@ -109,10 +109,10 @@ try {
   $faultSha = (Get-FileHash -LiteralPath $faultPlan -Algorithm SHA256).Hash.ToLowerInvariant()
   $faultApply = Invoke-Lifecycle -SelectedTarget $faultTarget -Action Install -Apply -PlanPath $faultPlan -Sha256 $faultSha -HumanApproved -FailAfterMutation 2
   Assert-True ($faultApply.exit_code -ne 0 -and $faultApply.output -match 'TRANSACTION_FAULT_INJECTED') 'Injected mutation failure must be observable.'
-  Assert-False (Test-Path -LiteralPath (Join-Path $faultTarget '.agent\skills\git-safety')) 'Failed install must roll back package content.'
+  Assert-False (Test-Path -LiteralPath (Join-Path $faultTarget '.agent/skills/git-safety')) 'Failed install must roll back package content.'
   Assert-False (Test-Path -LiteralPath (Join-Path $faultTarget '.lizard-agent-layer.lock')) 'Failed install rollback must clear the transaction lock.'
 
   Write-Host 'PASS tests\integration\skill-lifecycle.tests.ps1'
 } finally {
-  Clear-TestDirectory -Path $testRoot -AllowedRoot (Join-Path $LayerRoot '.tmp\tests')
+  Clear-TestDirectory -Path $testRoot -AllowedRoot (Join-Path $LayerRoot '.tmp/tests')
 }

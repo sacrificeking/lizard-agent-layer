@@ -2,12 +2,12 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 $fixture = Join-Path $testRoot ("install-containment-{0}" -f ([Guid]::NewGuid().ToString('N')))
-$installScript = Join-Path $LayerRoot 'scripts\install.ps1'
+$installScript = Join-Path $LayerRoot 'scripts/install.ps1'
 $links = New-Object System.Collections.Generic.List[string]
 New-Item -ItemType Directory -Path $fixture -Force | Out-Null
 
@@ -51,7 +51,7 @@ try {
   Assert-OutsideEmpty -Path $mirrorCase.outside -Case 'adapter mirror'
 
   $reportCase = New-CaseDirectories -Name 'linked-report-root'
-  $reportLink = Join-Path $reportCase.target '..\report-link'
+  $reportLink = Join-Path $reportCase.target '../report-link'
   New-DirectoryLink -Path $reportLink -Target $reportCase.outside
   $links.Add($reportLink) | Out-Null
   $reportResult = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $reportCase.target, '-Profile', 'minimal', '-WritePlan', '-PlanPath', (Join-Path $reportLink 'plan.md'))
@@ -60,7 +60,7 @@ try {
   Assert-OutsideEmpty -Path $reportCase.outside -Case 'linked report root'
 
   $previewCase = New-CaseDirectories -Name 'preview-target-noop'
-  $targetPlan = Join-Path $previewCase.target 'reports\plan.md'
+  $targetPlan = Join-Path $previewCase.target 'reports/plan.md'
   $previewResult = Invoke-TestPowerShell -ScriptPath $installScript -Arguments @('-TargetPath', $previewCase.target, '-Profile', 'minimal', '-WritePlan', '-PlanPath', $targetPlan)
   Assert-False ($previewResult.exit_code -eq 0) 'Preview report writes inside the target must fail closed.'
   Assert-True ($previewResult.output -match 'SAFEFS_FORBIDDEN_ROOT') 'Preview target-local report rejection must expose SAFEFS_FORBIDDEN_ROOT.'

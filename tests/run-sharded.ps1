@@ -14,10 +14,10 @@ Write-Host " LayerRoot: $LayerRoot"
 Write-Host " CPU Cores: $([Environment]::ProcessorCount) | Parallel Shards: $Shards"
 Write-Host "================================================================" -ForegroundColor Cyan
 
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Host.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Host.psm1') -Force
 $PowerShellHost = Get-LizardPowerShellHostPath
 
-$scriptPath = Join-Path $LayerRoot 'tests\run-focused.ps1'
+$scriptPath = Join-Path $LayerRoot 'tests/run-focused.ps1'
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
 $jobs = @()
@@ -46,7 +46,7 @@ foreach ($entry in $jobs) {
 
   $textLines = @($output | Where-Object { $_ -isnot [int] })
 
-  $reportPath = Join-Path $LayerRoot (".tmp\tests\focused-test-report-shard-{0:D2}-of-{1:D2}.json" -f $shard, $Shards)
+  $reportPath = Join-Path $LayerRoot (".tmp/tests/focused-test-report-shard-{0:D2}-of-{1:D2}.json" -f $shard, $Shards)
   $reportPass = $false
   if (Test-Path -LiteralPath $reportPath -PathType Leaf) {
     try {
@@ -56,9 +56,9 @@ foreach ($entry in $jobs) {
   }
 
   if ($shardExitCode -eq 0 -or $reportPass) {
-    Write-Host "âœ… Shard $shard/$Shards PASSED" -ForegroundColor Green
+    Write-Host "[PASS] Shard $shard/$Shards PASSED" -ForegroundColor Green
   } else {
-    Write-Host "âŒ Shard $shard/$Shards FAILED (ExitCode: $shardExitCode)" -ForegroundColor Red
+    Write-Host "[FAIL] Shard $shard/$Shards FAILED (ExitCode: $shardExitCode)" -ForegroundColor Red
     if ($textLines) {
       $textLines | Where-Object { $_ -match 'FAIL|ASSERT|Error' } | ForEach-Object { Write-Host "   $_" -ForegroundColor DarkRed }
     }

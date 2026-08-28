@@ -7,14 +7,14 @@ param(
 $ErrorActionPreference = 'Stop'
 $effectiveRepositoryRoot = if (-not [string]::IsNullOrWhiteSpace($RepositoryRoot)) { $RepositoryRoot } elseif (-not [string]::IsNullOrWhiteSpace($LayerRoot)) { $LayerRoot } else { $null }
 $RepoRoot = if ([string]::IsNullOrWhiteSpace($effectiveRepositoryRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $effectiveRepositoryRoot).Path }
-Import-Module (Join-Path $RepoRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.LoopEvidence.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.ConstrainedRunner.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'tests\TestTrustHelpers.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Trust.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Json.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.LoopEvidence.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.ConstrainedRunner.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'tests/TestTrustHelpers.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Trust.psm1') -Force
 
-$fixtureRoot = if ([string]::IsNullOrWhiteSpace($FixtureRoot)) { Join-Path $RepoRoot '.tmp\tests\loop-evidence' } else { [System.IO.Path]::GetFullPath($FixtureRoot) }
+$fixtureRoot = if ([string]::IsNullOrWhiteSpace($FixtureRoot)) { Join-Path $RepoRoot '.tmp/tests/loop-evidence' } else { [System.IO.Path]::GetFullPath($FixtureRoot) }
 $fixtureAllowedRoot = Split-Path -Parent $fixtureRoot
 if (Test-Path -LiteralPath $fixtureRoot) { Clear-TestDirectory -Path $fixtureRoot -AllowedRoot $fixtureAllowedRoot }
 New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
@@ -23,12 +23,12 @@ $target = Join-Path $fixtureRoot 'target'
 $worktree = Join-Path $fixtureRoot 'worktree'
 $createOutput = Join-Path $fixtureRoot 'create-output'
 $lifecyclePath = Join-Path $createOutput 'loop-worktree-lifecycle.json'
-$installScript = Join-Path $RepoRoot 'scripts\install.ps1'
-$loopInitScript = Join-Path $RepoRoot 'scripts\loop-init.ps1'
-$worktreeScript = Join-Path $RepoRoot 'scripts\loop-worktree.ps1'
-$verifyScript = Join-Path $RepoRoot 'scripts\loop-verify.ps1'
-$auditScript = Join-Path $RepoRoot 'scripts\loop-audit.ps1'
-$cleanupScript = Join-Path $RepoRoot 'scripts\loop-worktree-cleanup.ps1'
+$installScript = Join-Path $RepoRoot 'scripts/install.ps1'
+$loopInitScript = Join-Path $RepoRoot 'scripts/loop-init.ps1'
+$worktreeScript = Join-Path $RepoRoot 'scripts/loop-worktree.ps1'
+$verifyScript = Join-Path $RepoRoot 'scripts/loop-verify.ps1'
+$auditScript = Join-Path $RepoRoot 'scripts/loop-audit.ps1'
+$cleanupScript = Join-Path $RepoRoot 'scripts/loop-worktree-cleanup.ps1'
 $branch = 'lizard/l2/evidence-test'
 $operationId = ('3' * 32)
 
@@ -128,33 +128,33 @@ try {
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$passReport.head_sha)) 'Verifier must bind HEAD SHA.'
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$passReport.git_state_hash)) 'Verifier must bind final git state hash.'
   Assert-Equal 0 ([int]$passReport.command_results[0].exit_code) 'Verification command must record exit zero.'
-  $targetEvidence = Join-Path $target '.agent\loops\loop-verifier-report.evidence.json'
+  $targetEvidence = Join-Path $target '.agent/loops/loop-verifier-report.evidence.json'
   Assert-JsonSchemaValid -LayerRoot $RepoRoot -SchemaPath 'schemas/verifier-evidence.schema.json' -InstancePath $targetEvidence -Message 'Sealed verifier evidence must satisfy its published schema.'
   $sealedEvidence = Read-LizardSignedEvidenceFile -Path $targetEvidence
   Assert-Equal $passReport.evidence_packet_hash $sealedEvidence.payload_sha256 'Target evidence packet hash mismatch.'
   $sealedHashBeforeFailures = (Get-FileHash -LiteralPath $targetEvidence -Algorithm SHA256).Hash
-  $targetVerifierMarkdown = Join-Path $target '.agent\loops\loop-verifier-report.md'
+  $targetVerifierMarkdown = Join-Path $target '.agent/loops/loop-verifier-report.md'
   $sealedMarkdownHashBeforeFailures = (Get-FileHash -LiteralPath $targetVerifierMarkdown -Algorithm SHA256).Hash
 
   # Adversarial DoD Tests
   $missingDoD = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'Missing DoD packet.', '-OutputDir', (Join-Path $fixtureRoot 'verify-missing-dod'), '-Apply') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs)
   Assert-False ($missingDoD.exit_code -eq 0) 'PASS without required DoD criteria packet must fail closed.'
-  $missingDoDReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-missing-dod\loop-verify-report.json') -Raw)
+  $missingDoDReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-missing-dod/loop-verify-report.json') -Raw)
   Assert-True ((@($missingDoDReport.failures) -join ' ') -match 'DOD_CRITERIA_REQUIRED') 'Missing criteria must expose DOD_CRITERIA_REQUIRED failure.'
 
   $failingDoDArgs = New-TestCriteriaPacket -Name 'fail-criteria.json' -Overrides @{ 'verifier-pass' = 'FAIL' }
   $failingDoD = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'Failing DoD criterion.', '-OutputDir', (Join-Path $fixtureRoot 'verify-failing-dod'), '-Apply') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs + $failingDoDArgs)
   Assert-False ($failingDoD.exit_code -eq 0) 'PASS with failing required DoD criterion must fail closed.'
-  $failingDoDReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-failing-dod\loop-verify-report.json') -Raw)
+  $failingDoDReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-failing-dod/loop-verify-report.json') -Raw)
   Assert-True ((@($failingDoDReport.failures) -join ' ') -match 'DOD_REQUIRED_CRITERION_UNMET') 'Failing criterion must expose DOD_REQUIRED_CRITERION_UNMET failure.'
 
-  $inTargetCriteriaDir = Join-Path $target '.agent\criteria'
+  $inTargetCriteriaDir = Join-Path $target '.agent/criteria'
   New-Item -ItemType Directory -Path $inTargetCriteriaDir -Force | Out-Null
   $inTargetCriteriaPath = Join-Path $inTargetCriteriaDir 'in-target-criteria.json'
-  Set-Content -LiteralPath $inTargetCriteriaPath -Value (Get-Content -LiteralPath (Join-Path $fixtureRoot 'criteria\pass-criteria.json') -Raw)
+  Set-Content -LiteralPath $inTargetCriteriaPath -Value (Get-Content -LiteralPath (Join-Path $fixtureRoot 'criteria/pass-criteria.json') -Raw)
   $inTargetDoD = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-Summary', 'In-target DoD packet must fail.', '-OutputDir', (Join-Path $fixtureRoot 'verify-in-target-dod'), '-Apply', '-CriteriaPath', $inTargetCriteriaPath) + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs)
   Assert-False ($inTargetDoD.exit_code -eq 0) 'PASS with in-target CriteriaPath must fail closed.'
-  $inTargetDoDReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-in-target-dod\loop-verify-report.json') -Raw)
+  $inTargetDoDReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-in-target-dod/loop-verify-report.json') -Raw)
   Assert-True ((@($inTargetDoDReport.failures) -join ' ') -match 'Criteria file path rejected|SAFEFS_FORBIDDEN_ROOT') 'In-target criteria must expose path rejection failure.'
 
   $outsideEvidence = Join-Path $fixtureRoot 'outside-evidence'
@@ -207,12 +207,12 @@ try {
   Set-Content -LiteralPath $tamperedLifecyclePath -Value ($tampered | ConvertTo-Json -Depth 12)
   $tamperedVerify = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $tamperedLifecyclePath, '-Verifier', 'independent-reviewer', '-OutputDir', (Join-Path $fixtureRoot 'verify-tampered')) + $lifecycleTrustArgs)
   Assert-False ($tamperedVerify.exit_code -eq 0) 'Tampered lifecycle must be rejected.'
-  $tamperedReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-tampered\loop-verify-report.json') -Raw)
+  $tamperedReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-tampered/loop-verify-report.json') -Raw)
   Assert-True ((@($tamperedReport.failures) -join ' ') -match 'TRUST_(PAYLOAD_HASH_MISMATCH|ENVELOPE_CONTEXT_MISMATCH)') 'Tampered lifecycle must expose signed evidence mismatch.'
 
   $selfVerify = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'same-agent', '-Implementer', 'same-agent', '-Status', 'PASS', '-OutputDir', (Join-Path $fixtureRoot 'verify-self'), '-Apply') + $headPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs + $criteriaArgs)
   Assert-False ($selfVerify.exit_code -eq 0) 'Self-verification must fail.'
-  $selfReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-self\loop-verify-report.json') -Raw)
+  $selfReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-self/loop-verify-report.json') -Raw)
   Assert-True ((@($selfReport.failures) -join ' ') -match 'SELF_VERIFICATION_FORBIDDEN') 'Self-verification must expose stable code.'
 
   $failedCommand = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-Implementer', 'implementation-agent', '-Status', 'PASS', '-OutputDir', (Join-Path $fixtureRoot 'verify-command-failure'), '-Apply') + $failedPlanArguments + $lifecycleTrustArgs + $verifierTrustArgs + $criteriaArgs)
@@ -222,7 +222,7 @@ try {
   Assert-GitSuccess @('-C', $worktree, 'checkout', '--detach', '--quiet') 'detach failed'
   $detached = Invoke-TestPowerShell -ScriptPath $verifyScript -Arguments (@('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-Verifier', 'independent-reviewer', '-OutputDir', (Join-Path $fixtureRoot 'verify-detached')) + $lifecycleTrustArgs)
   Assert-False ($detached.exit_code -eq 0) 'Detached HEAD must be rejected.'
-  $detachedReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-detached\loop-verify-report.json') -Raw)
+  $detachedReport = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $fixtureRoot 'verify-detached/loop-verify-report.json') -Raw)
   Assert-True ((@($detachedReport.failures) -join ' ') -match 'Detached HEAD') 'Detached HEAD rejection must be explicit.'
   Assert-GitSuccess @('-C', $worktree, 'checkout', '--quiet', $branch) 'branch restore failed'
 

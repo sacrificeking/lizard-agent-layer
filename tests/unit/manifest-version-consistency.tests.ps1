@@ -2,10 +2,10 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 
-$installSource = Get-Content -LiteralPath (Join-Path $LayerRoot 'scripts\install.ps1') -Raw
-$updateSource = Get-Content -LiteralPath (Join-Path $LayerRoot 'scripts\update-target.ps1') -Raw
+$installSource = Get-Content -LiteralPath (Join-Path $LayerRoot 'scripts/install.ps1') -Raw
+$updateSource = Get-Content -LiteralPath (Join-Path $LayerRoot 'scripts/update-target.ps1') -Raw
 
 function Get-SingleSchemaVersion {
   param([string]$Source, [string]$Pattern, [string]$Label)

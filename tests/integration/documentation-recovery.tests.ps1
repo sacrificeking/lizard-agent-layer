@@ -2,9 +2,9 @@ param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 
-$testRoot = Join-Path $LayerRoot '.tmp\tests'
+$testRoot = Join-Path $LayerRoot '.tmp/tests'
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 $fixture = Join-Path $testRoot ("documentation-recovery-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $target = Join-Path $fixture 'target'
@@ -12,7 +12,7 @@ $output = Join-Path $fixture 'recovery-output'
 New-Item -ItemType Directory -Path $target -Force | Out-Null
 
 try {
-  $troubleshooting = Get-Content -LiteralPath (Join-Path $LayerRoot 'docs\troubleshooting.md') -Raw
+  $troubleshooting = Get-Content -LiteralPath (Join-Path $LayerRoot 'docs/troubleshooting.md') -Raw
   foreach ($required in @(
     'TRANSACTION_LOCK_HELD', 'TRANSACTION_JOURNAL_MISSING', 'TRANSACTION_ROLLBACK_FAILED',
     'MANIFEST_READER_TOO_OLD', 'DOWNGRADE_APPROVAL_REQUIRED', 'EVIDENCE_HASH_MISMATCH',
@@ -38,7 +38,7 @@ try {
     }
   }
 
-  $recovery = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\transaction-recover.ps1') -Arguments @('-TargetPath', $target, '-OutputDir', $output, '-Json')
+  $recovery = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts/transaction-recover.ps1') -Arguments @('-TargetPath', $target, '-OutputDir', $output, '-Json')
   Assert-Equal 0 $recovery.exit_code "Documented clean recovery preview failed: $($recovery.output)"
   $report = $recovery.output | ConvertFrom-LizardJson
   Assert-Equal 'CLEAN' ([string]$report.status) 'Clean target recovery preview must report CLEAN.'

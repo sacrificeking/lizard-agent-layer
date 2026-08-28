@@ -4,10 +4,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Json.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Manifest.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SkillPackage.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Json.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Manifest.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SkillPackage.psm1') -Force
 $Failures = New-Object System.Collections.Generic.List[string]
 $Warnings = New-Object System.Collections.Generic.List[string]
 
@@ -60,7 +60,7 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'adapters') -Directory | ForEac
       if ($pathValue -and -not (Is-SafeRelativePath $pathValue)) { Fail "Adapter $name instruction $pathField is unsafe: $pathValue" }
     }
   }
-  $srcPath = Join-Path $_.FullName ($adapter.instruction.src.Replace('/', '\'))
+  $srcPath = Join-Path $_.FullName ($adapter.instruction.src.Replace('/', '/'))
   if (-not (Test-Path -LiteralPath $srcPath)) { Fail "Adapter $name instruction source missing: $($adapter.instruction.src)" }
   foreach ($mirror in @($adapter.skillMirrors)) {
     if (-not $mirror.dst) { Fail "Adapter $name has skill mirror without dst." }
@@ -159,7 +159,7 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'packs') -Filter '*.json' -File
     }
   }
 }
-$loopRegistryPath = Join-Path $LayerRoot 'loops\registry.json'
+$loopRegistryPath = Join-Path $LayerRoot 'loops/registry.json'
 $loopRegistry = Read-JsonFile $loopRegistryPath
 $loopNames = New-Object System.Collections.Generic.HashSet[string]
 if ($null -ne $loopRegistry) {
@@ -173,7 +173,7 @@ if ($null -ne $loopRegistry) {
     if ($entry.readinessLevel -and $entry.readinessLevel -notin @('L0', 'L1', 'L2', 'L3')) { Fail "Loop registry entry $($entry.name) has invalid readinessLevel '$($entry.readinessLevel)'." }
     if ($entry.riskLevel -and $entry.riskLevel -notin @('low', 'medium', 'high')) { Fail "Loop registry entry $($entry.name) has invalid riskLevel '$($entry.riskLevel)'." }
     if ($entry.file -and -not (Is-SafeRelativePath ([string]$entry.file))) { Fail "Loop registry entry $($entry.name) has unsafe file path '$($entry.file)'." }
-    elseif ($entry.file -and -not (Test-Path -LiteralPath (Join-Path $LayerRoot ([string]$entry.file).Replace('/', '\')))) { Fail "Loop registry entry $($entry.name) references missing file '$($entry.file)'." }
+    elseif ($entry.file -and -not (Test-Path -LiteralPath (Join-Path $LayerRoot ([string]$entry.file).Replace('/', '/')))) { Fail "Loop registry entry $($entry.name) references missing file '$($entry.file)'." }
     if ($entry.name) { $loopNames.Add([string]$entry.name) | Out-Null }
   }
 }
@@ -232,50 +232,50 @@ Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'loops') -Filter '*.json' -File
     }
   }
 }
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\lizard-agent-layer.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\adapter.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\install-manifest.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-profile.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\routing-policy.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-inventory.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-evaluation.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\model-evaluation-payload.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\routing-runtime.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\route-receipt.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\route-decision-payload.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\transaction-journal.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\execution-receipt.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\execution-receipt-payload.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\verification-command-plan.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\trust-store.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\trust-challenge.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\quality-registry.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\maturity-levels.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\pack.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\loop-registry.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\manifest-migrations.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\risk-signals.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\drift-baseline.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\verifier-evidence.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\worktree-lifecycle.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\merge-suggestions-report.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\behavioral-readiness.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\skill-evidence.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\skill-package.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\skill-lifecycle-state.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\focused-test-report.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\safe-fs-capability.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\uninstall-receipt.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\contracts.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\contract-change.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'schemas\contract-check-report.schema.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'registry\quality-rubric.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'registry\maturity-levels.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'registry\risk-signals.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'registry\behavioral-readiness.json')
-$null = Read-JsonFile (Join-Path $LayerRoot 'registry\contracts.json')
-$migrationRegistry = Read-JsonFile (Join-Path $LayerRoot 'registry\manifest-migrations.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/lizard-agent-layer.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/adapter.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/install-manifest.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/model-profile.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/routing-policy.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/model-inventory.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/model-evaluation.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/model-evaluation-payload.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/routing-runtime.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/route-receipt.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/route-decision-payload.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/transaction-journal.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/execution-receipt.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/execution-receipt-payload.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/verification-command-plan.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/trust-store.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/trust-challenge.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/quality-registry.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/maturity-levels.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/pack.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/loop.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/loop-registry.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/manifest-migrations.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/risk-signals.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/drift-baseline.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/verifier-evidence.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/worktree-lifecycle.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/merge-suggestions-report.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/behavioral-readiness.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/skill-evidence.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/skill-package.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/skill-lifecycle-state.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/focused-test-report.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/safe-fs-capability.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/uninstall-receipt.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/contracts.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/contract-change.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'schemas/contract-check-report.schema.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'registry/quality-rubric.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'registry/maturity-levels.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'registry/risk-signals.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'registry/behavioral-readiness.json')
+$null = Read-JsonFile (Join-Path $LayerRoot 'registry/contracts.json')
+$migrationRegistry = Read-JsonFile (Join-Path $LayerRoot 'registry/manifest-migrations.json')
 if ($migrationRegistry) {
   if ([int]$migrationRegistry.currentSchemaVersion -ne 4) { Fail 'Manifest migration registry currentSchemaVersion must be 4.' }
   if ([int]$migrationRegistry.minimumReadableSchemaVersion -ne 2 -or [int]$migrationRegistry.maximumReadableSchemaVersion -ne 4) { Fail 'Manifest migration reader range must be 2 through 4.' }
@@ -338,29 +338,29 @@ foreach ($relative in @('scripts\Lizard.Json.psm1', 'scripts\Lizard.SafeFs.psm1'
   catch { Fail "PowerShell parse failure in ${relative}: $($_.Exception.Message)" }
 }
 
-$signedCalibrationTest = Join-Path $LayerRoot 'tests\adversarial\signed-calibration.tests.ps1'
+$signedCalibrationTest = Join-Path $LayerRoot 'tests/adversarial/signed-calibration.tests.ps1'
 if (-not (Test-Path -LiteralPath $signedCalibrationTest -PathType Leaf)) { Fail 'Missing safety artifact tests\adversarial\signed-calibration.tests.ps1.' }
 else {
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $signedCalibrationTest -Raw)) }
   catch { Fail "PowerShell parse failure in signed-calibration.tests.ps1: $($_.Exception.Message)" }
 }
 
-$skillLifecycleTest = Join-Path $LayerRoot 'tests\integration\skill-lifecycle.tests.ps1'
+$skillLifecycleTest = Join-Path $LayerRoot 'tests/integration/skill-lifecycle.tests.ps1'
 if (-not (Test-Path -LiteralPath $skillLifecycleTest -PathType Leaf)) { Fail 'Missing safety artifact tests\integration\skill-lifecycle.tests.ps1.' }
 else {
   try { $null = [scriptblock]::Create((Get-Content -LiteralPath $skillLifecycleTest -Raw)) }
   catch { Fail "PowerShell parse failure in skill-lifecycle.tests.ps1: $($_.Exception.Message)" }
 }
 
-if (-not (Test-Path -LiteralPath (Join-Path $LayerRoot 'scripts\native\Lizard.WindowsHandleFs.cs') -PathType Leaf)) {
+if (-not (Test-Path -LiteralPath (Join-Path $LayerRoot 'scripts/native/Lizard.WindowsHandleFs.cs') -PathType Leaf)) {
   Fail 'Missing Windows handle-bound native source scripts\native\Lizard.WindowsHandleFs.cs.'
 }
-if (-not (Test-Path -LiteralPath (Join-Path $LayerRoot 'scripts\native\Lizard.UnixHandleFs.cs') -PathType Leaf)) {
+if (-not (Test-Path -LiteralPath (Join-Path $LayerRoot 'scripts/native/Lizard.UnixHandleFs.cs') -PathType Leaf)) {
   Fail 'Missing Unix handle-bound native source scripts\native\Lizard.UnixHandleFs.cs.'
 }
 
-$schemaValidator = Join-Path $LayerRoot 'tools\schema-validator\validate.mjs'
-$ajvPackage = Join-Path $LayerRoot 'node_modules\ajv\package.json'
+$schemaValidator = Join-Path $LayerRoot 'tools/schema-validator/validate.mjs'
+$ajvPackage = Join-Path $LayerRoot 'node_modules/ajv/package.json'
 $nodeCommand = Get-Command node -ErrorAction SilentlyContinue
 if (-not $nodeCommand) {
   Fail 'SCHEMA_VALIDATOR_NODE_MISSING: Node.js 22 or newer is required for executable schema validation.'

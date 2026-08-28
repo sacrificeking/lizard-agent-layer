@@ -2,11 +2,11 @@ param([string]$LayerRoot)
 
 $ErrorActionPreference = 'Stop'
 $RepoRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $LayerRoot).Path }
-Import-Module (Join-Path $RepoRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Plan.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Json.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Plan.psm1') -Force
 
-$fixtureRoot = Join-Path $RepoRoot '.tmp\tests\update-plan-binding'
+$fixtureRoot = Join-Path $RepoRoot '.tmp/tests/update-plan-binding'
 if (Test-Path -LiteralPath $fixtureRoot) { Clear-TestDirectory -Path $fixtureRoot -AllowedRoot (Join-Path $RepoRoot '.tmp') }
 New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
 $target = Join-Path $fixtureRoot 'target'
@@ -23,7 +23,7 @@ function Write-TestCanonicalPlan {
 Push-Location $RepoRoot
 try {
   $installApproval = New-TestInstallApprovalArguments -LayerRoot $RepoRoot -BaseArguments @('-TargetPath', $target, '-Profile', 'minimal')
-  $install = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts\install.ps1') -Arguments $installApproval.arguments
+  $install = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts/install.ps1') -Arguments $installApproval.arguments
   Assert-Equal 0 $install.exit_code "Plan-bound prerequisite install must succeed: $($install.output)"
 
   $updateApproval = New-TestUpdateApprovalArguments -LayerRoot $RepoRoot -BaseArguments @('-TargetPath', $target, '-OutputDir', $output)
@@ -37,7 +37,7 @@ try {
   $missingChildPlan.intent_sha256 = Get-LizardPlanIntentSha256 -Intent $missingChildPlan.intent
   $missingOuterPath = Join-Path $fixtureRoot 'missing-child-outer.json'
   $missingOuterSha256 = Write-TestCanonicalPlan -Plan $missingChildPlan -Path $missingOuterPath
-  $missingChild = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts\update-target.ps1') -Arguments @(
+  $missingChild = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts/update-target.ps1') -Arguments @(
     '-TargetPath', $target, '-OutputDir', $output, '-Apply', '-ApprovedPlanPath', $missingOuterPath,
     '-ApprovedPlanSha256', $missingOuterSha256, '-HumanApproved'
   )
@@ -49,7 +49,7 @@ try {
   $wrongChildDigestPlan.intent_sha256 = Get-LizardPlanIntentSha256 -Intent $wrongChildDigestPlan.intent
   $wrongOuterPath = Join-Path $fixtureRoot 'wrong-child-digest-outer.json'
   $wrongOuterSha256 = Write-TestCanonicalPlan -Plan $wrongChildDigestPlan -Path $wrongOuterPath
-  $wrongChildDigest = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts\update-target.ps1') -Arguments @(
+  $wrongChildDigest = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts/update-target.ps1') -Arguments @(
     '-TargetPath', $target, '-OutputDir', $output, '-Apply', '-ApprovedPlanPath', $wrongOuterPath,
     '-ApprovedPlanSha256', $wrongOuterSha256, '-HumanApproved'
   )
@@ -69,19 +69,19 @@ try {
   $staleOuterPlan.intent_sha256 = Get-LizardPlanIntentSha256 -Intent $staleOuterPlan.intent
   $staleOuterPath = Join-Path $fixtureRoot 'stale-child-outer.json'
   $staleOuterSha256 = Write-TestCanonicalPlan -Plan $staleOuterPlan -Path $staleOuterPath
-  $staleChild = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts\update-target.ps1') -Arguments @(
+  $staleChild = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts/update-target.ps1') -Arguments @(
     '-TargetPath', $target, '-OutputDir', $output, '-Apply', '-ApprovedPlanPath', $staleOuterPath,
     '-ApprovedPlanSha256', $staleOuterSha256, '-HumanApproved'
   )
   Assert-False ($staleChild.exit_code -eq 0) 'Canonically redigested stale nested install plan must fail closed.'
   Assert-True ($staleChild.output -match 'PLAN_BINDING_NESTED_MISMATCH') "Stale nested plan must expose a nested binding mismatch. Output: $($staleChild.output)"
 
-  $unbound = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts\update-target.ps1') -Arguments @('-TargetPath', $target, '-OutputDir', $output, '-Apply')
+  $unbound = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts/update-target.ps1') -Arguments @('-TargetPath', $target, '-OutputDir', $output, '-Apply')
   Assert-False ($unbound.exit_code -eq 0) 'Unbound update apply must fail closed.'
   Assert-True ($unbound.output -match 'PLAN_APPROVAL_REQUIRED') 'Unbound update must expose PLAN_APPROVAL_REQUIRED.'
-  $apply = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts\update-target.ps1') -Arguments $updateApproval.arguments
+  $apply = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts/update-target.ps1') -Arguments $updateApproval.arguments
   Assert-Equal 0 $apply.exit_code "Exact approved update plan must apply: $($apply.output)"
-  $historyPath = Join-Path $target '.agent\lizard-agent-layer.update-history.jsonl'
+  $historyPath = Join-Path $target '.agent/lizard-agent-layer.update-history.jsonl'
   $history = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $historyPath | Select-Object -Last 1)
   Assert-Equal $updateApproval.sha256 ([string]$history.applied_plan_sha256) 'Update history must record the exact approved outer plan digest.'
   Assert-Equal 64 ([string]$history.applied_install_plan_sha256).Length 'Update history must record the nested approved install digest.'

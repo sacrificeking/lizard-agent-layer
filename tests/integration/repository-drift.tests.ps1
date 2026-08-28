@@ -8,9 +8,9 @@ if ([string]::IsNullOrWhiteSpace($LayerRoot)) {
   }
 }
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
 
-$driftScript = Join-Path $LayerRoot 'scripts\check-repository-drift.ps1'
+$driftScript = Join-Path $LayerRoot 'scripts/check-repository-drift.ps1'
 
 # 1. Assert repository drift checker passes cleanly on repository root
 $cleanResult = Invoke-TestPowerShell -ScriptPath $driftScript -Arguments @('-RepoRoot', $LayerRoot)

@@ -2,18 +2,18 @@ param([string]$LayerRoot)
 
 $ErrorActionPreference = 'Stop'
 $RepoRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $LayerRoot).Path }
-Import-Module (Join-Path $RepoRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.SafeFs.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Plan.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Trust.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Json.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Plan.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Trust.psm1') -Force
 
-$testRoot = Join-Path $RepoRoot ('.tmp\tests\signed-apply-' + [Guid]::NewGuid().ToString('N'))
+$testRoot = Join-Path $RepoRoot ('.tmp/tests/signed-apply-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
 $targetRoot = Join-Path $testRoot 'target'
 New-Item -ItemType Directory -Path $targetRoot -Force | Out-Null
 
-$installScript = Join-Path $RepoRoot 'scripts\install.ps1'
+$installScript = Join-Path $RepoRoot 'scripts/install.ps1'
 
 try {
   # 1. Generate RSA key pair for operator
@@ -134,7 +134,7 @@ try {
     '-ReplayLedgerPath', $replayLedger
   ))
   Assert-Equal 0 $validResult.exit_code "Signed apply failed: $($validResult.output)"
-  Assert-True (Test-Path -LiteralPath (Join-Path $targetRoot '.agent\lizard-agent-layer.install.json') -PathType Leaf) 'Install manifest should be created on successful signed apply.'
+  Assert-True (Test-Path -LiteralPath (Join-Path $targetRoot '.agent/lizard-agent-layer.install.json') -PathType Leaf) 'Install manifest should be created on successful signed apply.'
 
   # Assert 4: Replay with the same envelope/challenge fails closed
   $replayResult = Invoke-TestPowerShell -ScriptPath $installScript -Arguments (@($approval.arguments) + @(

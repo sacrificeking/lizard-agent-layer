@@ -59,51 +59,51 @@ Write-Host "StrictGitStatus: $($StrictGitStatus.IsPresent)"
 Write-Host ""
 
 Invoke-CiStep 'validate' {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\validate.ps1') -LayerRoot $LayerRoot
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts/validate.ps1') -LayerRoot $LayerRoot
 }
 Invoke-CiStep 'schema mutations' {
-  & node (Join-Path $LayerRoot 'tools\schema-validator\validate.mjs') --root $LayerRoot --mutation-corpus 'tools/schema-validator/mutation-corpus.json'
+  & node (Join-Path $LayerRoot 'tools/schema-validator/validate.mjs') --root $LayerRoot --mutation-corpus 'tools/schema-validator/mutation-corpus.json'
 }
 Invoke-CiStep 'contract governance' {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\contract-check.ps1') -LayerRoot $LayerRoot -Strict
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts/contract-check.ps1') -LayerRoot $LayerRoot -Strict
 }
 $focusedStepName = if ($FocusedShardCount -eq 1) { 'focused safety' } else { "focused safety shard $FocusedShardIndex of $FocusedShardCount" }
 Invoke-CiStep $focusedStepName {
-  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'tests\run-focused.ps1') -LayerRoot $LayerRoot -ShardIndex $FocusedShardIndex -ShardCount $FocusedShardCount
+  & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'tests/run-focused.ps1') -LayerRoot $LayerRoot -ShardIndex $FocusedShardIndex -ShardCount $FocusedShardCount
 }
 $focusedReportName = if ($FocusedShardCount -eq 1) { 'focused-test-report.json' } else { 'focused-test-report-shard-{0:D2}-of-{1:D2}.json' -f $FocusedShardIndex, $FocusedShardCount }
 $focusedReportPath = Join-Path $LayerRoot ".tmp\tests\$focusedReportName"
 if (-not (Test-Path -LiteralPath $focusedReportPath -PathType Leaf)) { throw "FOCUSED_REPORT_MISSING: $focusedReportPath" }
 if (-not $SkipPacks) {
   Invoke-CiStep 'packs' {
-    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\pack-report.ps1') -LayerRoot $LayerRoot -Strict
+    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts/pack-report.ps1') -LayerRoot $LayerRoot -Strict
   }
 }
 
 if (-not $SkipDrift) {
   Invoke-CiStep 'drift' {
-    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\drift-check.ps1') -LayerRoot $LayerRoot -Strict
+    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts/drift-check.ps1') -LayerRoot $LayerRoot -Strict
   }
   Invoke-CiStep 'repository drift' {
-    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\check-repository-drift.ps1') -RepoRoot $LayerRoot
+    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts/check-repository-drift.ps1') -RepoRoot $LayerRoot
   }
 }
 
 if (-not $SkipQuality) {
   Invoke-CiStep 'quality' {
-    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\score-layer.ps1') -LayerRoot $LayerRoot -FocusedReportPath $focusedReportPath -Strict
+    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts/score-layer.ps1') -LayerRoot $LayerRoot -FocusedReportPath $focusedReportPath -Strict
   }
 }
 
 if (-not $SkipSmoke) {
   Invoke-CiStep 'smoke' {
-    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'tests\smoke.ps1') -LayerRoot $LayerRoot
+    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'tests/smoke.ps1') -LayerRoot $LayerRoot
   }
 }
 
 if (-not $SkipMatrix) {
   Invoke-CiStep 'matrix' {
-    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\matrix.ps1') -LayerRoot $LayerRoot
+    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts/matrix.ps1') -LayerRoot $LayerRoot
   }
 }
 
@@ -127,7 +127,7 @@ $Report = [ordered]@{
   strict_git_status = $StrictGitStatus.IsPresent
   results = @($Results.ToArray())
 }
-$ReportDir = Join-Path $LayerRoot '.tmp\ci'
+$ReportDir = Join-Path $LayerRoot '.tmp/ci'
 $ReportDir = Initialize-SafeDirectory -Path $ReportDir
 $ReportPath = Join-Path $ReportDir ('ci-report-{0}.json' -f (Get-Date -Format 'yyyyMMddHHmmss'))
 Set-SafeContent -AuthorizedRoot $ReportDir -Path $ReportPath -Value ($Report | ConvertTo-Json -Depth 8)

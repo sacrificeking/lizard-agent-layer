@@ -10,8 +10,8 @@ $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Host.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'tests\TestTrustHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestTrustHelpers.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $PowerShellHost = Get-LizardPowerShellHostPath
 $PowerShellFilePrefix = Get-LizardPowerShellFilePrefix
@@ -66,11 +66,11 @@ foreach ($profile in $selectedProfiles) {
     $status = 'pass'
     $message = ''
     try {
-      $installScript = Join-Path $LayerRoot 'scripts\install.ps1'
+      $installScript = Join-Path $LayerRoot 'scripts/install.ps1'
       $approval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Profile', $profile, '-Harnesses', $harness)
       $installResult = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $approval.arguments
       if ($installResult.exit_code -ne 0) { throw "install failed: $($installResult.output)" }
-      $doctorOutput = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\doctor.ps1') -TargetPath $target -Strict 2>&1 | Out-String
+      $doctorOutput = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts/doctor.ps1') -TargetPath $target -Strict 2>&1 | Out-String
       if ($LASTEXITCODE -ne 0) { throw "doctor failed: $doctorOutput" }
       Write-Host "PASS $profile / $harness"
     } catch {

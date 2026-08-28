@@ -13,9 +13,9 @@ if ([string]::IsNullOrWhiteSpace($LayerRoot)) {
 }
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Json.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Host.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Json.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Host.psm1') -Force
 
 $PowerShellHost = Get-LizardPowerShellHostPath
 $PowerShellFilePrefix = Get-LizardPowerShellFilePrefix
@@ -62,7 +62,7 @@ if ([string]::IsNullOrWhiteSpace($currentVersion)) {
 }
 
 # 2. Check Repository Drift
-$driftScript = Join-Path $LayerRoot 'scripts\check-repository-drift.ps1'
+$driftScript = Join-Path $LayerRoot 'scripts/check-repository-drift.ps1'
 if (Test-Path -LiteralPath $driftScript -PathType Leaf) {
   $driftOutput = & $PowerShellHost @PowerShellFilePrefix $driftScript -RepoRoot $LayerRoot 2>&1 | Out-String
   if ($LASTEXITCODE -eq 0) {
@@ -75,7 +75,7 @@ if (Test-Path -LiteralPath $driftScript -PathType Leaf) {
 }
 
 # 3. Check JSON Reader Policy
-$policyScript = Join-Path $LayerRoot 'scripts\check-json-reader-policy.ps1'
+$policyScript = Join-Path $LayerRoot 'scripts/check-json-reader-policy.ps1'
 if (Test-Path -LiteralPath $policyScript -PathType Leaf) {
   $policyOutput = & $PowerShellHost @PowerShellFilePrefix $policyScript -LayerRoot $LayerRoot 2>&1 | Out-String
   if ($LASTEXITCODE -eq 0) {
@@ -88,7 +88,7 @@ if (Test-Path -LiteralPath $policyScript -PathType Leaf) {
 }
 
 # 4. Check Schema Validation
-$validatorScript = Join-Path $LayerRoot 'tools\schema-validator\validate.mjs'
+$validatorScript = Join-Path $LayerRoot 'tools/schema-validator/validate.mjs'
 if (Test-Path -LiteralPath $validatorScript -PathType Leaf) {
   $valOutput = & node $validatorScript 2>&1 | Out-String
   if ($LASTEXITCODE -eq 0) {

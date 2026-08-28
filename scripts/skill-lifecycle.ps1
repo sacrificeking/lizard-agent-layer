@@ -17,11 +17,11 @@ $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $TargetRoot = (Resolve-Path -LiteralPath $TargetRoot).Path
 
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Json.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SafeFs.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Plan.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Transaction.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.SkillPackage.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Json.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SafeFs.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Plan.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Transaction.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.SkillPackage.psm1') -Force
 
 function New-SkillLifecycleException {
   param([string]$Code, [string]$Message)
@@ -201,11 +201,11 @@ function Assert-PostLockPlanBinding {
   if ((Get-LizardPlanRootHash -TargetRoot $TargetRoot) -ne [string]$Plan.intent.target_root_hash) { throw (New-SkillLifecycleException 'SKILL_PLAN_DRIFT' 'Target root identity changed after approval.') }
   foreach ($inputRecord in @($Plan.intent.inputs)) {
     if ([string]$inputRecord.scope -ne 'layer') { throw (New-SkillLifecycleException 'SKILL_PLAN_DRIFT' 'Skill lifecycle accepts layer inputs only.') }
-    $inputPath = Resolve-SafeTargetDestination -AuthorizedRoot $LayerRoot -DestinationPath (Join-Path $LayerRoot ([string]$inputRecord.path).Replace('/', '\'))
+    $inputPath = Resolve-SafeTargetDestination -AuthorizedRoot $LayerRoot -DestinationPath (Join-Path $LayerRoot ([string]$inputRecord.path).Replace('/', '/'))
     if ((Get-SafeFileHash -AuthorizedRoot $LayerRoot -Path $inputPath) -ne [string]$inputRecord.sha256) { throw (New-SkillLifecycleException 'SKILL_PLAN_DRIFT' "Source input '$($inputRecord.path)' changed after approval.") }
   }
   foreach ($targetEntry in @($Plan.intent.target_entries)) {
-    $path = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot ([string]$targetEntry.path).Replace('/', '\'))
+    $path = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot ([string]$targetEntry.path).Replace('/', '/'))
     $exists = Test-Path -LiteralPath $path
     $kind = if (-not $exists) { 'absent' } elseif (Test-Path -LiteralPath $path -PathType Leaf) { 'file' } elseif (Test-Path -LiteralPath $path -PathType Container) { 'directory' } else { 'other' }
     if ($kind -ne [string]$targetEntry.precondition_kind) { throw (New-SkillLifecycleException 'SKILL_PLAN_DRIFT' "Target '$($targetEntry.path)' kind changed after approval.") }
@@ -290,17 +290,17 @@ foreach ($file in @($sourceTree.files)) {
 }
 if ($writesPackage) {
   $requiredDirectories = New-Object System.Collections.Generic.List[string]
-  foreach ($path in @((Join-Path $TargetRoot '.agent'), (Join-Path $TargetRoot '.agent\skills'), $packagePath, (Join-Path $TargetRoot '.agent\skill-lifecycle'))) { $requiredDirectories.Add($path) | Out-Null }
-  foreach ($relative in @($sourceTree.directories)) { $requiredDirectories.Add((Join-Path $packagePath $relative.Replace('/', '\'))) | Out-Null }
+  foreach ($path in @((Join-Path $TargetRoot '.agent'), (Join-Path $TargetRoot '.agent/skills'), $packagePath, (Join-Path $TargetRoot '.agent/skill-lifecycle'))) { $requiredDirectories.Add($path) | Out-Null }
+  foreach ($relative in @($sourceTree.directories)) { $requiredDirectories.Add((Join-Path $packagePath $relative.Replace('/', '/'))) | Out-Null }
   Add-RequiredDirectoryEntries -Entries $entries -Paths @($requiredDirectories.ToArray())
-  foreach ($file in @($sourceTree.files)) { $entries.Add((Get-TargetEntry -Path (Join-Path $packagePath $file.path.Replace('/', '\')) -Kind file -IntendedHash ([string]$file.sha256) -Ownership layer-owned)) | Out-Null }
+  foreach ($file in @($sourceTree.files)) { $entries.Add((Get-TargetEntry -Path (Join-Path $packagePath $file.path.Replace('/', '/')) -Kind file -IntendedHash ([string]$file.sha256) -Ownership layer-owned)) | Out-Null }
 } elseif ($removesPackage) {
   foreach ($file in @($targetTree.files)) { $entries.Add((Get-TargetEntry -Path $file.full_path -Kind file -IntendedHash $null -Ownership layer-owned -ActionOverride remove)) | Out-Null }
-  $directoryPaths = @($targetTree.directories | ForEach-Object { Join-Path $packagePath $_.Replace('/', '\') }) + @($packagePath)
+  $directoryPaths = @($targetTree.directories | ForEach-Object { Join-Path $packagePath $_.Replace('/', '/') }) + @($packagePath)
   $directoryPaths = @($directoryPaths | Sort-Object { $_.Length } -Descending)
   foreach ($path in $directoryPaths) { $entries.Add((Get-TargetEntry -Path $path -Kind directory -IntendedHash $null -Ownership layer-owned -ActionOverride remove)) | Out-Null }
 }
-Add-RequiredDirectoryEntries -Entries $entries -Paths @((Join-Path $TargetRoot '.agent'), (Join-Path $TargetRoot '.agent\skill-lifecycle'))
+Add-RequiredDirectoryEntries -Entries $entries -Paths @((Join-Path $TargetRoot '.agent'), (Join-Path $TargetRoot '.agent/skill-lifecycle'))
 $entries.Add((Get-TargetEntry -Path $statePath -Kind file -IntendedHash $stateHash -Ownership layer-owned)) | Out-Null
 
 $options = [pscustomobject][ordered]@{
@@ -314,7 +314,7 @@ $candidatePlan = New-LizardOperationPlan -OperationKind skill-lifecycle -TargetR
 
 if (-not $Apply) {
   if ([string]::IsNullOrWhiteSpace($CanonicalPlanPath)) {
-    $planRoot = Join-Path $LayerRoot '.tmp\skill-plans'
+    $planRoot = Join-Path $LayerRoot '.tmp/skill-plans'
     if (-not (Test-Path -LiteralPath $planRoot)) { New-SafeDirectory -AuthorizedRoot $LayerRoot -Path $planRoot | Out-Null }
     $CanonicalPlanPath = Join-Path $planRoot ("{0}-{1}-{2}.json" -f $SkillName, $Action.ToLowerInvariant(), ([Guid]::NewGuid().ToString('N')))
   }
@@ -334,9 +334,9 @@ try {
   foreach ($plannedEntry in @($candidatePlan.intent.target_entries)) { $entryByPath[[string]$plannedEntry.path] = $plannedEntry }
   if ($writesPackage) {
     New-LizardTransactionalDirectory -Path $packagePath | Out-Null
-    foreach ($directory in @($sourceTree.directories)) { New-LizardTransactionalDirectory -Path (Join-Path $packagePath $directory.Replace('/', '\')) | Out-Null }
+    foreach ($directory in @($sourceTree.directories)) { New-LizardTransactionalDirectory -Path (Join-Path $packagePath $directory.Replace('/', '/')) | Out-Null }
     foreach ($file in @($sourceTree.files)) {
-      $destination = Join-Path $packagePath $file.path.Replace('/', '\')
+      $destination = Join-Path $packagePath $file.path.Replace('/', '/')
       $relativeDestination = ConvertTo-RelativePath -Root $TargetRoot -Path $destination
       if ([string]$entryByPath[$relativeDestination].action -eq 'preserve') { continue }
       $force = Test-Path -LiteralPath $destination -PathType Leaf
@@ -347,7 +347,7 @@ try {
       $identity = Get-SafeItemMetadata -AuthorizedRoot $TargetRoot -Path $file.full_path -Kind File
       Remove-LizardTransactionalItem -Path $file.full_path -Kind File -ExpectedIdentity $identity
     }
-    $directoryPaths = @($targetTree.directories | ForEach-Object { Join-Path $packagePath $_.Replace('/', '\') }) + @($packagePath)
+    $directoryPaths = @($targetTree.directories | ForEach-Object { Join-Path $packagePath $_.Replace('/', '/') }) + @($packagePath)
     $directoryPaths = @($directoryPaths | Sort-Object { $_.Length } -Descending)
     foreach ($directory in $directoryPaths) {
       $identity = Get-SafeItemMetadata -AuthorizedRoot $TargetRoot -Path $directory -Kind Directory

@@ -111,20 +111,20 @@ function Add-JsonlArtifact {
 
 function Get-RecordArtifacts {
   $artifacts = New-Object System.Collections.Generic.List[object]
-  foreach ($relative in @('.agent/memory/personal/PREFERENCES.md', '.agent/memory/semantic/DECISIONS.md', '.agent/memory/semantic/LESSONS.md', '.agent/memory/working/WORKSPACE.md', '.agent/memory/episodic/EPISODES.md')) { Add-FileArtifact $artifacts (Join-Path $TargetRoot $relative.Replace('/', '\')) 'memory' 'filesystem' }
+  foreach ($relative in @('.agent/memory/personal/PREFERENCES.md', '.agent/memory/semantic/DECISIONS.md', '.agent/memory/semantic/LESSONS.md', '.agent/memory/working/WORKSPACE.md', '.agent/memory/episodic/EPISODES.md')) { Add-FileArtifact $artifacts (Join-Path $TargetRoot $relative.Replace('/', '/')) 'memory' 'filesystem' }
   foreach ($spec in @(
     [pscustomobject]@{ path = '.agent/routing/receipts/decisions'; class = 'routing-decision' },
     [pscustomobject]@{ path = '.agent/routing/receipts/executions'; class = 'routing-execution' }
   )) {
-    $directory = Join-Path $TargetRoot $spec.path.Replace('/', '\')
+    $directory = Join-Path $TargetRoot $spec.path.Replace('/', '/')
     if (Test-Path -LiteralPath $directory -PathType Container) {
       foreach ($entry in @(Get-SafeDirectoryEntries -AuthorizedRoot $TargetRoot -Path $directory)) {
         if ($entry.kind -eq 'file' -and $entry.name.EndsWith('.json', [StringComparison]::OrdinalIgnoreCase)) { Add-FileArtifact $artifacts $entry.path $spec.class 'route-envelope' }
       }
     }
   }
-  Add-JsonlArtifact $artifacts (Join-Path $TargetRoot '.agent\lizard-agent-layer.update-history.jsonl') 'update-history' 'updated_at'
-  $loopsRoot = Join-Path $TargetRoot '.agent\loops'
+  Add-JsonlArtifact $artifacts (Join-Path $TargetRoot '.agent/lizard-agent-layer.update-history.jsonl') 'update-history' 'updated_at'
+  $loopsRoot = Join-Path $TargetRoot '.agent/loops'
   if (Test-Path -LiteralPath $loopsRoot -PathType Container) {
     $queue = New-Object System.Collections.Generic.Queue[string]
     $queue.Enqueue($loopsRoot)
@@ -163,11 +163,11 @@ function Assert-PlanPreconditions {
   param($Plan)
   if ((Get-LizardPlanRootHash $TargetRoot) -ne [string]$Plan.intent.target_root_hash) { throw (New-RecordsLifecycleException 'RECORDS_PLAN_DRIFT' 'Target root identity changed after approval.') }
   foreach ($inputRecord in @($Plan.intent.inputs)) {
-    $path = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot ([string]$inputRecord.path).Replace('/', '\'))
+    $path = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot ([string]$inputRecord.path).Replace('/', '/'))
     if ((Get-SafeFileHash -AuthorizedRoot $TargetRoot -Path $path) -ne [string]$inputRecord.sha256) { throw (New-RecordsLifecycleException 'RECORDS_PLAN_DRIFT' "Input '$($inputRecord.path)' changed after approval.") }
   }
   foreach ($entry in @($Plan.intent.target_entries)) {
-    $path = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot ([string]$entry.path).Replace('/', '\'))
+    $path = Resolve-SafeTargetDestination -AuthorizedRoot $TargetRoot -DestinationPath (Join-Path $TargetRoot ([string]$entry.path).Replace('/', '/'))
     $exists = Test-Path -LiteralPath $path
     $kind = if (-not $exists) { 'absent' } elseif (Test-Path -LiteralPath $path -PathType Leaf) { 'file' } elseif (Test-Path -LiteralPath $path -PathType Container) { 'directory' } else { 'other' }
     if ($kind -ne [string]$entry.precondition_kind) { throw (New-RecordsLifecycleException 'RECORDS_PLAN_DRIFT' "Target '$($entry.path)' kind changed after approval.") }
@@ -198,7 +198,7 @@ function Write-ExportBundle {
   } else { Set-SafeBytes -AuthorizedRoot $exportRootResolved -Path $manifestPath -Bytes $manifestBytes -CreateNew }
 }
 
-if ([string]::IsNullOrWhiteSpace($PolicyPath)) { $PolicyPath = Join-Path $LayerRoot 'retention-policies\conservative.json' }
+if ([string]::IsNullOrWhiteSpace($PolicyPath)) { $PolicyPath = Join-Path $LayerRoot 'retention-policies/conservative.json' }
 if ([string]::IsNullOrWhiteSpace($PolicySha256)) { throw (New-RecordsLifecycleException 'RETENTION_POLICY_DIGEST_REQUIRED' 'Supply an independently calculated PolicySha256.') }
 if ($Action -ne 'Inventory' -and -not $PSBoundParameters.ContainsKey('AsOf')) { throw (New-RecordsLifecycleException 'RECORDS_AS_OF_REQUIRED' 'Export and purge require an explicit AsOf boundary time.') }
 if (-not $PSBoundParameters.ContainsKey('AsOf')) { $AsOf = [DateTimeOffset]::UtcNow }
@@ -223,7 +223,7 @@ if ($Action -eq 'Purge') {
 }
 
 $artifacts = Get-RecordArtifacts
-$loopOperational = Test-Path -LiteralPath (Join-Path $TargetRoot '.agent\loops\lizard-agent-layer.loop-install.json') -PathType Leaf
+$loopOperational = Test-Path -LiteralPath (Join-Path $TargetRoot '.agent/loops/lizard-agent-layer.loop-install.json') -PathType Leaf
 $allRecords = New-Object System.Collections.Generic.List[object]
 foreach ($artifact in @($artifacts)) {
   foreach ($record in @($artifact.records)) {
@@ -290,7 +290,7 @@ if ($Action -eq 'Purge') {
       $mutations.Add([pscustomobject]@{ action = 'replace'; artifact = $artifact; bytes = $bytes; intended_sha256 = $intended }) | Out-Null
     }
   }
-  $recordsRoot = Join-Path $TargetRoot '.agent\records'
+  $recordsRoot = Join-Path $TargetRoot '.agent/records'
   $receiptRoot = Join-Path $recordsRoot 'deletion-receipts'
   $receiptPath = Join-Path $receiptRoot ($ReceiptId + '.json')
   foreach ($directory in @($recordsRoot, $receiptRoot)) {
@@ -309,7 +309,7 @@ $options = [pscustomobject][ordered]@{ action = $Action.ToLowerInvariant(); poli
 $candidatePlan = New-LizardOperationPlan -OperationKind records-lifecycle -TargetRoot $TargetRoot -LayerRoot $LayerRoot -Options $options -Inputs @($inputs.ToArray()) -TargetEntries @($entries.ToArray()) -TtlMinutes $PlanTtlMinutes
 
 if (-not $Apply) {
-  if ([string]::IsNullOrWhiteSpace($CanonicalPlanPath)) { $planRoot = Join-Path $LayerRoot '.tmp\records-plans'; if (-not (Test-Path -LiteralPath $planRoot)) { New-SafeDirectory -AuthorizedRoot $LayerRoot -Path $planRoot | Out-Null }; $CanonicalPlanPath = Join-Path $planRoot ("$ReceiptId-$($Action.ToLowerInvariant())-$([Guid]::NewGuid().ToString('N')).json") }
+  if ([string]::IsNullOrWhiteSpace($CanonicalPlanPath)) { $planRoot = Join-Path $LayerRoot '.tmp/records-plans'; if (-not (Test-Path -LiteralPath $planRoot)) { New-SafeDirectory -AuthorizedRoot $LayerRoot -Path $planRoot | Out-Null }; $CanonicalPlanPath = Join-Path $planRoot ("$ReceiptId-$($Action.ToLowerInvariant())-$([Guid]::NewGuid().ToString('N')).json") }
   $written = Write-LizardOperationPlan -Plan $candidatePlan -AuthorizedRoot $LayerRoot -Path $CanonicalPlanPath
   Write-Output ([pscustomobject]@{ mode = 'preview'; action = $Action.ToLowerInvariant(); policy_id = [string]$policyRead.policy.policy_id; as_of = $AsOf.ToString('o'); selected_records = $candidateRecords.Count; held_records = @($allRecords | Where-Object { $_.held }).Count; operationally_blocked = @($allRecords | Where-Object { $_.operational_block }).Count; plan_path = $written.path; plan_sha256 = $written.sha256; export_manifest_sha256 = if ($needsExport) { $exportManifestHash } else { $null } })
   return

@@ -317,7 +317,7 @@ if ($null -ne $Manifest) {
 }
 
 $stamp = Get-Date -Format 'yyyyMMddHHmmss'
-$defaultBase = Join-Path $LayerRoot ('.tmp\uninstall-plans\lizard-agent-layer-{0}-{1}' -f (Split-Path -Leaf $TargetRoot), $stamp)
+$defaultBase = Join-Path $LayerRoot ('.tmp/uninstall-plans/lizard-agent-layer-{0}-{1}' -f (Split-Path -Leaf $TargetRoot), $stamp)
 $EffectivePlanPath = if ([string]::IsNullOrWhiteSpace($PlanPath)) { $defaultBase + '.md' } elseif ([System.IO.Path]::IsPathRooted($PlanPath)) { [System.IO.Path]::GetFullPath($PlanPath) } else { [System.IO.Path]::GetFullPath((Join-Path (Get-Location).Path $PlanPath)) }
 $EffectiveCanonicalPlanPath = if ([string]::IsNullOrWhiteSpace($CanonicalPlanPath)) { [System.IO.Path]::ChangeExtension($EffectivePlanPath, '.json') } elseif ([System.IO.Path]::IsPathRooted($CanonicalPlanPath)) { [System.IO.Path]::GetFullPath($CanonicalPlanPath) } else { [System.IO.Path]::GetFullPath((Join-Path (Get-Location).Path $CanonicalPlanPath)) }
 $EffectiveReceiptPath = if ([string]::IsNullOrWhiteSpace($ReceiptPath)) { [System.IO.Path]::ChangeExtension($EffectivePlanPath, '.receipt.json') } elseif ([System.IO.Path]::IsPathRooted($ReceiptPath)) { [System.IO.Path]::GetFullPath($ReceiptPath) } else { [System.IO.Path]::GetFullPath((Join-Path (Get-Location).Path $ReceiptPath)) }
@@ -347,7 +347,7 @@ if (-not $Apply) {
 
 $Inputs = New-Object System.Collections.Generic.List[object]
 foreach ($relative in @('VERSION', 'scripts/uninstall.ps1', 'scripts/Lizard.Json.psm1', 'scripts/Lizard.SafeFs.psm1', 'scripts/Lizard.Manifest.psm1', 'scripts/Lizard.Plan.psm1', 'scripts/Lizard.Transaction.psm1')) {
-  $Inputs.Add((Get-UninstallPlanInput -ScopeName layer -Root $LayerRoot -Path (Join-Path $LayerRoot ($relative.Replace('/', '\'))) -DisplayPath $relative)) | Out-Null
+  $Inputs.Add((Get-UninstallPlanInput -ScopeName layer -Root $LayerRoot -Path (Join-Path $LayerRoot ($relative.Replace('/', '/'))) -DisplayPath $relative)) | Out-Null
 }
 if ($null -ne $Manifest) { $Inputs.Add((Get-UninstallPlanInput -ScopeName target -Root $TargetRoot -Path $ManifestPath -DisplayPath $ManifestRelativePath)) | Out-Null }
 

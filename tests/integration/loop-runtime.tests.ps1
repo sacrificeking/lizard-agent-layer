@@ -2,17 +2,17 @@ param([string]$LayerRoot)
 
 $ErrorActionPreference = 'Stop'
 $RepoRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $LayerRoot).Path }
-Import-Module (Join-Path $RepoRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.LoopEvidence.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Trust.psm1') -Force
-Import-Module (Join-Path $RepoRoot 'tests\TestTrustHelpers.psm1') -Force
-$testRoot = Join-Path $RepoRoot '.tmp\tests'
+Import-Module (Join-Path $RepoRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Json.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.LoopEvidence.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'scripts/Lizard.Trust.psm1') -Force
+Import-Module (Join-Path $RepoRoot 'tests/TestTrustHelpers.psm1') -Force
+$testRoot = Join-Path $RepoRoot '.tmp/tests'
 $fixture = Join-Path $testRoot ("loop-runtime-{0}" -f ([Guid]::NewGuid().ToString('N')))
-$runScript = Join-Path $RepoRoot 'scripts\loop-run.ps1'
-$recoverScript = Join-Path $RepoRoot 'scripts\loop-recover.ps1'
-$initScript = Join-Path $RepoRoot 'scripts\loop-init.ps1'
-$syncScript = Join-Path $RepoRoot 'scripts\loop-sync.ps1'
+$runScript = Join-Path $RepoRoot 'scripts/loop-run.ps1'
+$recoverScript = Join-Path $RepoRoot 'scripts/loop-recover.ps1'
+$initScript = Join-Path $RepoRoot 'scripts/loop-init.ps1'
+$syncScript = Join-Path $RepoRoot 'scripts/loop-sync.ps1'
 New-Item -ItemType Directory -Path $fixture -Force | Out-Null
 $clockOutside = Join-Path (Join-Path $RepoRoot '.tmp') ("loop-clock-outside-{0}" -f ([Guid]::NewGuid().ToString('N')))
 $script:reportIndex = 0
@@ -32,7 +32,7 @@ function Initialize-LoopTarget {
 }
 function Get-RuntimePaths {
   param([string]$Target)
-  $manifest = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $Target '.agent\loops\lizard-agent-layer.loop-install.json') -Raw)
+  $manifest = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath (Join-Path $Target '.agent/loops/lizard-agent-layer.loop-install.json') -Raw)
   [pscustomobject]@{
     state = Join-Path $Target ([string]$manifest.runtime_state_file).Replace('/', [System.IO.Path]::DirectorySeparatorChar)
     budget = Join-Path $Target ([string]$manifest.runtime_budget_file).Replace('/', [System.IO.Path]::DirectorySeparatorChar)
@@ -100,7 +100,7 @@ try {
   Assert-Equal 'released' ([string]$lease.status) 'Completion must release lease.'
   Assert-Equal 80 ([int]$state.budget_window.tokens_used) 'Completion must reconcile token usage.'
   Assert-Equal 2 @((Get-Content -LiteralPath $paths.events) | Where-Object { $_ }).Count 'A valid run needs exactly two events.'
-  Assert-JsonSchemaValid $RepoRoot 'schemas/loop-runtime-report.schema.json' (Join-Path $fixture 'report-004\loop-run-report.json') 'Generated runtime report must satisfy schema.'
+  Assert-JsonSchemaValid $RepoRoot 'schemas/loop-runtime-report.schema.json' (Join-Path $fixture 'report-004/loop-run-report.json') 'Generated runtime report must satisfy schema.'
   $duplicate = Invoke-LoopRun $happy @('-Action', 'Start', '-RunId', 'run-1', '-ItemId', 'item-1', '-Owner', 'agent', '-TokenEstimate', '10', '-TestNowUtc', '2026-07-12T08:03:00Z', '-Apply')
   Assert-False ($duplicate.exit_code -eq 0) 'RunId reuse must fail.'
   Assert-True ($duplicate.output -match 'LOOP_RUN_DUPLICATE') 'RunId reuse must expose stable code.'
@@ -123,7 +123,7 @@ try {
   # Additive migration for installations created before executable runtime fields existed.
   $legacy = Initialize-LoopTarget 'legacy'; $legacyPaths = Get-RuntimePaths $legacy
   Remove-Item -LiteralPath @($legacyPaths.state, $legacyPaths.budget, $legacyPaths.events, $legacyPaths.lease) -Force
-  $legacyManifestPath = Join-Path $legacy '.agent\loops\lizard-agent-layer.loop-install.json'
+  $legacyManifestPath = Join-Path $legacy '.agent/loops/lizard-agent-layer.loop-install.json'
   $legacyManifest = ConvertFrom-LizardJson -InputObject (Get-Content $legacyManifestPath -Raw)
   foreach ($name in @('runtime_budget_file', 'runtime_state_file', 'runtime_events_file', 'runtime_lease_file')) { $legacyManifest.PSObject.Properties.Remove($name) }
   $legacyManifest | ConvertTo-Json -Depth 12 | Set-Content $legacyManifestPath -Encoding UTF8

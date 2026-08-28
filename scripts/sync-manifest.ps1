@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 $TargetRoot = Resolve-SafeRoot -Path $TargetPath -RequireExisting
-$SkillsRoot = Join-Path $TargetRoot '.agent\skills'
+$SkillsRoot = Join-Path $TargetRoot '.agent/skills'
 if (-not (Test-Path -LiteralPath $SkillsRoot)) { throw "Missing .agent\skills in target: $TargetRoot" }
 
 $indexLines = New-Object System.Collections.Generic.List[string]

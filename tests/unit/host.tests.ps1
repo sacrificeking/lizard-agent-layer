@@ -1,8 +1,8 @@
 param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
 
 $ErrorActionPreference = 'Stop'
-Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
-Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Host.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests/TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'scripts/Lizard.Host.psm1') -Force
 
 $hostPath = Get-LizardPowerShellHostPath
 $hostId = Get-LizardHostId
@@ -23,7 +23,7 @@ foreach ($case in @(
   @{ id = 'linux-pwsh'; executable = 'pwsh'; execution_policy = $false },
   @{ id = 'macos-pwsh'; executable = 'pwsh'; execution_policy = $false }
 )) {
-  $invocation = New-LizardPowerShellFileInvocation -ScriptPath '.\scripts\install.ps1' -ArgumentList @('-TargetPath', 'path with spaces') -HostId $case.id
+  $invocation = New-LizardPowerShellFileInvocation -ScriptPath './scripts/install.ps1' -ArgumentList @('-TargetPath', 'path with spaces') -HostId $case.id
   Assert-Equal $case.executable ([string]$invocation.executable) "Generated executable mismatch for $($case.id)."
   Assert-True (@($invocation.argv) -contains '-File') "Generated argv lacks -File for $($case.id)."
   Assert-Equal ([bool]$case.execution_policy) (@($invocation.argv) -contains '-ExecutionPolicy') "Generated execution-policy compatibility mismatch for $($case.id)."
@@ -31,7 +31,7 @@ foreach ($case in @(
   Assert-True ([string]$invocation.display -match '"path with spaces"') "Display command does not quote an argv item for $($case.id)."
 }
 
-$fixtureRoot = Join-Path $LayerRoot '.tmp\tests\host'
+$fixtureRoot = Join-Path $LayerRoot '.tmp/tests/host'
 if (Test-Path -LiteralPath $fixtureRoot) { Clear-TestDirectory -Path $fixtureRoot -AllowedRoot (Join-Path $LayerRoot '.tmp') }
 New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
 try {
@@ -47,8 +47,8 @@ try {
     foreach ($match in @($matches)) { $bareCalls += "$($file.FullName):$($match.LineNumber)" }
   }
   Assert-Equal 0 $bareCalls.Count "Executable code still invokes powershell.exe directly: $($bareCalls -join ', ')"
-  foreach ($generatedCommandSource in @('scripts\install.ps1', 'scripts\analyze-target.ps1')) {
-    $hardCoded = @(Select-String -LiteralPath (Join-Path $LayerRoot $generatedCommandSource) -Pattern 'powershell\.exe' -CaseSensitive:$false)
+  foreach ($generatedCommandSource in @('scripts/install.ps1', 'scripts/analyze-target.ps1')) {
+    $hardCoded = @(Select-String -LiteralPath (Join-Path $LayerRoot $generatedCommandSource) -Pattern 'powershell/.exe' -CaseSensitive:$false)
     Assert-Equal 0 $hardCoded.Count "Generated command source still hard-codes powershell.exe: $generatedCommandSource"
   }
 
@@ -56,7 +56,7 @@ try {
   $generatedCwd = Join-Path $fixtureRoot 'generated-cwd'
   New-Item -ItemType Directory -Path $generatedTarget, $generatedCwd -Force | Out-Null
   Set-Content -LiteralPath (Join-Path $generatedTarget 'README.md') -Value '# portable generated command' -Encoding UTF8
-  $analysisResult = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\analyze-target.ps1') -Arguments @('-TargetPath', $generatedTarget, '-ApprovedHarnesses', 'generic-agents-md', '-Json')
+  $analysisResult = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts/analyze-target.ps1') -Arguments @('-TargetPath', $generatedTarget, '-ApprovedHarnesses', 'generic-agents-md', '-Json')
   Assert-Equal 0 $analysisResult.exit_code "Analyzer invocation generation failed: $($analysisResult.output)"
   $analysis = $analysisResult.output | ConvertFrom-LizardJson
   $originalLocation = (Get-Location).Path
@@ -67,7 +67,7 @@ try {
   } finally { Set-Location -LiteralPath $originalLocation }
   Assert-Equal 0 $generatedExit "Exact analyzer executable/argv did not execute on the current host: $generatedOutput"
   Assert-False (Test-Path -LiteralPath (Join-Path $generatedTarget '.agent')) 'Generated analyzer preview invocation mutated the target.'
-  $generatedPlan = Join-Path $generatedCwd '.tmp\install-plan.md'
+  $generatedPlan = Join-Path $generatedCwd '.tmp/install-plan.md'
   Assert-True (Test-Path -LiteralPath $generatedPlan -PathType Leaf) 'Generated analyzer preview invocation did not write its outside-target plan.'
   $generatedPlanText = Get-Content -LiteralPath $generatedPlan -Raw
   Assert-True ($generatedPlanText -match [regex]::Escape([string]$analysis.previewInvocation.executable)) 'Install plan did not render the current host executable.'
