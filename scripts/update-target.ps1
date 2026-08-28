@@ -60,15 +60,15 @@ if ($Apply) {
   if (Test-Path -LiteralPath $profilePath -PathType Leaf) {
     try {
       $pDoc = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $profilePath -Raw)
-      if ($pDoc.riskLevel) { $effectiveRisk = [string]$pDoc.riskLevel }
+      if ($pDoc.PSObject.Properties['riskLevel']) { $effectiveRisk = [string]$pDoc.riskLevel }
     } catch {}
   } elseif (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
     try {
       $mDoc = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $manifestPath -Raw)
-      if ($mDoc.risk_level) { $effectiveRisk = [string]$mDoc.risk_level }
+      if ($mDoc.PSObject.Properties['risk_level']) { $effectiveRisk = [string]$mDoc.risk_level }
     } catch {}
   }
-  if ($ApprovedUpdatePlan.intent.risk_level) {
+  if ($ApprovedUpdatePlan.intent.PSObject.Properties['risk_level']) {
     $effectiveRisk = [string]$ApprovedUpdatePlan.intent.risk_level
   }
   $approvalPolicy = Get-LizardOperationApprovalPolicy `

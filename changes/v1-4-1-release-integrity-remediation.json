@@ -1,7 +1,7 @@
 {
     "schema_version":  1,
     "id":  "v1-4-1-release-integrity-remediation",
-    "date":  "2026-08-27",
+    "date":  "2026-08-28",
     "summary":  "Release integrity remediation for v1.4.1: CI matrix repair, universal canonical JSON reader policy, macOS SafeFS permission bits, mandatory signed plan approval with replay protection, transaction rollback post-state binding anti-clobber, deep semantic drift verification engine, release readiness engine, and release pipeline automation.",
     "changed_paths":  [
                           "changes/v1-4-1-release-integrity-remediation.json",
