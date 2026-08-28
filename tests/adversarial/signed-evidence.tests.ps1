@@ -1,6 +1,8 @@
-param([string]$RepoRoot = (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))))
+param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
 
 $ErrorActionPreference = 'Stop'
+$RepoRoot = if ([string]::IsNullOrWhiteSpace($LayerRoot)) { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) } else { (Resolve-Path -LiteralPath $LayerRoot).Path }
+Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Json.psm1') -Force
 Import-Module (Join-Path $RepoRoot 'scripts\Lizard.Trust.psm1') -Force
 
 function Assert-True { param([bool]$Condition, [string]$Message) if (-not $Condition) { throw "ASSERT_TRUE_FAILED: $Message" } }
@@ -54,7 +56,7 @@ try {
   Assert-True ($verified.principal_id -eq 'verifier-01') 'Trusted principal should come from the signing key.'
   Assert-True ($verified.approval_ref -eq 'approval-01') 'External approval reference should survive verification.'
 
-  $tampered = $envelope | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+  $tampered = $envelope | ConvertTo-Json -Depth 20 | ConvertFrom-LizardJson
   $tampered.payload.effective_status = 'FAIL'
   Assert-ThrowsCode { Test-LizardSignedEvidenceEnvelope -Envelope $tampered -TrustStoreRead $trustRead -ChallengeRead $challengeRead -ExpectedPayloadKind verifier-evidence -ExpectedPurpose loop-completion -ExpectedSubject operation-01 -ExpectedBindingSha256 $binding -RequiredRole verifier -Now $now } 'TRUST_PAYLOAD_HASH_MISMATCH'
   Assert-ThrowsCode { Test-LizardSignedEvidenceEnvelope -Envelope $envelope -TrustStoreRead $trustRead -ChallengeRead $challengeRead -ExpectedPayloadKind verifier-evidence -ExpectedPurpose loop-completion -ExpectedSubject operation-02 -ExpectedBindingSha256 $binding -RequiredRole verifier -Now $now } 'TRUST_ENVELOPE_CONTEXT_MISMATCH'
@@ -64,7 +66,7 @@ try {
   Use-LizardReplayLedger -LedgerPath $ledger -EnvelopeId $envelope.envelope_id -Nonce $envelope.nonce -Purpose loop-completion -Now $now | Out-Null
   Assert-ThrowsCode { Use-LizardReplayLedger -LedgerPath $ledger -EnvelopeId $envelope.envelope_id -Nonce $envelope.nonce -Purpose loop-completion -Now $now } 'TRUST_REPLAY_DETECTED'
 
-  $revoked = $trust | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+  $revoked = $trust | ConvertTo-Json -Depth 20 | ConvertFrom-LizardJson
   $revoked.revoked_key_ids = @('verifier-key-01')
   $revokedPath = Join-Path $testRoot 'trust-revoked.json'; Write-Json $revokedPath $revoked
   $revokedRead = Read-LizardTrustStore -Path $revokedPath -ExpectedSha256 (Get-LizardTrustFileSha256 $revokedPath) -Now $now

@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)),
   [switch]$SkipSmoke,
   [switch]$SkipMatrix,
@@ -83,6 +83,9 @@ if (-not $SkipPacks) {
 if (-not $SkipDrift) {
   Invoke-CiStep 'drift' {
     & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\drift-check.ps1') -LayerRoot $LayerRoot -Strict
+  }
+  Invoke-CiStep 'repository drift' {
+    & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\check-repository-drift.ps1') -RepoRoot $LayerRoot
   }
 }
 

@@ -27,7 +27,7 @@ function Invoke-Route {
   param([string]$Root, [string[]]$Arguments)
   $result = Invoke-TestPowerShell -ScriptPath $routeScript -Arguments (@('-TargetPath', $Root, '-Json') + $Arguments)
   Assert-Equal 0 $result.exit_code "Route command failed: $($result.output)"
-  return ($result.output | ConvertFrom-Json)
+  return ($result.output | ConvertFrom-LizardJson)
 }
 
 try {
@@ -49,7 +49,7 @@ try {
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.agent\routing\inventory.json')) 'Portable install must not fabricate model availability.'
 
   $manifestPath = Join-Path $target '.agent\lizard-agent-layer.install.json'
-  $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+  $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-LizardJson
   Assert-Equal 'staged-balanced' ([string]$manifest.routing_policy) 'Manifest must record the staged execution policy.'
   Assert-Equal 'inherit-current' ([string]$manifest.model_mode) 'Portable manifest must inherit the active model.'
   Assert-Equal 0 @($manifest.routing_models).Count 'Portable manifest must not claim installed models.'
@@ -239,7 +239,7 @@ try {
   Assert-False ([string]$advanced.recommended_model -eq 'expired-provider/old-perfect') 'Expired calibration evidence must remain ineligible.'
   Assert-False ([string]$advanced.recommended_model -eq 'wrong-runtime/misleading-perfect') 'Calibration from a different runtime configuration must remain ineligible.'
 
-  $advancedEnvelope = Get-Content -LiteralPath (Join-Path $advancedTarget '.agent\routing\receipts\decisions\advanced.json') -Raw | ConvertFrom-Json
+  $advancedEnvelope = Get-Content -LiteralPath (Join-Path $advancedTarget '.agent\routing\receipts\decisions\advanced.json') -Raw | ConvertFrom-LizardJson
   $executionBinding = Get-LizardExecutionTrustBinding -TargetRoot $advancedTarget -ReceiptId 'advanced-execution' -RouteDecisionId 'advanced' -RoutePayloadSha256 ([string]$advancedEnvelope.payload_sha256) -ExecutorId 'fixture/codex-runtime-v1' -ConfigurationFingerprint 'fixture-codex-config-v1' -ActualModel 'vendor-zeta/build-plus@2026-07' -ActualProvider 'vendor-zeta'
   $runtimeTrust = New-LizardTestTrustMaterial -Root (Join-Path $fixture 'advanced-runtime-trust') -BindingSha256 $executionBinding -Subject 'advanced-execution' -Now ([DateTimeOffset]::UtcNow) -PrincipalId 'fixture/codex-runtime-v1' -Roles @('runtime') -Purpose 'execution-attestation' -PayloadKind 'execution-receipt'
   $execution = Invoke-TestPowerShell -ScriptPath $recordExecutionScript -Arguments @(
@@ -260,7 +260,7 @@ try {
     '-Apply', '-Json'
   )
   Assert-Equal 0 $execution.exit_code "Attesting runtime receipt must succeed: $($execution.output)"
-  $executionDoc = $execution.output | ConvertFrom-Json
+  $executionDoc = $execution.output | ConvertFrom-LizardJson
   Assert-Equal 'execution-receipt' ([string]$executionDoc.artifact_kind) 'Actual execution must be a separate receipt.'
   Assert-Equal 'vendor-zeta/build-plus@2026-07' ([string]$executionDoc.actual_model) 'Execution receipt must contain actual runtime identity.'
   Assert-Equal 'fixture-codex-config-v1' ([string]$executionDoc.configuration_fingerprint) 'Execution receipt must preserve the attested runtime configuration.'
@@ -295,7 +295,7 @@ try {
 }
 '@ | Set-Content -LiteralPath $evaluationPayloadPath -Encoding UTF8
   Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/model-evaluation-payload.schema.json' -InstancePath $evaluationPayloadPath -Message 'Model promotion evaluation payload must satisfy schema.'
-  $evaluationPayload = Get-Content -LiteralPath $evaluationPayloadPath -Raw | ConvertFrom-Json
+  $evaluationPayload = Get-Content -LiteralPath $evaluationPayloadPath -Raw | ConvertFrom-LizardJson
   $calibrationBinding = Get-LizardCalibrationTrustBinding -TargetRoot $advancedTarget -EvaluationId $evaluationPayload.evaluation_id -ModelId $evaluationPayload.model_id -Provider $evaluationPayload.provider -ExecutorId $evaluationPayload.executor_id -ConfigurationFingerprint $evaluationPayload.configuration_fingerprint -Cases @($evaluationPayload.cases)
   $evaluationTrust = New-LizardTestTrustMaterial -Root (Join-Path $fixture 'evaluation-trust') -BindingSha256 $calibrationBinding -Subject $evaluationPayload.evaluation_id -Now ([DateTimeOffset]::UtcNow) -PrincipalId 'independent-evaluator' -Roles @('evaluator') -Purpose 'model-calibration' -PayloadKind 'model-evaluation'
   $evaluationEnvelope = New-LizardSignedEvidenceEnvelope -Payload $evaluationPayload -PayloadKind model-evaluation -Purpose model-calibration -Subject $evaluationPayload.evaluation_id -BindingSha256 $calibrationBinding -ChallengePath $evaluationTrust.challenge_path -ChallengeSha256 $evaluationTrust.challenge_sha256 -PrivateKeyPath $evaluationTrust.private_key_path -PrivateKeySha256 $evaluationTrust.private_key_sha256
@@ -309,7 +309,7 @@ try {
   Assert-Equal $inventoryHashBeforeCalibration (Get-LizardSha256 $inventoryPath) 'Calibration preview must not mutate inventory evidence.'
   $calibrationApply = Invoke-TestPowerShell -ScriptPath $calibrateModelScript -Arguments (@('-TargetPath', $advancedTarget, '-EvaluationPath', $evaluationPath, '-Apply', '-Json') + $calibrationTrustArgs)
   Assert-Equal 0 $calibrationApply.exit_code "Calibration apply must succeed: $($calibrationApply.output)"
-  $promotedInventory = Get-Content -LiteralPath $inventoryPath -Raw | ConvertFrom-Json
+  $promotedInventory = Get-Content -LiteralPath $inventoryPath -Raw | ConvertFrom-LizardJson
   $promoted = @($promotedInventory.models | Where-Object { [string]$_.id -eq 'future-provider/unseen-perfect' })[0]
   Assert-Equal 'calibrated' ([string]$promoted.evidence.state) 'Attested evaluation must promote the matching inventory model.'
   Assert-Equal 0.81 ([double]$promoted.evidence.role_scores.standardExecutor) 'Calibration must derive the role score from evaluation cases.'
@@ -326,7 +326,7 @@ try {
   $canaryInstall = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $canaryApproval.arguments
   Assert-Equal 0 $canaryInstall.exit_code 'Install with existing target routing policy must succeed.'
   Assert-Equal $canaryHash (Get-LizardSha256 $canaryPolicyPath) 'Installer must not clobber an existing target routing policy.'
-  $canaryManifest = Get-Content -LiteralPath (Join-Path $canaryTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  $canaryManifest = Get-Content -LiteralPath (Join-Path $canaryTarget '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
   $canaryArtifact = @($canaryManifest.artifacts | Where-Object { $_.path -eq '.agent/routing/policy.json' } | Select-Object -First 1)
   Assert-Equal 'user-owned' ([string]$canaryArtifact[0].ownership) 'Existing routing policy must remain user-owned.'
 

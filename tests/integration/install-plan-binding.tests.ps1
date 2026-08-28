@@ -16,7 +16,7 @@ try {
   $apply = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts\install.ps1') -Arguments $approval.arguments
   Assert-Equal 0 $apply.exit_code "Exact approved install plan must apply: $($apply.output)"
   $manifestPath = Join-Path $target '.agent\lizard-agent-layer.install.json'
-  $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+  $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-LizardJson
   Assert-Equal $approval.sha256 ([string]$manifest.applied_plan_sha256) 'Manifest must record the exact independently supplied plan digest.'
   Assert-Equal 32 ([string]$manifest.applied_plan_id).Length 'Manifest must record the approved plan ID.'
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.lizard-agent-layer.lock')) 'Committed install must remove its transaction lock.'

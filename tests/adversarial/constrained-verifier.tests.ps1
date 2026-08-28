@@ -65,7 +65,7 @@ try {
   try { $null = Read-LizardVerificationPlan -Path $written.path -ExpectedSha256 $written.sha256 -WorktreeRoot $otherRoot } catch { $rootRejected = $_.Exception.Message -match 'VERIFICATION_PLAN_WORKTREE_MISMATCH' }
   Assert-True $rootRejected 'A command plan must not be replayed against another worktree.'
 
-  $weakened = Get-Content -LiteralPath $written.path -Raw | ConvertFrom-Json
+  $weakened = Get-Content -LiteralPath $written.path -Raw | ConvertFrom-LizardJson
   $weakened.restrictions.shell = $true
   $weakenedWritten = Write-TestPlan -Plan $weakened -Name 'weakened.json'
   $restrictionRejected = $false
@@ -135,13 +135,13 @@ try {
   $verifyOutput = Join-Path $fixture 'verify-output'
   $verify = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\loop-verify.ps1') -Arguments @('-TargetPath', $integrationTarget, '-LifecyclePath', $lifecyclePath, '-Verifier', 'verifier-1', '-Implementer', 'implementer-1', '-Status', 'PASS', '-Summary', 'Constrained integration pass.', '-CriteriaPath', $criteriaPath, '-VerificationPlanPath', $integrationPlanWritten.path, '-VerificationPlanSha256', $integrationPlanWritten.sha256, '-HumanApprovedVerificationPlan', '-LifecycleTrustStorePath', $lifecycleTrust.trust_store_path, '-LifecycleTrustStoreSha256', $lifecycleTrust.trust_store_sha256, '-LifecycleChallengePath', $lifecycleTrust.challenge_path, '-LifecycleChallengeSha256', $lifecycleTrust.challenge_sha256, '-TrustChallengePath', $trust.challenge_path, '-TrustChallengeSha256', $trust.challenge_sha256, '-VerifierPrivateKeyPath', $trust.private_key_path, '-VerifierPrivateKeySha256', $trust.private_key_sha256, '-OutputDir', $verifyOutput, '-Apply')
   Assert-Equal 0 $verify.exit_code "loop-verify must accept an exact approved constrained plan: $($verify.output)"
-  $verifyReport = Get-Content -LiteralPath (Join-Path $verifyOutput 'loop-verify-report.json') -Raw | ConvertFrom-Json
+  $verifyReport = Get-Content -LiteralPath (Join-Path $verifyOutput 'loop-verify-report.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal 'PASS' ([string]$verifyReport.status) 'Constrained verifier integration must produce PASS.'
   Assert-Equal ([string]$integrationPlan.plan_id) ([string]$verifyReport.verification_plan_id) 'Verifier report must bind the exact command plan ID.'
   Assert-Equal ([string]$integrationPlanWritten.sha256) ([string]$verifyReport.verification_plan_sha256) 'Verifier report must bind the independently supplied command plan digest.'
   Assert-Equal 'git-head' ([string]$verifyReport.command_results[0].command_id) 'Verifier report must retain only the allowlisted command ID.'
   Assert-True (Test-Path -LiteralPath (Join-Path $loopRoot 'loop-verifier-report.evidence.json')) 'Successful constrained verification must seal target evidence.'
-  $signed = Get-Content -LiteralPath (Join-Path $loopRoot 'loop-verifier-report.evidence.json') -Raw | ConvertFrom-Json
+  $signed = Get-Content -LiteralPath (Join-Path $loopRoot 'loop-verifier-report.evidence.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal 2 ([int]$signed.schema_version) 'Verdict evidence must use the signed envelope schema.'
   Assert-Equal 'RS256' ([string]$signed.signature_algorithm) 'Verdict evidence must be asymmetrically signed.'
   Write-Host 'PASS tests\adversarial\constrained-verifier.tests.ps1'

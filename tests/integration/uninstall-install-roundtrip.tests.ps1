@@ -1,4 +1,4 @@
-param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)))
+param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
@@ -14,15 +14,12 @@ $uninstall = Join-Path $LayerRoot 'scripts\uninstall.ps1'
 New-Item -ItemType Directory -Path $target, $reports -Force | Out-Null
 
 try {
-  $installPlan = Join-Path $reports 'install.json'
-  $installPreview = Invoke-TestPowerShell -ScriptPath $install -Arguments @('-TargetPath', $target, '-Profile', 'minimal', '-Harnesses', 'codex', '-CanonicalPlanPath', $installPlan)
-  Assert-Equal 0 $installPreview.exit_code "Real installer preview failed: $($installPreview.output)"
-  $installSha = (Get-Content -LiteralPath ($installPlan + '.sha256') -Raw).Trim()
-  $installApply = Invoke-TestPowerShell -ScriptPath $install -Arguments @('-TargetPath', $target, '-Profile', 'minimal', '-Harnesses', 'codex', '-Apply', '-ApprovedPlanPath', $installPlan, '-ApprovedPlanSha256', $installSha, '-HumanApproved')
+  $installApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Profile', 'minimal', '-Harnesses', 'codex')
+  $installApply = Invoke-TestPowerShell -ScriptPath $install -Arguments $installApproval.arguments
   Assert-Equal 0 $installApply.exit_code "Real installer apply failed: $($installApply.output)"
   $manifestPath = Join-Path $target '.agent\lizard-agent-layer.install.json'
   Assert-True (Test-Path -LiteralPath $manifestPath -PathType Leaf) 'Real installation must produce a schema-v4 manifest.'
-  $installedManifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+  $installedManifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-LizardJson
   foreach ($nestedDirectory in @('.agent/memory', '.agents', '.agent/skills/research-audit/references', '.agent/skills/research-audit/tests')) {
     $directoryRecord = @($installedManifest.artifacts | Where-Object { $_.path -eq $nestedDirectory })
     Assert-Equal 1 $directoryRecord.Count "Every nested skill directory must have one manifest record: $nestedDirectory"
@@ -33,25 +30,18 @@ try {
   $modifiedPath = Join-Path $target '.agent\memory\personal\PREFERENCES.md'
   Add-Content -LiteralPath $modifiedPath -Value 'local preference canary' -Encoding UTF8
   $modifiedHash = (Get-FileHash -LiteralPath $modifiedPath -Algorithm SHA256).Hash.ToLowerInvariant()
-  $managedPlan = Join-Path $reports 'managed-only.md'
-  $managedPreview = Invoke-TestPowerShell -ScriptPath $uninstall -Arguments @('-TargetPath', $target, '-PlanPath', $managedPlan)
-  Assert-Equal 0 $managedPreview.exit_code "Managed-only preview on a real installation failed: $($managedPreview.output)"
-  $managedCanonical = [System.IO.Path]::ChangeExtension($managedPlan, '.json')
-  $managedSha = (Get-Content -LiteralPath ($managedCanonical + '.sha256') -Raw).Trim()
-  $managedApply = Invoke-TestPowerShell -ScriptPath $uninstall -Arguments @('-TargetPath', $target, '-Apply', '-ApprovedPlanPath', $managedCanonical, '-ApprovedPlanSha256', $managedSha, '-HumanApproved')
+  
+  $managedApproval = New-TestUninstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Scope', 'managed-only')
+  $managedApply = Invoke-TestPowerShell -ScriptPath $uninstall -Arguments $managedApproval.arguments
   Assert-Equal 0 $managedApply.exit_code "Managed-only partial apply on a real installation failed: $($managedApply.output)"
   Assert-Equal $modifiedHash ((Get-FileHash -LiteralPath $modifiedPath -Algorithm SHA256).Hash.ToLowerInvariant()) 'Managed-only partial apply must preserve modified bytes exactly.'
   Assert-True (Test-Path -LiteralPath $manifestPath -PathType Leaf) 'Partial apply must retain residual ownership evidence.'
-  $residual = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+  $residual = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-LizardJson
   Assert-Equal 'active' ([string](@($residual.artifacts | Where-Object { $_.path -eq '.agent/memory/personal/PREFERENCES.md' })[0].lifecycle)) 'Modified artifact must remain active in the residual manifest.'
   Assert-True (@($residual.artifacts | Where-Object { $_.lifecycle -eq 'removed' }).Count -gt 0) 'Removed unchanged artifacts must retain tombstoned ownership records.'
 
-  $completePlan = Join-Path $reports 'complete.md'
-  $completePreview = Invoke-TestPowerShell -ScriptPath $uninstall -Arguments @('-TargetPath', $target, '-Scope', 'complete', '-ConfirmModifiedLayerOwnedPurge', '-PlanPath', $completePlan)
-  Assert-Equal 0 $completePreview.exit_code "Complete preview after partial removal failed: $($completePreview.output)"
-  $completeCanonical = [System.IO.Path]::ChangeExtension($completePlan, '.json')
-  $completeSha = (Get-Content -LiteralPath ($completeCanonical + '.sha256') -Raw).Trim()
-  $completeApply = Invoke-TestPowerShell -ScriptPath $uninstall -Arguments @('-TargetPath', $target, '-Scope', 'complete', '-ConfirmModifiedLayerOwnedPurge', '-Apply', '-ApprovedPlanPath', $completeCanonical, '-ApprovedPlanSha256', $completeSha, '-HumanApproved')
+  $completeApproval = New-TestUninstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Scope', 'complete', '-ConfirmModifiedLayerOwnedPurge')
+  $completeApply = Invoke-TestPowerShell -ScriptPath $uninstall -Arguments $completeApproval.arguments
   Assert-Equal 0 $completeApply.exit_code "Complete apply after partial removal failed: $($completeApply.output)"
   Assert-Equal 0 @([System.IO.Directory]::EnumerateFileSystemEntries($target)).Count 'Install then partial then complete uninstall must restore the originally empty target tree.'
 

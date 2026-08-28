@@ -120,7 +120,7 @@ try {
   Assert-True ($remainingHistory -match '"id":"recent"') 'Selective JSONL purge must retain recent update history.'
 
   $receiptPath = Join-Path $target '.agent\records\deletion-receipts\purge-01.json'
-  $receipt = Get-SafeContent -AuthorizedRoot $target -Path $receiptPath -Raw | ConvertFrom-Json
+  $receipt = Get-SafeContent -AuthorizedRoot $target -Path $receiptPath -Raw | ConvertFrom-LizardJson
   Assert-Equal 'records-deletion-receipt' ([string]$receipt.artifact_kind) 'Purge must write deletion evidence.'
   Assert-Equal 'records-officer-01' ([string]$receipt.records_officer) 'Receipt must bind authenticated records authority.'
   Assert-True (@($receipt.deleted_records).Count -ge 5) 'Receipt must enumerate selectively deleted records.'

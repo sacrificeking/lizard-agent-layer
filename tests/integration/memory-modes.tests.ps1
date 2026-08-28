@@ -24,8 +24,8 @@ function Install-TestMode {
 try {
   foreach ($mode in @('curated', 'private-episodic', 'off')) {
     $target = Install-TestMode -Mode $mode
-    $profile = Get-Content -LiteralPath (Join-Path $target '.agent\project-profile.json') -Raw | ConvertFrom-Json
-    $manifest = Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+    $profile = Get-Content -LiteralPath (Join-Path $target '.agent\project-profile.json') -Raw | ConvertFrom-LizardJson
+    $manifest = Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
     Assert-Equal $mode ([string]$profile.memoryMode) "Installed profile must record effective mode $mode."
     Assert-Equal $mode ([string]$manifest.memory_mode) "Install manifest must record effective mode $mode."
 

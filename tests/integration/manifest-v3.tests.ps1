@@ -21,7 +21,7 @@ function New-Target {
 
 function Read-Manifest {
   param([string]$Target)
-  Get-Content -LiteralPath (Join-Path $Target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  Get-Content -LiteralPath (Join-Path $Target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
 }
 
 function Find-Artifact {
@@ -72,7 +72,7 @@ try {
   $diffDir = Join-Path $fixture 'tamper-diff'
   $diff = Invoke-TestPowerShell -ScriptPath $diffScript -Arguments @('-TargetPath', $tamperTarget, '-LayerRoot', $LayerRoot, '-OutputDir', $diffDir, '-Strict')
   Assert-False ($diff.exit_code -eq 0) 'Strict diff must reject modified layer-owned content.'
-  $diffReport = Get-Content -LiteralPath (Join-Path $diffDir 'manifest-diff.json') -Raw | ConvertFrom-Json
+  $diffReport = Get-Content -LiteralPath (Join-Path $diffDir 'manifest-diff.json') -Raw | ConvertFrom-LizardJson
   Assert-True (@($diffReport.differences | Where-Object { $_.kind -eq 'content-modified' -and $_.value -eq '.agent/protocols/handoff.md' }).Count -eq 1) 'Tamper report must name the exact modified artifact.'
   Assert-True (@($diffReport.differences | Where-Object { $_.kind -eq 'adapter-identity-mismatch' -and $_.value -eq 'codex' }).Count -eq 1) 'Tampered instruction identity must invalidate the effective adapter.'
   Assert-True (@($diffReport.differences | Where-Object { $_.kind -eq 'mirror-mismatch' -and $_.value -eq 'skill:git-safety:SKILL.md' }).Count -eq 1) 'Tampered harness mirror must invalidate mirror equality.'
@@ -101,7 +101,7 @@ try {
   $legacyDiffDir = Join-Path $fixture 'legacy-diff'
   $legacyDiff = Invoke-TestPowerShell -ScriptPath $diffScript -Arguments @('-TargetPath', $legacyTarget, '-LayerRoot', $LayerRoot, '-OutputDir', $legacyDiffDir, '-Strict')
   Assert-False ($legacyDiff.exit_code -eq 0) 'Legacy manifests must never pass strict integrity checks.'
-  $legacyDiffReport = Get-Content -LiteralPath (Join-Path $legacyDiffDir 'manifest-diff.json') -Raw | ConvertFrom-Json
+  $legacyDiffReport = Get-Content -LiteralPath (Join-Path $legacyDiffDir 'manifest-diff.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal 'integrity-unknown' ([string]$legacyDiffReport.status) 'Legacy strict diff must report integrity-unknown.'
   $legacyFile = Join-Path $legacyTarget '.agent\protocols\permissions.md'
   Set-Content -LiteralPath $legacyFile -Value 'legacy-customization' -Encoding UTF8
@@ -140,7 +140,7 @@ try {
 
   $adapterEntries = @()
   Get-ChildItem -LiteralPath (Join-Path $LayerRoot 'adapters') -Directory | Sort-Object Name | ForEach-Object {
-    $adapterEntries += [pscustomobject]@{ name = $_.Name; adapter_dir = $_.FullName; manifest = (Get-Content -LiteralPath (Join-Path $_.FullName 'adapter.json') -Raw | ConvertFrom-Json) }
+    $adapterEntries += [pscustomobject]@{ name = $_.Name; adapter_dir = $_.FullName; manifest = (Get-Content -LiteralPath (Join-Path $_.FullName 'adapter.json') -Raw | ConvertFrom-LizardJson) }
   }
   for ($i = 0; $i -lt $adapterEntries.Count; $i++) {
     for ($j = $i + 1; $j -lt $adapterEntries.Count; $j++) {

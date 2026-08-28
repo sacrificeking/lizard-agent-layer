@@ -213,8 +213,16 @@ function ConvertTo-LizardCanonicalTemporaryPath {
     ConvertTo-LizardFullPath -Path $Path
   }
 
-  if ($HostId -eq 'macos-pwsh' -and ($fullPath -eq '/var' -or $fullPath.StartsWith('/var/', [System.StringComparison]::Ordinal))) {
-    return '/private' + $fullPath
+  if ($HostId -eq 'macos-pwsh') {
+    if ($fullPath -eq '/var' -or $fullPath.StartsWith('/var/', [System.StringComparison]::Ordinal)) {
+      return '/private' + $fullPath
+    }
+    if ($fullPath -eq '/tmp' -or $fullPath.StartsWith('/tmp/', [System.StringComparison]::Ordinal)) {
+      return '/private' + $fullPath
+    }
+    if ($fullPath -eq '/etc' -or $fullPath.StartsWith('/etc/', [System.StringComparison]::Ordinal)) {
+      return '/private' + $fullPath
+    }
   }
   return $fullPath
 }

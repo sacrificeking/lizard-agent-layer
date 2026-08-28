@@ -50,7 +50,7 @@ try {
   $statePath = Join-Path $target '.agent\skill-lifecycle\git-safety.json'
   Assert-True (Test-Path -LiteralPath (Join-Path $packageRoot 'SKILL.md') -PathType Leaf) 'Install must copy SKILL.md.'
   Assert-True (Test-Path -LiteralPath (Join-Path $packageRoot 'skill.json') -PathType Leaf) 'Install must copy version metadata.'
-  $state = Get-SafeContent -AuthorizedRoot $target -Path $statePath -Raw | ConvertFrom-Json
+  $state = Get-SafeContent -AuthorizedRoot $target -Path $statePath -Raw | ConvertFrom-LizardJson
   Assert-Equal 'active' ([string]$state.status) 'Install state must be active.'
   Assert-Equal 2 @($state.files).Count 'Install state must bind both package files.'
   Assert-Equal 0 @($state.directories).Count 'Empty directory inventory must remain an array.'
@@ -69,21 +69,21 @@ try {
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.lizard-agent-layer.lock')) 'Tamper rejection must occur before transaction lock creation.'
   Set-SafeBytes -AuthorizedRoot $target -Path $installedInstructions -Bytes $originalInstructionBytes
 
-  $legacyState = Get-SafeContent -AuthorizedRoot $target -Path $statePath -Raw | ConvertFrom-Json
+  $legacyState = Get-SafeContent -AuthorizedRoot $target -Path $statePath -Raw | ConvertFrom-LizardJson
   $legacyState.version = '0.9.0'
   $legacyState.previous_version = $null
   $legacyJson = ConvertTo-LizardCanonicalJson $legacyState
   Set-SafeBytes -AuthorizedRoot $target -Path $statePath -Bytes ((New-Object System.Text.UTF8Encoding($false)).GetBytes($legacyJson))
   $migration = Invoke-ApprovedLifecycle -SelectedTarget $target -Action Migrate
   Assert-Equal 0 $migration.apply.exit_code "Declared migration must succeed. $($migration.apply.output)"
-  $migratedState = Get-SafeContent -AuthorizedRoot $target -Path $statePath -Raw | ConvertFrom-Json
+  $migratedState = Get-SafeContent -AuthorizedRoot $target -Path $statePath -Raw | ConvertFrom-LizardJson
   Assert-Equal '1.0.0' ([string]$migratedState.version) 'Migration must install the reviewed package version.'
   Assert-Equal '0.9.0' ([string]$migratedState.previous_version) 'Migration must retain the source version.'
 
   $disable = Invoke-ApprovedLifecycle -SelectedTarget $target -Action Disable
   Assert-Equal 0 $disable.apply.exit_code "Disable must succeed. $($disable.apply.output)"
   Assert-False (Test-Path -LiteralPath $packageRoot) 'Disable must remove unchanged managed package content.'
-  $disabledState = Get-SafeContent -AuthorizedRoot $target -Path $statePath -Raw | ConvertFrom-Json
+  $disabledState = Get-SafeContent -AuthorizedRoot $target -Path $statePath -Raw | ConvertFrom-LizardJson
   Assert-Equal 'disabled' ([string]$disabledState.status) 'Disable must retain a recoverable tombstone.'
   Assert-Equal 2 @($disabledState.files).Count 'Disable must retain exact recovery hashes.'
 
@@ -94,7 +94,7 @@ try {
   $remove = Invoke-ApprovedLifecycle -SelectedTarget $target -Action Remove
   Assert-Equal 0 $remove.apply.exit_code "Removal must succeed. $($remove.apply.output)"
   Assert-False (Test-Path -LiteralPath $packageRoot) 'Removal must leave no package directory.'
-  $removedState = Get-SafeContent -AuthorizedRoot $target -Path $statePath -Raw | ConvertFrom-Json
+  $removedState = Get-SafeContent -AuthorizedRoot $target -Path $statePath -Raw | ConvertFrom-LizardJson
   Assert-Equal 'removed' ([string]$removedState.status) 'Removal must retain an ownership tombstone.'
   Assert-Equal 0 @($removedState.files).Count 'Removal tombstone must not claim installed files.'
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.lizard-agent-layer.lock')) 'Completed lifecycle must leave no transaction lock.'

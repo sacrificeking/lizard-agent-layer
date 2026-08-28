@@ -1,4 +1,4 @@
-param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)))
+param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
@@ -45,7 +45,7 @@ try {
   $canonicalPath = [System.IO.Path]::ChangeExtension($planPath, '.json')
   Assert-True (Test-Path -LiteralPath $canonicalPath -PathType Leaf) 'Preview must write an immutable canonical plan.'
   Assert-True (Test-Path -LiteralPath ($canonicalPath + '.sha256') -PathType Leaf) 'Preview must write the canonical plan digest sidecar.'
-  $plan = Get-Content -LiteralPath $canonicalPath -Raw | ConvertFrom-Json
+  $plan = Get-Content -LiteralPath $canonicalPath -Raw | ConvertFrom-LizardJson
   Assert-Equal 'uninstall' ([string]$plan.operation_kind) 'Preview must emit an uninstall operation plan.'
   Assert-Equal 4 @($plan.intent.target_entries | Where-Object { $_.action -eq 'remove' }).Count 'Clean owned files, directories, and manifest must be removal targets.'
   Assert-True (Test-Path -LiteralPath $owned -PathType Leaf) 'Preview must not mutate target content.'
@@ -66,7 +66,7 @@ try {
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.lizard-agent-layer-transactions')) 'Committed uninstall must remove transaction metadata.'
   $receiptPath = [System.IO.Path]::ChangeExtension($planPath, '.receipt.json')
   Assert-True (Test-Path -LiteralPath $receiptPath -PathType Leaf) 'Approved uninstall must write a deletion receipt outside the target.'
-  $receipt = Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-Json
+  $receipt = Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-LizardJson
   Assert-Equal 'completed' ([string]$receipt.status) 'Receipt must record completed removal.'
   Assert-Equal $plan.plan_id ([string]$receipt.plan_id) 'Receipt must bind the exact approved plan.'
   Assert-False ([bool]$receipt.final_manifest_present) 'Receipt must confirm manifest removal.'
@@ -74,7 +74,7 @@ try {
   $noOpPlanPath = Join-Path $reports 'no-op.md'
   $noOpPreview = Invoke-TestPowerShell -ScriptPath $script -Arguments @('-TargetPath', $target, '-PlanPath', $noOpPlanPath, '-Json')
   Assert-Equal 0 $noOpPreview.exit_code "A repeated uninstall preview must be an idempotent no-op: $($noOpPreview.output)"
-  $noOpPlan = Get-Content -LiteralPath ([System.IO.Path]::ChangeExtension($noOpPlanPath, '.json')) -Raw | ConvertFrom-Json
+  $noOpPlan = Get-Content -LiteralPath ([System.IO.Path]::ChangeExtension($noOpPlanPath, '.json')) -Raw | ConvertFrom-LizardJson
   Assert-Equal 0 @($noOpPlan.intent.target_entries).Count 'A target without an install manifest must produce an empty no-op plan.'
 
   $interruptedTarget = Join-Path $fixture 'interrupted'
@@ -118,7 +118,7 @@ try {
   $canonicalPath = [System.IO.Path]::ChangeExtension($planPath, '.json')
   $modifiedPreview = Invoke-TestPowerShell -ScriptPath $script -Arguments @('-TargetPath', $target, '-PlanPath', $planPath, '-Json')
   Assert-Equal 0 $modifiedPreview.exit_code "Modified-content preview must succeed conservatively: $($modifiedPreview.output)"
-  $modifiedPlan = Get-Content -LiteralPath $canonicalPath -Raw | ConvertFrom-Json
+  $modifiedPlan = Get-Content -LiteralPath $canonicalPath -Raw | ConvertFrom-LizardJson
   Assert-Equal 'preserve' ([string](@($modifiedPlan.intent.target_entries | Where-Object { $_.path -eq '.agent/owned/owned.txt' })[0].action)) 'Modified layer-owned files must be preserved in managed-only scope.'
   Assert-Equal 'preserve' ([string](@($modifiedPlan.intent.target_entries | Where-Object { $_.path -eq '.agent/owned' })[0].action)) 'A directory containing a preserved artifact must also be preserved.'
   Assert-Equal 'replace' ([string](@($modifiedPlan.intent.target_entries | Where-Object { $_.path -eq '.agent/lizard-agent-layer.install.json' })[0].action)) 'The manifest must be updated transactionally when ownership evidence is still needed.'
@@ -127,9 +127,9 @@ try {
   Assert-Equal 0 $modifiedApply.exit_code "Managed-only partial uninstall must succeed without losing ownership evidence: $($modifiedApply.output)"
   Assert-True (Test-Path -LiteralPath $owned -PathType Leaf) 'Managed-only partial uninstall must preserve the modified file.'
   Assert-True (Test-Path -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -PathType Leaf) 'Managed-only partial uninstall must retain the install manifest.'
-  $residualManifest = Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  $residualManifest = Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal 'active' ([string](@($residualManifest.artifacts | Where-Object { $_.path -eq '.agent/owned/owned.txt' })[0].lifecycle)) 'Preserved modified content must retain active ownership evidence.'
-  $modifiedReceipt = Get-Content -LiteralPath ([System.IO.Path]::ChangeExtension($planPath, '.receipt.json')) -Raw | ConvertFrom-Json
+  $modifiedReceipt = Get-Content -LiteralPath ([System.IO.Path]::ChangeExtension($planPath, '.receipt.json')) -Raw | ConvertFrom-LizardJson
   Assert-Equal 'partial' ([string]$modifiedReceipt.status) 'Receipt must report a partial uninstall when residue is preserved.'
   Assert-True ([bool]$modifiedReceipt.final_manifest_present) 'Partial receipt must report retained manifest evidence.'
   Assert-True (@($modifiedReceipt.unresolved_residue) -contains '.agent/owned/owned.txt') 'Partial receipt must list preserved residue.'
@@ -138,17 +138,15 @@ try {
   Assert-False ($completeWithoutConfirmation.exit_code -eq 0) 'Complete preview must require a separate modified-content purge confirmation.'
   Assert-True ($completeWithoutConfirmation.output -match 'UNINSTALL_SENSITIVE_PURGE_CONFIRMATION_REQUIRED') 'Missing complete confirmation must expose a stable code.'
   $completePlanPath = Join-Path $reports 'complete.md'
-  $completePreview = Invoke-TestPowerShell -ScriptPath $script -Arguments @('-TargetPath', $target, '-Scope', 'complete', '-ConfirmModifiedLayerOwnedPurge', '-PlanPath', $completePlanPath)
-  Assert-Equal 0 $completePreview.exit_code "Confirmed complete preview must succeed: $($completePreview.output)"
+  $completeApproval = New-TestUninstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Scope', 'complete', '-ConfirmModifiedLayerOwnedPurge', '-PlanPath', $completePlanPath)
   $completeCanonical = [System.IO.Path]::ChangeExtension($completePlanPath, '.json')
-  $completePlan = Get-Content -LiteralPath $completeCanonical -Raw | ConvertFrom-Json
+  $completePlan = Get-Content -LiteralPath $completeCanonical -Raw | ConvertFrom-LizardJson
   Assert-Equal 'remove' ([string](@($completePlan.intent.target_entries | Where-Object { $_.path -eq '.agent/owned/owned.txt' })[0].action)) 'Confirmed complete plan may remove modified layer-owned content.'
   Assert-True ([bool]$completePlan.intent.options.confirm_modified_layer_owned_purge) 'Complete plan must bind the second purge confirmation.'
-  $completeSha = (Get-Content -LiteralPath ($completeCanonical + '.sha256') -Raw).Trim()
-  $completeApply = Invoke-TestPowerShell -ScriptPath $script -Arguments @('-TargetPath', $target, '-Scope', 'complete', '-ConfirmModifiedLayerOwnedPurge', '-Apply', '-ApprovedPlanPath', $completeCanonical, '-ApprovedPlanSha256', $completeSha, '-HumanApproved', '-Json')
+  $completeApply = Invoke-TestPowerShell -ScriptPath $script -Arguments ($completeApproval.arguments + @('-Json'))
   Assert-Equal 0 $completeApply.exit_code "Confirmed complete apply must remove modified layer-owned content: $($completeApply.output)"
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.agent')) 'Residue-free complete apply must remove the final owned tree.'
-  $completeReceipt = Get-Content -LiteralPath ([System.IO.Path]::ChangeExtension($completePlanPath, '.receipt.json')) -Raw | ConvertFrom-Json
+  $completeReceipt = Get-Content -LiteralPath ([System.IO.Path]::ChangeExtension($completePlanPath, '.receipt.json')) -Raw | ConvertFrom-LizardJson
   Assert-Equal 'completed' ([string]$completeReceipt.status) 'Residue-free complete receipt must report completion.'
 
   $exportTarget = Join-Path $fixture 'export-target'
@@ -163,21 +161,18 @@ try {
   $exportRoot = Join-Path $reports 'approved-export-root'
   New-Item -ItemType Directory -Path $exportRoot -Force | Out-Null
   $exportPlanPath = Join-Path $reports 'export-complete.md'
-  $exportArgs = @('-TargetPath', $target, '-Scope', 'export-then-complete', '-ConfirmModifiedLayerOwnedPurge', '-ConfirmExportMayContainSensitiveData', '-ExportPath', $exportRoot, '-ExportRelativePaths', '.agent/owned/owned.txt', '-PlanPath', $exportPlanPath)
-  $exportPreview = Invoke-TestPowerShell -ScriptPath $script -Arguments $exportArgs
-  Assert-Equal 0 $exportPreview.exit_code "Export-then-complete preview must succeed for an exact manifest file allowlist: $($exportPreview.output)"
+  $exportApproval = New-TestUninstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Scope', 'export-then-complete', '-ConfirmModifiedLayerOwnedPurge', '-ConfirmExportMayContainSensitiveData', '-ExportPath', $exportRoot, '-ExportRelativePaths', '.agent/owned/owned.txt', '-PlanPath', $exportPlanPath)
   $exportCanonical = [System.IO.Path]::ChangeExtension($exportPlanPath, '.json')
-  $exportPlan = Get-Content -LiteralPath $exportCanonical -Raw | ConvertFrom-Json
+  $exportPlan = Get-Content -LiteralPath $exportCanonical -Raw | ConvertFrom-LizardJson
   Assert-Equal '.agent/owned/owned.txt' ([string]$exportPlan.intent.options.export_relative_paths[0]) 'Export plan must bind the exact relative allowlist.'
   Assert-True ([bool]$exportPlan.intent.options.confirm_export_may_contain_sensitive_data) 'Export plan must bind the sensitive-data confirmation.'
-  $exportSha = (Get-Content -LiteralPath ($exportCanonical + '.sha256') -Raw).Trim()
-  $exportApply = Invoke-TestPowerShell -ScriptPath $script -Arguments @($exportArgs[0..($exportArgs.Count - 3)] + @('-Apply', '-ApprovedPlanPath', $exportCanonical, '-ApprovedPlanSha256', $exportSha, '-HumanApproved', '-Json'))
+  $exportApply = Invoke-TestPowerShell -ScriptPath $script -Arguments ($exportApproval.arguments + @('-Json'))
   Assert-Equal 0 $exportApply.exit_code "Approved export-then-complete apply must succeed: $($exportApply.output)"
   $exportedFile = Join-Path $exportRoot '.agent\owned\owned.txt'
   Assert-True (Test-Path -LiteralPath $exportedFile -PathType Leaf) 'Export must recreate the selected relative path under the approved export root.'
   Assert-Equal $exportSourceHash ((Get-FileHash -LiteralPath $exportedFile -Algorithm SHA256).Hash.ToLowerInvariant()) 'Exported bytes must match the approved source hash.'
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.agent')) 'Successful export-then-complete must remove the residue-free target tree.'
-  $exportReceipt = Get-Content -LiteralPath ([System.IO.Path]::ChangeExtension($exportPlanPath, '.receipt.json')) -Raw | ConvertFrom-Json
+  $exportReceipt = Get-Content -LiteralPath ([System.IO.Path]::ChangeExtension($exportPlanPath, '.receipt.json')) -Raw | ConvertFrom-LizardJson
   Assert-Equal 1 @($exportReceipt.exported).Count 'Receipt must record every verified export.'
   Assert-Equal $exportSourceHash ([string]$exportReceipt.exported[0].sha256) 'Receipt must bind the verified export hash.'
 

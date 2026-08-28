@@ -87,7 +87,7 @@ try {
   $outputDir = Join-Path $miniRoot '.tmp\quality'
   $score = Invoke-TestPowerShell -ScriptPath $scoreScript -Arguments @('-LayerRoot', $miniRoot, '-OutputDir', $outputDir)
   Assert-Equal 0 $score.exit_code "Non-strict adversarial score failed unexpectedly: $($score.output)"
-  $report = Get-Content -LiteralPath (Join-Path $outputDir 'layer-quality-report.json') -Raw | ConvertFrom-Json
+  $report = Get-Content -LiteralPath (Join-Path $outputDir 'layer-quality-report.json') -Raw | ConvertFrom-LizardJson
   $stuffedResult = @($report.skills | Where-Object { $_.name -eq 'keyword-stuffed' })[0]
   $verifiedResult = @($report.skills | Where-Object { $_.name -eq 'behavior-verified' })[0]
   $brokenResult = @($report.skills | Where-Object { $_.name -eq 'broken-evidence' })[0]
@@ -103,7 +103,7 @@ try {
   Assert-False ($strict.exit_code -eq 0) 'Strict quality must reject failed behavioral evidence.'
   Assert-True ($strict.output -match 'behavioral evidence failed') 'Strict quality rejection must explain behavioral evidence failure.'
 
-  $shardFocused = $focused | ConvertTo-Json -Depth 8 | ConvertFrom-Json
+  $shardFocused = $focused | ConvertTo-Json -Depth 8 | ConvertFrom-LizardJson
   @($shardFocused.tests | Where-Object { $_.test -eq $brokenTestRel })[0].status = 'pass'
   @($shardFocused.tests | Where-Object { $_.test -eq $brokenTestRel })[0].exit_code = 0
   $shardFocused.passed = 2
@@ -113,7 +113,7 @@ try {
   $shardOutput = Join-Path $miniRoot '.tmp\quality-shard'
   $shardScore = Invoke-TestPowerShell -ScriptPath $scoreScript -Arguments @('-LayerRoot', $miniRoot, '-OutputDir', $shardOutput, '-FocusedReportPath', $shardReportPath, '-Strict')
   Assert-Equal 0 $shardScore.exit_code "Strict quality must accept an explicitly selected passing shard report: $($shardScore.output)"
-  $shardReport = Get-Content -LiteralPath (Join-Path $shardOutput 'layer-quality-report.json') -Raw | ConvertFrom-Json
+  $shardReport = Get-Content -LiteralPath (Join-Path $shardOutput 'layer-quality-report.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal $shardReportPath ([string]$shardReport.behavioral_evidence_context.focused_report_path) 'Quality output must identify the explicitly selected shard report.'
 
   $outsideReport = Join-Path $fixture 'outside-focused-report.json'

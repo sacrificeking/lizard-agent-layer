@@ -25,7 +25,7 @@ try {
   $filesystem = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-LayerRoot', $LayerRoot, '-ChangedPaths', 'scripts/Lizard.SafeFs.psm1,scripts/Lizard.MountBoundary.psm1,tests/adversarial/mount-boundary-fixtures.tests.ps1,.github/workflows/lizard-agent-layer-ci.yml,changes/unix-mount-boundaries.json', '-OutputDir', $filesystemOutput, '-Strict')
   Assert-Equal 0 $filesystem.exit_code "Filesystem declaration must cover its contract: $($filesystem.output)"
   $filesystemReportPath = Join-Path $filesystemOutput 'contract-check-report.json'
-  $filesystemReport = Get-Content -LiteralPath $filesystemReportPath -Raw | ConvertFrom-Json
+  $filesystemReport = Get-Content -LiteralPath $filesystemReportPath -Raw | ConvertFrom-LizardJson
   Assert-Equal 'pass' ([string]$filesystemReport.status) 'Covered filesystem contract must pass.'
   Assert-JsonSchemaValid -LayerRoot $LayerRoot -SchemaPath 'schemas/contract-check-report.schema.json' -InstancePath $filesystemReportPath -Message 'Contract check report must satisfy its schema.'
 
@@ -51,7 +51,7 @@ try {
   $docsOutput = Join-Path $fixture 'docs-only'
   $docs = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-LayerRoot', $LayerRoot, '-ChangedPaths', 'docs/troubleshooting.md', '-OutputDir', $docsOutput, '-Strict')
   Assert-Equal 0 $docs.exit_code 'Non-contract documentation change must not require a declaration.'
-  $docsReport = Get-Content -LiteralPath (Join-Path $docsOutput 'contract-check-report.json') -Raw | ConvertFrom-Json
+  $docsReport = Get-Content -LiteralPath (Join-Path $docsOutput 'contract-check-report.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal 'not-applicable' ([string]$docsReport.status) 'Non-contract change must report not-applicable.'
 
   Write-Host 'PASS tests\adversarial\contract-governance.tests.ps1'

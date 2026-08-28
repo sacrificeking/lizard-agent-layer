@@ -52,7 +52,7 @@ try {
   Assert-Equal 0 @(& git -C $target status --short).Count 'Report generation dirtied target Git state.'
 
   $jsonPath = Join-Path $defaultOutput 'merge-suggestions.json'
-  $report = Get-Content -LiteralPath $jsonPath -Raw | ConvertFrom-Json
+  $report = Get-Content -LiteralPath $jsonPath -Raw | ConvertFrom-LizardJson
   Assert-Equal 'metadata-only' ([string]$report.sensitivity) 'Default report sensitivity must be metadata-only.'
   Assert-False ([bool]$report.include_existing_context) 'Default report must not include existing context.'
   Assert-True ([string]$report.results[0].instruction_sha256 -match '^[a-f0-9]{64}$') 'Default report must bind the source instruction hash.'
@@ -76,7 +76,7 @@ try {
 
   $context = Invoke-TestPowerShell -ScriptPath $scriptPath -Arguments @('-TargetPath', $target, '-Profile', 'minimal', '-Harnesses', 'generic-agents-md', '-OutputDir', $contextOutput, '-IncludeExistingContext')
   Assert-Equal 0 $context.exit_code "Explicit context report failed: $($context.output)"
-  $contextReport = Get-Content -LiteralPath (Join-Path $contextOutput 'merge-suggestions.json') -Raw | ConvertFrom-Json
+  $contextReport = Get-Content -LiteralPath (Join-Path $contextOutput 'merge-suggestions.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal 'contains-target-context' ([string]$contextReport.sensitivity) 'Explicit context report must be sensitivity-labelled.'
   Assert-True ([bool]$contextReport.include_existing_context) 'Explicit context mode must be recorded.'
   Assert-True ((Get-Content -LiteralPath ([string]$contextReport.patch_files[0]) -Raw) -match [regex]::Escape($canary)) 'Explicit context patch must retain compatibility behavior.'

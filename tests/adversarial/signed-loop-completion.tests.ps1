@@ -48,7 +48,7 @@ try {
   Assert-False ($replay.exit_code -eq 0) 'A consumed signed PASS must not complete another run.'
   Assert-True ($replay.output -match 'TRUST_REPLAY_DETECTED') "Replay rejection must be explicit: $($replay.output)"
 
-  $forged = $envelope | ConvertTo-Json -Depth 20 | ConvertFrom-Json; $forged.payload.head_sha = ('9' * 40)
+  $forged = $envelope | ConvertTo-Json -Depth 20 | ConvertFrom-LizardJson; $forged.payload.head_sha = ('9' * 40)
   $forgedPath = Join-Path $fixture 'forged.json'; [IO.File]::WriteAllText($forgedPath, ($forged | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding($false)))
   $forgedArgs = @($replayArgs); $evidenceIndex = [Array]::IndexOf($forgedArgs, '-VerifierEvidencePath'); $forgedArgs[$evidenceIndex + 1] = $forgedPath
   $forgedResult = Invoke-Run $forgedArgs 'forged'

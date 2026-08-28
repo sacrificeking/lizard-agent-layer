@@ -58,7 +58,7 @@ try {
   Set-Content -LiteralPath (Join-Path $generatedTarget 'README.md') -Value '# portable generated command' -Encoding UTF8
   $analysisResult = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\analyze-target.ps1') -Arguments @('-TargetPath', $generatedTarget, '-ApprovedHarnesses', 'generic-agents-md', '-Json')
   Assert-Equal 0 $analysisResult.exit_code "Analyzer invocation generation failed: $($analysisResult.output)"
-  $analysis = $analysisResult.output | ConvertFrom-Json
+  $analysis = $analysisResult.output | ConvertFrom-LizardJson
   $originalLocation = (Get-Location).Path
   try {
     Set-Location -LiteralPath $generatedCwd

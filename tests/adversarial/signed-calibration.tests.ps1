@@ -12,7 +12,7 @@ try {
   Set-Content -LiteralPath (Join-Path $target '.agent\project-profile.json') -Value '{"modelMode":"inventory-routing","modelInventory":".agent/routing/inventory.json","modelRuntime":".agent/routing/runtime.json"}'
   Copy-Item -LiteralPath (Join-Path $LayerRoot 'tests\schema\fixtures\model-inventory.valid.json') -Destination (Join-Path $routing 'inventory.json')
   Copy-Item -LiteralPath (Join-Path $LayerRoot 'tests\schema\fixtures\routing-runtime.valid.json') -Destination (Join-Path $routing 'runtime.json')
-  $payload = Get-Content -LiteralPath (Join-Path $LayerRoot 'tests\schema\fixtures\model-evaluation.valid.json') -Raw | ConvertFrom-Json
+  $payload = Get-Content -LiteralPath (Join-Path $LayerRoot 'tests\schema\fixtures\model-evaluation.valid.json') -Raw | ConvertFrom-LizardJson
   $binding = Get-LizardCalibrationTrustBinding -TargetRoot $target -EvaluationId $payload.evaluation_id -ModelId $payload.model_id -Provider $payload.provider -ExecutorId $payload.executor_id -ConfigurationFingerprint $payload.configuration_fingerprint -Cases @($payload.cases)
   $now = [DateTimeOffset]::UtcNow
   $trust = New-LizardTestTrustMaterial -Root (Join-Path $fixture 'trust') -BindingSha256 $binding -Subject $payload.evaluation_id -Now $now -PrincipalId 'independent-evaluator' -Roles @('evaluator') -Purpose 'model-calibration' -PayloadKind 'model-evaluation'
@@ -21,7 +21,7 @@ try {
   $args = @('-TargetPath',$target,'-EvaluationPath',$evaluationPath,'-TrustStorePath',$trust.trust_store_path,'-TrustStoreSha256',$trust.trust_store_sha256,'-TrustChallengePath',$trust.challenge_path,'-TrustChallengeSha256',$trust.challenge_sha256,'-ReplayLedgerPath',$trust.replay_ledger_path,'-Json')
   $preview = Invoke-TestPowerShell -ScriptPath $script -Arguments $args
   Assert-Equal 0 $preview.exit_code "Signed calibration preview failed: $($preview.output)"
-  $previewDoc = $preview.output | ConvertFrom-Json
+  $previewDoc = $preview.output | ConvertFrom-LizardJson
   Assert-Equal 'independent-evaluator' ([string]$previewDoc.authenticated_evaluator_id) 'Calibration identity must come from the evaluator signing key.'
   $apply = Invoke-TestPowerShell -ScriptPath $script -Arguments ($args + '-Apply')
   Assert-Equal 0 $apply.exit_code "Signed calibration apply failed: $($apply.output)"
@@ -29,7 +29,7 @@ try {
   Assert-False ($replay.exit_code -eq 0) 'A consumed evaluation envelope must not be applied twice.'
   Assert-True ($replay.output -match 'TRUST_REPLAY_DETECTED') "Calibration replay rejection must be explicit: $($replay.output)"
 
-  $tampered = $envelope | ConvertTo-Json -Depth 20 | ConvertFrom-Json; $tampered.payload.cases[0].score = 1.0
+  $tampered = $envelope | ConvertTo-Json -Depth 20 | ConvertFrom-LizardJson; $tampered.payload.cases[0].score = 1.0
   $tamperedPath = Join-Path $fixture 'tampered.json'; [IO.File]::WriteAllText($tamperedPath, ($tampered | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding($false)))
   $tamperedArgs = @($args); $index = [Array]::IndexOf($tamperedArgs, '-EvaluationPath'); $tamperedArgs[$index + 1] = $tamperedPath
   $tamperedResult = Invoke-TestPowerShell -ScriptPath $script -Arguments $tamperedArgs

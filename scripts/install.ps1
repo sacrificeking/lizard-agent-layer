@@ -69,21 +69,6 @@ if ($Apply) {
   }
   Assert-PathOutsideRoot -Path $ApprovedPlanPath -ExcludedRoot $TargetRoot -Label 'ApprovedPlanPath'
   $ApprovedPlan = Read-LizardApprovedPlan -Path $ApprovedPlanPath -ExpectedSha256 $ApprovedPlanSha256 -ExpectedOperationKind 'install'
-  if ($RequireSignedApproval) {
-    if ([string]::IsNullOrWhiteSpace($ApprovalEnvelopePath) -or [string]::IsNullOrWhiteSpace($TrustStorePath) -or [string]::IsNullOrWhiteSpace($TrustStoreSha256) -or [string]::IsNullOrWhiteSpace($ChallengePath) -or [string]::IsNullOrWhiteSpace($ChallengeSha256)) {
-      throw 'SIGNED_APPROVAL_REQUIRED: -RequireSignedApproval requires -ApprovalEnvelopePath, -TrustStorePath, -TrustStoreSha256, -ChallengePath, and -ChallengeSha256.'
-    }
-    Assert-LizardPlanApprovalSignature `
-      -ApprovedPlan $ApprovedPlan `
-      -PlanSha256 $ApprovedPlanSha256 `
-      -ApprovalEnvelopePath $ApprovalEnvelopePath `
-      -TrustStorePath $TrustStorePath `
-      -TrustStoreSha256 $TrustStoreSha256 `
-      -ChallengePath $ChallengePath `
-      -ChallengeSha256 $ChallengeSha256 `
-      -ReplayLedgerPath $ReplayLedgerPath `
-      -TargetRoot $TargetRoot | Out-Null
-  }
 } elseif ($ValidateApprovedPlanOnly) {
   throw 'PLAN_APPROVAL_REQUIRED: -ValidateApprovedPlanOnly requires the normal plan-bound -Apply contract.'
 }
@@ -262,6 +247,35 @@ if (($Profile -eq "standard" -or $Profile -eq "enterprise-fullstack") -and ($nul
   throw "INSTALL_HARNESSES_REQUIRED: Profile '$Profile' requires the -Harnesses parameter to be explicitly specified."
 }
 if ($SelectedHarnesses.Count -eq 0) { throw "No harnesses selected. Set profile.harnesses or pass -Harnesses." }
+
+if ($Apply -and -not $ValidateApprovedPlanOnly -and -not $JoinTransaction) {
+  $approvalPolicy = Get-LizardOperationApprovalPolicy `
+    -OperationKind 'install' `
+    -RiskLevel ([string]$ProfileDoc.riskLevel) `
+    -Profile $Profile `
+    -Force:$Force `
+    -ForceManaged:$ForceManaged `
+    -RequireSignedApproval:$RequireSignedApproval
+
+  if ($approvalPolicy.signed_approval_required) {
+    if ([string]::IsNullOrWhiteSpace($ApprovalEnvelopePath) -or [string]::IsNullOrWhiteSpace($TrustStorePath) -or [string]::IsNullOrWhiteSpace($TrustStoreSha256) -or [string]::IsNullOrWhiteSpace($ChallengePath) -or [string]::IsNullOrWhiteSpace($ChallengeSha256)) {
+      throw "PLAN_SIGNED_APPROVAL_REQUIRED: Signed apply approval is mandatory for this operation ($($approvalPolicy.reason))."
+    }
+    if ([string]::IsNullOrWhiteSpace($ReplayLedgerPath)) {
+      throw 'PLAN_REPLAY_LEDGER_REQUIRED: A replay ledger path is mandatory for signed apply approval verification.'
+    }
+    Assert-LizardPlanApprovalSignature `
+      -ApprovedPlan $ApprovedPlan `
+      -PlanSha256 $ApprovedPlanSha256 `
+      -ApprovalEnvelopePath $ApprovalEnvelopePath `
+      -TrustStorePath $TrustStorePath `
+      -TrustStoreSha256 $TrustStoreSha256 `
+      -ChallengePath $ChallengePath `
+      -ChallengeSha256 $ChallengeSha256 `
+      -ReplayLedgerPath $ReplayLedgerPath `
+      -TargetRoot $TargetRoot | Out-Null
+  }
+}
 
 
 function Resolve-PlanReportPath {
@@ -1022,6 +1036,7 @@ function Get-InstallPlanInputs {
 function Get-InstallInvocationOptions {
   return [ordered]@{
     profile = $Profile
+    risk_level = [string]$ProfileDoc.riskLevel
     harnesses = @($SelectedHarnesses | Sort-Object -Unique)
     requested_packs = @($RequestedPacks | Sort-Object -Unique)
     expanded_packs = @($SelectedPacks)
@@ -1423,7 +1438,6 @@ if ($Apply) {
     $TransactionContext = Start-LizardTransaction -TargetRoot $TargetRoot -OperationName 'install' -FailAfterMutation $TestFailAfterMutation
     $OwnsTransaction = $true
   }
-  Assert-ApprovedInstallPlanCurrent
 }
 
 try {

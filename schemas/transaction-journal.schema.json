@@ -32,6 +32,15 @@
           "original_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
           "backup_path": { "type": ["string", "null"], "pattern": "^backups/[0-9]{6}\\.bin$" },
           "post_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+          "post_state": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind"],
+            "properties": {
+              "kind": { "enum": ["file", "directory", "absent"] },
+              "sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" }
+            }
+          },
           "status": { "enum": ["pending", "applied", "rolled-back"] }
         },
         "allOf": [

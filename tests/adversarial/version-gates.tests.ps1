@@ -12,7 +12,7 @@ $installScript = Join-Path $LayerRoot 'scripts\install.ps1'
 $updateScript = Join-Path $LayerRoot 'scripts\update-target.ps1'
 New-Item -ItemType Directory -Path $target -Force | Out-Null
 
-function Read-Manifest { Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json }
+function Read-Manifest { Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson }
 function Write-Manifest { param($Manifest) $Manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Encoding UTF8 }
 
 try {

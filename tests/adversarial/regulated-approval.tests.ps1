@@ -22,7 +22,7 @@ try {
         $arguments = @('-TargetPath', $target, '-Phase', $phase, '-TaskClass', 'implementation', '-RiskLevel', $risk, '-DataClass', 'regulated', '-Signals', 'regulated-data,security-sensitive,repeated-verification-failure', '-AttemptCount', '999', '-AvailableModels', 'caller-selected-model', '-ReceiptId', $id, '-Json')
         $result = Invoke-TestPowerShell -ScriptPath $routeScript -Arguments $arguments
         Assert-Equal 0 $result.exit_code "Regulated route evaluation must return a review decision: $($result.output)"
-        $receipt = $result.output | ConvertFrom-Json
+        $receipt = $result.output | ConvertFrom-LizardJson
         Assert-Equal 'human-review' ([string]$receipt.decision) "Regulated $modelMode/$phase/$risk data must require human review without a trusted approval authority."
         Assert-True ($null -eq $receipt.route_id) 'Regulated human-review decision must not select a technical route.'
         Assert-True ($null -eq $receipt.selected_role) 'Regulated human-review decision must not select a role.'
@@ -43,7 +43,7 @@ try {
 
   $invalidTarget = Join-Path $fixture 'invalid-policy-target'
   New-Item -ItemType Directory -Path (Join-Path $invalidTarget '.agent\routing') -Force | Out-Null
-  $invalidPolicy = Get-Content -LiteralPath (Join-Path $LayerRoot 'routing-policies\staged-balanced.json') -Raw | ConvertFrom-Json
+  $invalidPolicy = Get-Content -LiteralPath (Join-Path $LayerRoot 'routing-policies\staged-balanced.json') -Raw | ConvertFrom-LizardJson
   $invalidPolicy.regulated_data.default_decision = 'route'
   Set-Content -LiteralPath (Join-Path $invalidTarget '.agent\routing\policy.json') -Value ($invalidPolicy | ConvertTo-Json -Depth 20)
   Set-Content -LiteralPath (Join-Path $invalidTarget '.agent\project-profile.json') -Value (([ordered]@{ profile = 'minimal'; routingPolicy = 'staged-balanced'; modelMode = 'inherit-current' }) | ConvertTo-Json -Depth 5)

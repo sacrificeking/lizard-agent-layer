@@ -14,7 +14,7 @@ $diffScript = Join-Path $LayerRoot 'scripts\manifest-diff.ps1'
 New-Item -ItemType Directory -Path $target -Force | Out-Null
 
 function Read-Manifest {
-  Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
 }
 
 function Find-Artifact {
@@ -53,7 +53,7 @@ try {
   Assert-True (Test-Path -LiteralPath $updateApproval.plan_path -PathType Leaf) 'Update contraction preview must emit a canonical outer plan.'
 
   $contractionApproval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments $baseArguments
-  $contractionPlan = Get-Content -LiteralPath $contractionApproval.plan_path -Raw | ConvertFrom-Json
+  $contractionPlan = Get-Content -LiteralPath $contractionApproval.plan_path -Raw | ConvertFrom-LizardJson
   $retiredOptionEntries = @($contractionPlan.intent.options.retired_artifacts | Where-Object { [string]$_.path -eq $frontendPath })
   Assert-Equal 1 $retiredOptionEntries.Count 'Canonical install options must expose each retired path exactly once.'
   Assert-Equal 'retired-present' ([string]$retiredOptionEntries[0].lifecycle) 'Canonical install options must bind retired lifecycle.'
@@ -108,7 +108,7 @@ try {
   $invalidDiffDir = Join-Path $fixture 'invalid-lifecycle-diff'
   $invalidDiff = Invoke-TestPowerShell -ScriptPath $diffScript -Arguments @('-TargetPath', $target, '-LayerRoot', $LayerRoot, '-OutputDir', $invalidDiffDir, '-Strict')
   Assert-False ($invalidDiff.exit_code -eq 0) 'Manifest diff must reject a removed record whose path reappeared.'
-  $invalidDiffReport = Get-Content -LiteralPath (Join-Path $invalidDiffDir 'manifest-diff.json') -Raw | ConvertFrom-Json
+  $invalidDiffReport = Get-Content -LiteralPath (Join-Path $invalidDiffDir 'manifest-diff.json') -Raw | ConvertFrom-LizardJson
   Assert-True (@($invalidDiffReport.differences | Where-Object { [string]$_.kind -eq 'artifact-lifecycle-mismatch' -and [string]$_.value -eq $frontendPath }).Count -eq 1) 'Manifest diff must identify the exact lifecycle mismatch.'
   $invalidDoctor = Invoke-TestPowerShell -ScriptPath $doctorScript -Arguments @('-TargetPath', $target, '-Strict')
   Assert-False ($invalidDoctor.exit_code -eq 0) 'Doctor must reject a removed record whose path reappeared.'

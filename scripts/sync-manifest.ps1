@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$TargetPath = (Get-Location).Path,
   [switch]$Apply
 )

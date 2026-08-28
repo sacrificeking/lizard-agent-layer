@@ -576,7 +576,13 @@ namespace Lizard.AgentLayer.Native
                 Marshal.WriteInt32(buffer, lengthOffset, nameBytes.Length);
                 Marshal.Copy(nameBytes, 0, new IntPtr(buffer.ToInt64() + nameOffset), nameBytes.Length);
                 WindowsNativeFs.IoStatusBlock ioStatus;
-                int status = WindowsNativeFs.NtSetInformationFile(stage, out ioStatus, buffer, (uint)total, WindowsNativeFs.NativeFileRenameInformation);
+                int status = 0;
+                for (int attempt = 0; attempt < 5; attempt++)
+                {
+                    status = WindowsNativeFs.NtSetInformationFile(stage, out ioStatus, buffer, (uint)total, WindowsNativeFs.NativeFileRenameInformation);
+                    if (status >= 0) break;
+                    if (attempt < 4) System.Threading.Thread.Sleep(10 * (attempt + 1));
+                }
                 if (status < 0)
                 {
                     uint error = WindowsNativeFs.RtlNtStatusToDosError((uint)status);

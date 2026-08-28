@@ -18,34 +18,34 @@ try {
 
   $preserveOutput = Join-Path $fixture 'preserve-output'
   $preserveApproval = New-TestUpdateApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-LayerRoot', $LayerRoot, '-OutputDir', $preserveOutput)
-  $preservePlan = Get-Content -LiteralPath $preserveApproval.plan_path -Raw | ConvertFrom-Json
+  $preservePlan = Get-Content -LiteralPath $preserveApproval.plan_path -Raw | ConvertFrom-LizardJson
   Assert-Equal 'off' ([string]$preservePlan.intent.options.previous_memory_mode) 'Outer update plan must bind installed memory mode.'
   Assert-Equal 'off' ([string]$preservePlan.intent.options.memory_mode) 'Update without override must preserve installed off mode.'
   Assert-Equal 'none' ([string]$preservePlan.intent.options.memory_transition) 'Preserving mode must bind a no-op transition.'
   $preserveChildPath = [string]$preservePlan.intent.options.install_canonical_plan_path
-  $preserveChild = Get-Content -LiteralPath $preserveChildPath -Raw | ConvertFrom-Json
+  $preserveChild = Get-Content -LiteralPath $preserveChildPath -Raw | ConvertFrom-LizardJson
   Assert-Equal 'off' ([string]$preserveChild.intent.options.memory_mode) 'Nested install plan must bind preserved off mode.'
   $preserveApply = Invoke-TestPowerShell -ScriptPath $updateScript -Arguments $preserveApproval.arguments
   Assert-Equal 0 $preserveApply.exit_code "Mode-preserving update must succeed: $($preserveApply.output)"
-  $manifest = Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  $manifest = Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal 'off' ([string]$manifest.memory_mode) 'Mode-preserving update must leave manifest off.'
 
   $transitionOutput = Join-Path $fixture 'transition-output'
   $transitionApproval = New-TestUpdateApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-LayerRoot', $LayerRoot, '-OutputDir', $transitionOutput, '-MemoryMode', 'private-episodic')
-  $transitionPlan = Get-Content -LiteralPath $transitionApproval.plan_path -Raw | ConvertFrom-Json
+  $transitionPlan = Get-Content -LiteralPath $transitionApproval.plan_path -Raw | ConvertFrom-LizardJson
   Assert-Equal 'off' ([string]$transitionPlan.intent.options.previous_memory_mode) 'Transition update must bind its source mode.'
   Assert-Equal 'private-episodic' ([string]$transitionPlan.intent.options.memory_mode) 'Transition update must bind its destination mode.'
   Assert-Equal 'off->private-episodic' ([string]$transitionPlan.intent.options.memory_transition) 'Outer update plan must bind transition direction.'
   $transitionChildPath = [string]$transitionPlan.intent.options.install_canonical_plan_path
-  $transitionChild = Get-Content -LiteralPath $transitionChildPath -Raw | ConvertFrom-Json
+  $transitionChild = Get-Content -LiteralPath $transitionChildPath -Raw | ConvertFrom-LizardJson
   Assert-Equal 'private-episodic' ([string]$transitionChild.intent.options.memory_mode) 'Nested plan must bind transition destination.'
   Assert-Equal 'off->private-episodic' ([string]$transitionChild.intent.options.memory_transition) 'Nested plan must bind transition direction.'
   $transitionApply = Invoke-TestPowerShell -ScriptPath $updateScript -Arguments $transitionApproval.arguments
   Assert-Equal 0 $transitionApply.exit_code "Update memory transition must succeed: $($transitionApply.output)"
-  $manifest = Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  $manifest = Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal 'private-episodic' ([string]$manifest.memory_mode) 'Transition update must persist destination mode.'
   Assert-True (Test-Path -LiteralPath (Join-Path $target '.agent\memory\episodic\EPISODES.md') -PathType Leaf) 'Transition update must install private episodic seed.'
-  $history = @(Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.update-history.jsonl') | ForEach-Object { $_ | ConvertFrom-Json })
+  $history = @(Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.update-history.jsonl') | ForEach-Object { $_ | ConvertFrom-LizardJson })
   $last = $history[-1]
   Assert-Equal 'off' ([string]$last.previous_memory_mode) 'Update history must record source mode.'
   Assert-Equal 'private-episodic' ([string]$last.memory_mode) 'Update history must record destination mode.'

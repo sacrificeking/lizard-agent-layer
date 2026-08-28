@@ -40,7 +40,7 @@ try {
 
   $recovery = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\transaction-recover.ps1') -Arguments @('-TargetPath', $target, '-OutputDir', $output, '-Json')
   Assert-Equal 0 $recovery.exit_code "Documented clean recovery preview failed: $($recovery.output)"
-  $report = $recovery.output | ConvertFrom-Json
+  $report = $recovery.output | ConvertFrom-LizardJson
   Assert-Equal 'CLEAN' ([string]$report.status) 'Clean target recovery preview must report CLEAN.'
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.lizard-agent-layer.lock')) 'Recovery preview must not dirty the target.'
 

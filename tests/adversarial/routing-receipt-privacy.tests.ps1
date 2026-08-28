@@ -1,4 +1,4 @@
-param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)))
+param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
@@ -21,7 +21,7 @@ $canaries = @(
   'C:\private\customer-7788.txt',
   'powershell -Command Get-SecretValue',
   "line-one`nline-two-private",
-  'Kundennummer-Ãœ-7788',
+  'Kundennummer-äöü-7788',
   ('oversized-' + ('x' * 2100))
 )
 
@@ -72,11 +72,11 @@ try {
   $routeBase = @('-TargetPath', $target, '-Phase', 'execution', '-TaskClass', 'implementation', '-RiskLevel', 'medium', '-DataClass', 'internal-code', '-Signals', 'plan-deviation', '-ReceiptId', 'valid-metadata', '-RouterId', 'privacy-router', '-Json')
   $routePreview = Invoke-TestPowerShell -ScriptPath $routeScript -Arguments $routeBase
   Assert-Equal 0 $routePreview.exit_code "Route trust preview failed: $($routePreview.output)"
-  $routePreviewDoc = $routePreview.output | ConvertFrom-Json
+  $routePreviewDoc = $routePreview.output | ConvertFrom-LizardJson
   $routeTrust = New-LizardTestTrustMaterial -Root (Join-Path $fixture 'route-trust') -BindingSha256 ([string]$routePreviewDoc.trust_binding_sha256) -Subject 'valid-metadata' -Now ([DateTimeOffset]::UtcNow) -PrincipalId 'privacy-router' -Roles @('router') -Purpose 'routing' -PayloadKind 'route-decision'
   $valid = Invoke-TestPowerShell -ScriptPath $routeScript -Arguments ($routeBase + @('-Apply', '-TrustChallengePath', $routeTrust.challenge_path, '-TrustChallengeSha256', $routeTrust.challenge_sha256, '-RouterPrivateKeyPath', $routeTrust.private_key_path, '-RouterPrivateKeySha256', $routeTrust.private_key_sha256))
   Assert-Equal 0 $valid.exit_code "Valid enumerated signal route must succeed: $($valid.output)"
-  $receipt = $valid.output | ConvertFrom-Json
+  $receipt = $valid.output | ConvertFrom-LizardJson
   Assert-Equal 'metadata-only' ([string]$receipt.sensitivity) 'Route receipt must carry typed sensitivity.'
   Assert-Equal 'route-decision-audit' ([string]$receipt.purpose) 'Route receipt must carry typed purpose.'
   Assert-Equal 'organization-policy-required' ([string]$receipt.retention_class) 'Route receipt must carry typed retention.'
@@ -109,12 +109,12 @@ try {
   $runtimeTrust = New-LizardTestTrustMaterial -Root (Join-Path $fixture 'runtime-trust') -BindingSha256 $executionBinding -Subject 'execution-valid' -Now ([DateTimeOffset]::UtcNow) -PrincipalId 'privacy-runtime-v1' -Roles @('runtime') -Purpose 'execution-attestation' -PayloadKind 'execution-receipt'
   $execution = Invoke-TestPowerShell -ScriptPath $executionScript -Arguments @('-TargetPath', $advancedTarget, '-RouteDecisionId', 'advanced-route', '-ActualModel', 'model/opaque@1', '-ActualProvider', 'provider-1', '-Harness', 'codex', '-StartedAt', '2026-08-22T10:00:00Z', '-CompletedAt', '2026-08-22T10:01:00Z', '-EvidenceRef', 'evidence-opaque-123', '-ReceiptId', 'execution-valid', '-RouteTrustStorePath', $advancedRouteTrust.trust_store_path, '-RouteTrustStoreSha256', $advancedRouteTrust.trust_store_sha256, '-RouteTrustChallengePath', $advancedRouteTrust.challenge_path, '-RouteTrustChallengeSha256', $advancedRouteTrust.challenge_sha256, '-RouteReplayLedgerPath', $advancedRouteTrust.replay_ledger_path, '-TrustChallengePath', $runtimeTrust.challenge_path, '-TrustChallengeSha256', $runtimeTrust.challenge_sha256, '-RuntimePrivateKeyPath', $runtimeTrust.private_key_path, '-RuntimePrivateKeySha256', $runtimeTrust.private_key_sha256, '-Apply', '-Json')
   Assert-Equal 0 $execution.exit_code "Valid opaque execution receipt must succeed: $($execution.output)"
-  $executionReceipt = $execution.output | ConvertFrom-Json
+  $executionReceipt = $execution.output | ConvertFrom-LizardJson
   Assert-Equal 'metadata-only' ([string]$executionReceipt.sensitivity) 'Execution receipt must carry typed sensitivity.'
   Assert-Equal 'execution-attestation-audit' ([string]$executionReceipt.purpose) 'Execution receipt must carry typed purpose.'
   Assert-Equal 'not-required' ([string]$executionReceipt.redaction.status) 'Opaque execution receipt must not require redaction.'
   Assert-True (Test-Path -LiteralPath (Join-Path $advancedExecutions 'execution-valid.json')) 'Valid execution receipt must be written inside the execution receipt root.'
-  $sealedExecution = Get-Content -LiteralPath (Join-Path $advancedExecutions 'execution-valid.json') -Raw | ConvertFrom-Json
+  $sealedExecution = Get-Content -LiteralPath (Join-Path $advancedExecutions 'execution-valid.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal 2 ([int]$sealedExecution.schema_version) 'Persisted execution receipt must be signed.'
   Assert-Equal 'privacy-runtime-v1' ([string]$sealedExecution.principal_id) 'Execution signer must be the authenticated runtime.'
 

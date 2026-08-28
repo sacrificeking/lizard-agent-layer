@@ -60,9 +60,19 @@ if ($Apply) {
   }
   Assert-PathOutsideRoot -Path $ApprovedPlanPath -ExcludedRoot $TargetRoot -Label 'ApprovedPlanPath'
   $ApprovedPlan = Read-LizardApprovedPlan -Path $ApprovedPlanPath -ExpectedSha256 $ApprovedPlanSha256 -ExpectedOperationKind uninstall
-  if ($RequireSignedApproval) {
+  $manifestRisk = if ($ApprovedPlan.intent.risk_level) { [string]$ApprovedPlan.intent.risk_level } else { 'medium' }
+  $approvalPolicy = Get-LizardOperationApprovalPolicy `
+    -OperationKind 'uninstall' `
+    -RiskLevel $manifestRisk `
+    -Scope $Scope `
+    -RequireSignedApproval:$RequireSignedApproval
+
+  if ($approvalPolicy.signed_approval_required) {
     if ([string]::IsNullOrWhiteSpace($ApprovalEnvelopePath) -or [string]::IsNullOrWhiteSpace($TrustStorePath) -or [string]::IsNullOrWhiteSpace($TrustStoreSha256) -or [string]::IsNullOrWhiteSpace($ChallengePath) -or [string]::IsNullOrWhiteSpace($ChallengeSha256)) {
-      throw 'SIGNED_APPROVAL_REQUIRED: -RequireSignedApproval requires -ApprovalEnvelopePath, -TrustStorePath, -TrustStoreSha256, -ChallengePath, and -ChallengeSha256.'
+      throw "PLAN_SIGNED_APPROVAL_REQUIRED: Signed apply approval is mandatory for this operation ($($approvalPolicy.reason))."
+    }
+    if ([string]::IsNullOrWhiteSpace($ReplayLedgerPath)) {
+      throw 'PLAN_REPLAY_LEDGER_REQUIRED: A replay ledger path is mandatory for signed apply approval verification.'
     }
     Assert-LizardPlanApprovalSignature `
       -ApprovedPlan $ApprovedPlan `

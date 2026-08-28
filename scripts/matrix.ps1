@@ -10,6 +10,8 @@ $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Host.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests\TestHelpers.psm1') -Force
+Import-Module (Join-Path $LayerRoot 'tests\TestTrustHelpers.psm1') -Force
 $LayerRoot = Resolve-SafeRoot -Path $LayerRoot -RequireExisting
 $PowerShellHost = Get-LizardPowerShellHostPath
 $PowerShellFilePrefix = Get-LizardPowerShellFilePrefix
@@ -65,12 +67,9 @@ foreach ($profile in $selectedProfiles) {
     $message = ''
     try {
       $installScript = Join-Path $LayerRoot 'scripts\install.ps1'
-      $canonicalPlanPath = Join-Path $tmpRoot ("{0}--{1}.install.json" -f $profile, $harness)
-      $previewOutput = & $PowerShellHost @PowerShellFilePrefix $installScript -TargetPath $target -Profile $profile -Harnesses $harness -CanonicalPlanPath $canonicalPlanPath 2>&1 | Out-String
-      if ($LASTEXITCODE -ne 0) { throw "install plan failed: $previewOutput" }
-      $approvedSha256 = (Get-FileHash -LiteralPath $canonicalPlanPath -Algorithm SHA256).Hash.ToLowerInvariant()
-      $installOutput = & $PowerShellHost @PowerShellFilePrefix $installScript -TargetPath $target -Profile $profile -Harnesses $harness -Apply -ApprovedPlanPath $canonicalPlanPath -ApprovedPlanSha256 $approvedSha256 -HumanApproved 2>&1 | Out-String
-      if ($LASTEXITCODE -ne 0) { throw "install failed: $installOutput" }
+      $approval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments @('-TargetPath', $target, '-Profile', $profile, '-Harnesses', $harness)
+      $installResult = Invoke-TestPowerShell -ScriptPath $installScript -Arguments $approval.arguments
+      if ($installResult.exit_code -ne 0) { throw "install failed: $($installResult.output)" }
       $doctorOutput = & $PowerShellHost @PowerShellFilePrefix (Join-Path $LayerRoot 'scripts\doctor.ps1') -TargetPath $target -Strict 2>&1 | Out-String
       if ($LASTEXITCODE -ne 0) { throw "doctor failed: $doctorOutput" }
       Write-Host "PASS $profile / $harness"

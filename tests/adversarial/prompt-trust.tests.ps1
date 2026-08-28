@@ -29,7 +29,7 @@ try {
   Set-Content -LiteralPath $overlayPath -Value $overlayJson
   $baseArguments = @('-TargetPath', $target, '-Profile', 'minimal', '-Packs', 'hostile-overlay', '-Harnesses', 'codex')
   $approval = New-TestInstallApprovalArguments -LayerRoot $LayerRoot -BaseArguments $baseArguments
-  $plan = Get-Content -LiteralPath $approval.plan_path -Raw | ConvertFrom-Json
+  $plan = Get-Content -LiteralPath $approval.plan_path -Raw | ConvertFrom-LizardJson
   $overlayInput = @($plan.intent.inputs | Where-Object { $_.scope -eq 'target' -and $_.path -eq '.lizard-agent-layer/packs/hostile-overlay.json' })
   Assert-Equal 1 $overlayInput.Count 'Exact plan must bind the complete target overlay bytes.'
 
@@ -51,7 +51,7 @@ try {
   Assert-True ($adapterText -match 'doctor\.ps1 -Strict') 'Installed adapter must require the integrity gate before managed target instructions.'
   Assert-True ($adapterText -match 'Platform/system') 'Installed adapter must state higher-trust instruction precedence.'
 
-  $manifest = Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  $manifest = Get-Content -LiteralPath (Join-Path $target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
   $source = @($manifest.pack_sources | Where-Object name -eq 'hostile-overlay')
   Assert-Equal 1 $source.Count 'Manifest must record the overlay source once.'
   Assert-Equal 'quarantined' ([string]$source[0].prose_trust) 'Manifest must mark target overlay prose as quarantined.'

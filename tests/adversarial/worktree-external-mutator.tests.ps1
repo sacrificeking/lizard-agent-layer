@@ -36,7 +36,7 @@ try {
 
   $blocked = Invoke-TestPowerShell -ScriptPath $worktreeScript -Arguments @('-TargetPath', $target, '-Branch', $branch, '-WorktreePath', $worktree, '-OutputDir', $output, '-Apply', '-HumanApproved')
   Assert-False ($blocked.exit_code -eq 0) 'Built-in Git worktree mutation must fail closed.'
-  $blockedReport = Get-Content -LiteralPath (Join-Path $output 'loop-worktree-report.json') -Raw | ConvertFrom-Json
+  $blockedReport = Get-Content -LiteralPath (Join-Path $output 'loop-worktree-report.json') -Raw | ConvertFrom-LizardJson
   Assert-True ((@($blockedReport.failures) -join ' ') -match 'SAFEFS_EXTERNAL_MUTATOR_UNBOUND') 'Blocked creation must expose the stable external-mutator code.'
   Assert-False (Test-Path -LiteralPath $worktree) 'Blocked creation must not create the worktree path.'
 
@@ -52,13 +52,13 @@ try {
   Assert-Equal 'implementer-01' ([string]$lifecycle.principal_id) 'Lifecycle identity must come from the signing key.'
   Assert-Equal 'CREATED' ([string]$lifecycle.payload.status) 'Registered lifecycle must be verifier-ready.'
   Assert-Equal 'external-registered' ([string]$lifecycle.payload.mutation_origin) 'Registered lifecycle must disclose its external mutation origin.'
-  $report = Get-Content -LiteralPath (Join-Path $output 'loop-worktree-report.json') -Raw | ConvertFrom-Json
+  $report = Get-Content -LiteralPath (Join-Path $output 'loop-worktree-report.json') -Raw | ConvertFrom-LizardJson
   Assert-True ([bool]$report.registered) 'Registration report must identify the read-only registration path.'
   Assert-False ([bool]$report.created) 'Registration report must not claim that the layer created the worktree.'
 
   $cleanup = Invoke-TestPowerShell -ScriptPath $cleanupScript -Arguments @('-TargetPath', $target, '-LifecyclePath', $lifecyclePath, '-LifecycleTrustStorePath', $trust.trust_store_path, '-LifecycleTrustStoreSha256', $trust.trust_store_sha256, '-LifecycleChallengePath', $trust.challenge_path, '-LifecycleChallengeSha256', $trust.challenge_sha256, '-WorktreePath', $worktree, '-Branch', $branch, '-RemoveBranch', '-Force', '-OutputDir', $cleanupOutput, '-Apply', '-HumanApproved')
   Assert-False ($cleanup.exit_code -eq 0) 'Built-in Git worktree removal must fail closed.'
-  $cleanupReport = Get-Content -LiteralPath (Join-Path $cleanupOutput 'loop-worktree-cleanup-report.json') -Raw | ConvertFrom-Json
+  $cleanupReport = Get-Content -LiteralPath (Join-Path $cleanupOutput 'loop-worktree-cleanup-report.json') -Raw | ConvertFrom-LizardJson
   Assert-True ((@($cleanupReport.failures) -join ' ') -match 'SAFEFS_EXTERNAL_MUTATOR_UNBOUND') 'Blocked cleanup must expose the stable external-mutator code.'
   Assert-True (Test-Path -LiteralPath $worktree) 'Blocked cleanup must preserve the external worktree.'
 

@@ -477,19 +477,64 @@ function Assert-LizardPlanApprovalSignature {
     -RequiredRole $RequiredRole `
     -Now $Now
 
-  if (-not [string]::IsNullOrWhiteSpace($ReplayLedgerPath)) {
-    if (Test-LizardPathWithinRoot -AuthorizedRoot $root -Path $ReplayLedgerPath -AllowRoot) {
-      throw (New-LizardPlanException -Code 'PLAN_APPROVAL_LEDGER_IN_TARGET' -Message 'Replay ledger cannot reside inside the target root.')
-    }
-    Use-LizardReplayLedger -LedgerPath $ReplayLedgerPath -EnvelopeId ([string]$verified.envelope_id) -Nonce ([string]$verified.nonce) -Purpose $expectedPurpose -Now $Now | Out-Null
+  if ([string]::IsNullOrWhiteSpace($ReplayLedgerPath)) {
+    throw (New-LizardPlanException -Code 'PLAN_REPLAY_LEDGER_REQUIRED' -Message 'A replay ledger path is mandatory for signed apply approval verification.')
   }
+  if (Test-LizardPathWithinRoot -AuthorizedRoot $root -Path $ReplayLedgerPath -AllowRoot) {
+    throw (New-LizardPlanException -Code 'PLAN_APPROVAL_LEDGER_IN_TARGET' -Message 'Replay ledger cannot reside inside the target root.')
+  }
+  Use-LizardReplayLedger -LedgerPath $ReplayLedgerPath -EnvelopeId ([string]$verified.envelope_id) -Nonce ([string]$verified.nonce) -Purpose $expectedPurpose -Now $Now | Out-Null
   return $verified
+}
+
+function Get-LizardOperationApprovalPolicy {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][ValidateSet('install', 'update', 'uninstall', 'skill-lifecycle', 'records-lifecycle')][string]$OperationKind,
+    [Parameter(Mandatory = $true)][string]$RiskLevel,
+    [string]$Profile,
+    [string]$Scope,
+    [string]$Action,
+    [switch]$Force,
+    [switch]$ForceManaged,
+    [switch]$RequireSignedApproval
+  )
+
+  $normalizedRisk = [string]$RiskLevel.ToLowerInvariant()
+  $isHighRisk = $normalizedRisk -eq 'high'
+  $signedRequired = $false
+  $reason = 'standard-exact-plan'
+
+  if ($RequireSignedApproval.IsPresent) {
+    $signedRequired = $true
+    $reason = 'explicit-requirement'
+  } elseif ($isHighRisk) {
+    $signedRequired = $true
+    $reason = 'high-risk-profile-or-pack'
+  } elseif ($OperationKind -eq 'uninstall' -and ($Scope -eq 'complete' -or $Scope -eq 'export-then-complete')) {
+    $signedRequired = $true
+    $reason = 'complete-uninstall-scope'
+  } elseif ($Force.IsPresent -or $ForceManaged.IsPresent) {
+    $signedRequired = $true
+    $reason = 'force-override-mutation'
+  } elseif ($OperationKind -eq 'records-lifecycle' -and ($Action -eq 'purge' -or $Action -eq 'destroy')) {
+    $signedRequired = $true
+    $reason = 'destructive-records-lifecycle'
+  }
+
+  return [pscustomobject][ordered]@{
+    signed_approval_required = $signedRequired
+    reason = $reason
+    operation_kind = $OperationKind
+    risk_level = $normalizedRisk
+  }
 }
 
 Export-ModuleMember -Function @(
   'Assert-LizardPlanApprovalSignature',
   'Assert-LizardPlanIntentMatch',
   'ConvertTo-LizardCanonicalJson',
+  'Get-LizardOperationApprovalPolicy',
   'Get-LizardPlanIntentSha256',
   'Get-LizardPlanRootHash',
   'Get-LizardPlanSha256',

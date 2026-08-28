@@ -73,6 +73,7 @@ namespace Lizard.AgentLayer.Native
         [DllImport("libc", SetLastError = true)] internal static extern int open(string path, int flags, int mode);
         [DllImport("libc", SetLastError = true)] internal static extern int openat(int directory, string path, int flags, int mode);
         [DllImport("libc", SetLastError = true)] internal static extern int mkdirat(int directory, string path, uint mode);
+        [DllImport("libc", SetLastError = true)] internal static extern int fchmod(int fd, uint mode);
         [DllImport("libc", SetLastError = true)] internal static extern int linkat(int oldDirectory, string oldPath, int newDirectory, string newPath, int flags);
         [DllImport("libc", SetLastError = true)] internal static extern int renameat(int oldDirectory, string oldPath, int newDirectory, string newPath);
         [DllImport("libc", EntryPoint = "renameat2", SetLastError = true)] private static extern int renameat2_linux(int oldDirectory, string oldPath, int newDirectory, string newPath, uint flags);
@@ -123,10 +124,11 @@ namespace Lizard.AgentLayer.Native
         {
             int error = Marshal.GetLastWin32Error();
             if (error == 2) return new FileNotFoundException("SAFEFS_FILE_MISSING: File does not exist: " + path);
+            if (error == 13) return new UnauthorizedAccessException("SAFEFS_ACCESS_DENIED: Access denied (errno=13 EACCES) for " + operation + ": " + path);
             if (error == 17) return new IOException("SAFEFS_DESTINATION_EXISTS: Destination already exists: " + path);
             if (error == 18) return new UnauthorizedAccessException("SAFEFS_MOUNT_BOUNDARY: Native operation crossed a mount boundary: " + path);
             if ((!IsMac && error == 40) || (IsMac && error == 62)) return new UnauthorizedAccessException("SAFEFS_REPARSE_POINT: Linked path component is not allowed: " + path);
-            return new Win32Exception(error, "SAFEFS_NATIVE_CALL_FAILED: " + operation + " failed for " + path);
+            return new Win32Exception(error, "SAFEFS_NATIVE_CALL_FAILED: " + operation + " failed (errno=" + error + ") for " + path);
         }
 
         internal static void AssertSegment(string segment)
@@ -371,6 +373,7 @@ namespace Lizard.AgentLayer.Native
             {
                 UnixNativeFs.ValidateFile(stage, stageName, rootIdentity);
                 UnixNativeFs.WriteAll(stage, bytes, stageName);
+                UnixNativeFs.fchmod(stage.FileDescriptor, 420); // 0644 octal
                 if (UnixNativeFs.fsync(stage.FileDescriptor) != 0) throw UnixNativeFs.NativeFailure("fsync", stageName);
                 if (replace)
                 {
@@ -494,6 +497,15 @@ namespace Lizard.AgentLayer.Native
         {
             string full = Path.GetFullPath(path);
             if (!full.StartsWith("/", StringComparison.Ordinal)) throw new UnauthorizedAccessException("SAFEFS_OUTSIDE_ROOT: Unix path must be absolute.");
+            if (UnixNativeFs.IsMac)
+            {
+                if (full.StartsWith("/var/", StringComparison.Ordinal) || full == "/var")
+                    full = "/private" + full;
+                else if (full.StartsWith("/tmp/", StringComparison.Ordinal) || full == "/tmp")
+                    full = "/private" + full;
+                else if (full.StartsWith("/etc/", StringComparison.Ordinal) || full == "/etc")
+                    full = "/private" + full;
+            }
             return full == "/" ? full : full.TrimEnd('/');
         }
 

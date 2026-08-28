@@ -1,4 +1,4 @@
-param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)))
+param([string]$LayerRoot = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
 
 $ErrorActionPreference = 'Stop'
 $LayerRoot = (Resolve-Path -LiteralPath $LayerRoot).Path
@@ -36,7 +36,7 @@ try {
   Assert-False ($dependencies -match 'blocked the final live') 'Dependency snapshot must not retain a resolved release blocker.'
 
   $version = (Get-Content -LiteralPath (Join-Path $LayerRoot 'VERSION') -Raw).Trim()
-  $package = Get-Content -LiteralPath (Join-Path $LayerRoot 'package.json') -Raw | ConvertFrom-Json
+  $package = Get-Content -LiteralPath (Join-Path $LayerRoot 'package.json') -Raw | ConvertFrom-LizardJson
   $lockText = Get-Content -LiteralPath (Join-Path $LayerRoot 'package-lock.json') -Raw
   $changelog = Get-Content -LiteralPath (Join-Path $LayerRoot 'CHANGELOG.md') -Raw
   $escapedVersion = [regex]::Escape($version)
@@ -96,7 +96,7 @@ try {
   Assert-True (Test-Path -LiteralPath (Join-Path $existingTarget '.github\copilot-instructions.lizard-agent-layer.md') -PathType Leaf) 'Existing target must receive a reviewable Copilot sidecar.'
 
   $manifestPath = Join-Path $existingTarget '.agent\lizard-agent-layer.install.json'
-  $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+  $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-LizardJson
   Assert-Equal $version ([string]$manifest.layer_version) 'Installed manifest must record the current public version.'
   Assert-True (@($manifest.harnesses) -contains 'github-copilot') 'Installed manifest must record the Copilot harness.'
 

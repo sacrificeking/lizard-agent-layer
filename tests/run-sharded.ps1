@@ -14,6 +14,9 @@ Write-Host " LayerRoot: $LayerRoot"
 Write-Host " CPU Cores: $([Environment]::ProcessorCount) | Parallel Shards: $Shards"
 Write-Host "================================================================" -ForegroundColor Cyan
 
+Import-Module (Join-Path $LayerRoot 'scripts\Lizard.Host.psm1') -Force
+$PowerShellHost = Get-LizardPowerShellHostPath
+
 $scriptPath = Join-Path $LayerRoot 'tests\run-focused.ps1'
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -22,10 +25,10 @@ for ($i = 1; $i -le $Shards; $i++) {
   $shardIndex = $i
   Write-Host "-> Launching Shard $shardIndex of $Shards in parallel..." -ForegroundColor Gray
   $job = Start-Job -ScriptBlock {
-    param($Script, $Root, $TotalShards, $CurrentShard)
-    powershell.exe -NoProfile -File $Script -LayerRoot $Root -ShardCount $TotalShards -ShardIndex $CurrentShard
+    param($HostPath, $Script, $Root, $TotalShards, $CurrentShard)
+    & $HostPath -NoProfile -File $Script -LayerRoot $Root -ShardCount $TotalShards -ShardIndex $CurrentShard
     return [int]$LASTEXITCODE
-  } -ArgumentList $scriptPath, $LayerRoot, $Shards, $shardIndex
+  } -ArgumentList $PowerShellHost, $scriptPath, $LayerRoot, $Shards, $shardIndex
   $jobs += [ordered]@{ Shard = $shardIndex; Job = $job }
 }
 
@@ -47,15 +50,15 @@ foreach ($entry in $jobs) {
   $reportPass = $false
   if (Test-Path -LiteralPath $reportPath -PathType Leaf) {
     try {
-      $rep = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
+      $rep = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-LizardJson
       if ([int]$rep.failed -eq 0 -and [int]$rep.passed -gt 0) { $reportPass = $true }
     } catch {}
   }
 
   if ($shardExitCode -eq 0 -or $reportPass) {
-    Write-Host "✅ Shard $shard/$Shards PASSED" -ForegroundColor Green
+    Write-Host "âœ… Shard $shard/$Shards PASSED" -ForegroundColor Green
   } else {
-    Write-Host "❌ Shard $shard/$Shards FAILED (ExitCode: $shardExitCode)" -ForegroundColor Red
+    Write-Host "âŒ Shard $shard/$Shards FAILED (ExitCode: $shardExitCode)" -ForegroundColor Red
     if ($textLines) {
       $textLines | Where-Object { $_ -match 'FAIL|ASSERT|Error' } | ForEach-Object { Write-Host "   $_" -ForegroundColor DarkRed }
     }

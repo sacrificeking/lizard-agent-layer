@@ -30,7 +30,7 @@ function New-InstalledModeTarget {
 
 function Assert-ManifestMode {
   param([string]$Target, [string]$Mode)
-  $manifest = Get-Content -LiteralPath (Join-Path $Target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-Json
+  $manifest = Get-Content -LiteralPath (Join-Path $Target '.agent\lizard-agent-layer.install.json') -Raw | ConvertFrom-LizardJson
   Assert-Equal $Mode ([string]$manifest.memory_mode) "Manifest must remain in mode $Mode."
   return $manifest
 }
@@ -54,7 +54,7 @@ try {
   $offManifest = Assert-ManifestMode -Target $roundtrip -Mode 'off'
   Assert-False (Test-Path -LiteralPath (Join-Path $roundtrip '.agent\memory')) 'curated -> off must remove the physical memory namespace.'
   Assert-True (@($offManifest.artifacts | Where-Object { ([string]$_.path).StartsWith('.agent/memory') -and $_.lifecycle -eq 'removed' }).Count -gt 0) 'Off manifest must retain non-executable removed tombstones.'
-  $offPlan = Get-Content -LiteralPath $toOff.approval.plan_path -Raw | ConvertFrom-Json
+  $offPlan = Get-Content -LiteralPath $toOff.approval.plan_path -Raw | ConvertFrom-LizardJson
   foreach ($entry in @($offPlan.intent.target_entries | Where-Object { $_.action -eq 'remove' })) {
     Assert-True (-not [string]::IsNullOrWhiteSpace([string]$entry.precondition_identity_sha256)) "Removal must bind physical identity: $($entry.path)"
   }

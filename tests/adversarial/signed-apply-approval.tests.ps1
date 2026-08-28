@@ -88,10 +88,24 @@ try {
   $envelopePath = Join-Path $testRoot 'approval-envelope.json'
   Set-Content -LiteralPath $envelopePath -Value ($envelope | ConvertTo-Json -Depth 20) -Encoding UTF8
 
-  # Assert 1: Opt-in without required flags throws SIGNED_APPROVAL_REQUIRED
+  # Assert 1: Opt-in without required flags throws PLAN_SIGNED_APPROVAL_REQUIRED
   $missingArgsResult = Invoke-TestPowerShell -ScriptPath $installScript -Arguments (@($approval.arguments) + @('-RequireSignedApproval'))
   Assert-False ($missingArgsResult.exit_code -eq 0) 'Opt-in signed approval without trust args must fail closed.'
-  Assert-True ($missingArgsResult.output -match 'SIGNED_APPROVAL_REQUIRED') 'Expected SIGNED_APPROVAL_REQUIRED error.'
+  Assert-True ($missingArgsResult.output -match 'PLAN_SIGNED_APPROVAL_REQUIRED') 'Expected PLAN_SIGNED_APPROVAL_REQUIRED error.'
+
+  # Assert 1b: Missing replay ledger throws PLAN_REPLAY_LEDGER_REQUIRED
+  $missingLedgerResult = Invoke-TestPowerShell -ScriptPath $installScript -Arguments (@($approval.arguments) + @(
+    '-RequireSignedApproval',
+    '-ApprovalEnvelopePath', $envelopePath,
+    '-TrustStorePath', $trustStorePath,
+    '-TrustStoreSha256', $trustStoreSha,
+    '-ChallengePath', $challengePath,
+    '-ChallengeSha256', $challengeSha
+  ))
+  Assert-False ($missingLedgerResult.exit_code -eq 0) 'Signed approval without replay ledger must fail closed.'
+  Assert-True ($missingLedgerResult.output -match 'PLAN_REPLAY_LEDGER_REQUIRED') 'Expected PLAN_REPLAY_LEDGER_REQUIRED error.'
+
+  $replayLedger = Join-Path $testRoot 'apply-replay.jsonl'
 
   # Assert 2: Envelope inside target root throws PLAN_APPROVAL_ENVELOPE_IN_TARGET
   $insideEnvelopePath = Join-Path $targetRoot 'approval-envelope.json'
@@ -102,7 +116,8 @@ try {
     '-TrustStorePath', $trustStorePath,
     '-TrustStoreSha256', $trustStoreSha,
     '-ChallengePath', $challengePath,
-    '-ChallengeSha256', $challengeSha
+    '-ChallengeSha256', $challengeSha,
+    '-ReplayLedgerPath', $replayLedger
   ))
   Assert-False ($insideResult.exit_code -eq 0) 'Envelope inside target must fail closed.'
   Assert-True ($insideResult.output -match 'PLAN_APPROVAL_ENVELOPE_IN_TARGET') 'Expected PLAN_APPROVAL_ENVELOPE_IN_TARGET error.'

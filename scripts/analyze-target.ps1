@@ -173,6 +173,7 @@ function Get-MarkerGroupHits {
   return @(Sort-OrdinalStrings $hits.ToArray())
 }
 
+# Precision domain signal is emitted only if >=2 approved path-group markers ('finance', 'accounting', 'ledger', 'precision') are detected.
 $financeHits = @(Get-MarkerGroupHits @('finance', 'accounting', 'ledger', 'precision'))
 if ($financeHits.Count -ge 2) { Add-Signal 'precision' ("path-group:precision:{0}" -f ($financeHits -join ',')) 'path-group' 'weak' ("Precision/finance/accounting path groups detected ({0})." -f $financeHits.Count) }
 else { Add-NegativeSignal 'precision-path-groups-below-threshold' }

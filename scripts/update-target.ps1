@@ -56,9 +56,34 @@ if ($Apply) {
   }
   Assert-PathOutsideRoot -Path $ApprovedPlanPath -ExcludedRoot $TargetRoot -Label 'ApprovedPlanPath'
   $ApprovedUpdatePlan = Read-LizardApprovedPlan -Path $ApprovedPlanPath -ExpectedSha256 $ApprovedPlanSha256 -ExpectedOperationKind update
-  if ($RequireSignedApproval) {
+  $effectiveRisk = 'medium'
+  if (Test-Path -LiteralPath $profilePath -PathType Leaf) {
+    try {
+      $pDoc = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $profilePath -Raw)
+      if ($pDoc.riskLevel) { $effectiveRisk = [string]$pDoc.riskLevel }
+    } catch {}
+  } elseif (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
+    try {
+      $mDoc = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $manifestPath -Raw)
+      if ($mDoc.risk_level) { $effectiveRisk = [string]$mDoc.risk_level }
+    } catch {}
+  }
+  if ($ApprovedUpdatePlan.intent.risk_level) {
+    $effectiveRisk = [string]$ApprovedUpdatePlan.intent.risk_level
+  }
+  $approvalPolicy = Get-LizardOperationApprovalPolicy `
+    -OperationKind 'update' `
+    -RiskLevel $effectiveRisk `
+    -Force:$Force `
+    -ForceManaged:$ForceManaged `
+    -RequireSignedApproval:$RequireSignedApproval
+
+  if ($approvalPolicy.signed_approval_required) {
     if ([string]::IsNullOrWhiteSpace($ApprovalEnvelopePath) -or [string]::IsNullOrWhiteSpace($TrustStorePath) -or [string]::IsNullOrWhiteSpace($TrustStoreSha256) -or [string]::IsNullOrWhiteSpace($ChallengePath) -or [string]::IsNullOrWhiteSpace($ChallengeSha256)) {
-      throw 'SIGNED_APPROVAL_REQUIRED: -RequireSignedApproval requires -ApprovalEnvelopePath, -TrustStorePath, -TrustStoreSha256, -ChallengePath, and -ChallengeSha256.'
+      throw "PLAN_SIGNED_APPROVAL_REQUIRED: Signed apply approval is mandatory for this operation ($($approvalPolicy.reason))."
+    }
+    if ([string]::IsNullOrWhiteSpace($ReplayLedgerPath)) {
+      throw 'PLAN_REPLAY_LEDGER_REQUIRED: A replay ledger path is mandatory for signed apply approval verification.'
     }
     Assert-LizardPlanApprovalSignature `
       -ApprovedPlan $ApprovedUpdatePlan `

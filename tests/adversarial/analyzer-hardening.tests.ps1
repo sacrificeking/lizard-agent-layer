@@ -15,7 +15,7 @@ function Invoke-AnalyzerJson {
   param([string]$Target, [string[]]$Extra = @())
   $result = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts\analyze-target.ps1') -Arguments (@('-TargetPath', $Target, '-Json') + @($Extra))
   if ($result.exit_code -ne 0) { throw "ANALYZER_TEST_EXECUTION_FAILED: $($result.output)" }
-  return $result.output | ConvertFrom-Json
+  return $result.output | ConvertFrom-LizardJson
 }
 
 try {
@@ -42,6 +42,19 @@ try {
   Assert-False (@($positiveResult.recommendedHarnesses) -contains 'claude-code') 'Detected target instructions must not self-authorize a harness.'
   Assert-True (@($positiveResult.evidence | Where-Object { $_.id -like 'manifest:package.json*' }).Count -gt 0) 'Recommendation must include stable manifest evidence.'
   Assert-Equal 'bounded-evidence-score-not-probability' ([string]$positiveResult.calibration.score_kind) 'Evidence score must not be presented as a probability.'
+
+  # Explicit precision threshold test: 1 marker below threshold, 2 markers satisfies threshold
+  Assert-False (@($positiveResult.signals) -contains 'precision') 'Single finance marker must not emit precision signal.'
+  Assert-True (@($positiveResult.negativeSignals) -contains 'precision-path-groups-below-threshold') 'Single finance marker must record negative precision signal.'
+
+  $precisionTarget = Join-Path $fixtureRoot 'precision-multi'
+  New-Item -ItemType Directory -Path (Join-Path $precisionTarget 'src\finance\dca') -Force | Out-Null
+  New-Item -ItemType Directory -Path (Join-Path $precisionTarget 'src\lib\ledger\entry') -Force | Out-Null
+  Set-Content -LiteralPath (Join-Path $precisionTarget 'src\finance\dca\calc.ts') -Value 'export {}' -Encoding UTF8
+  Set-Content -LiteralPath (Join-Path $precisionTarget 'src\lib\ledger\entry\audit.ts') -Value 'export {}' -Encoding UTF8
+  $precisionResult = Invoke-AnalyzerJson -Target $precisionTarget
+  Assert-True (@($precisionResult.signals) -contains 'precision') 'Two distinct precision/finance path markers must emit precision signal.'
+  Assert-True (@($precisionResult.recommendedPacks) -contains 'precision-domain') 'Precision signal must recommend precision-domain pack.'
 
   $repeatResult = Invoke-AnalyzerJson -Target $positive -Extra @('-ApprovedHarnesses', 'github-copilot,codex')
   Assert-Equal ($positiveResult | ConvertTo-Json -Depth 10 -Compress) ($repeatResult | ConvertTo-Json -Depth 10 -Compress) 'Repeated analysis of an unchanged tree must be byte-order deterministic after JSON parsing.'
