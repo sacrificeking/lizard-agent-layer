@@ -1,4 +1,4 @@
-﻿---
+---
 name: git-safety
 description: Safe git workflow for branches, commits, pushes, tags, merges, rebases, and history-sensitive operations. Use when a task mentions git, commit, push, branch, merge, rebase, tag, staging, or remote repository changes.
 ---

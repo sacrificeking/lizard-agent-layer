@@ -1,4 +1,4 @@
-﻿# Loop Run Log
+# Loop Run Log
 
 Append one entry per loop run. Keep this file factual and short.
 

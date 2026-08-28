@@ -114,7 +114,7 @@ These gaps are **intentional**. Closing them inside this repository would be a s
 | An `expert` profile, DLP/PII engine, or Spec-Kit-style slash OS | Same overlay for novices and experienced users. Paste-stop is protocol judgment, not a scanner. SDD CLIs are adjacent products. |
 | Replacing PowerShell with Node for install | Containment scripts are the platform. Target apps do not take that dependency. Champions need PowerShell 7.5+. |
 
-Unix handle-bound SafeFs **runtime** evidence (H-03) is validated through the multi-host CI matrix across Windows, Ubuntu, and macOS. See [Compatibility](compatibility.md). Organization residual risk: [Enterprise usage](enterprise-usage.md).
+Unix handle-bound SafeFs **runtime** evidence (H-03) is verified against the exact release commit SHA through the multi-host CI matrix across Windows, Ubuntu, and macOS (see [`docs/safety-model.md`](safety-model.md)). Organization residual risk: [Enterprise usage](enterprise-usage.md).
 
 ## Durable contracts
 

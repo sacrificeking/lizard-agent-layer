@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "cursor",
   "description": "Cursor adapter using a project rule file under .cursor/rules.",
   "instruction": {

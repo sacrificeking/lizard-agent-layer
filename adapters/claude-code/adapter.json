@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "claude-code",
   "description": "Claude Code adapter using CLAUDE.md plus optional .claude/skills mirrors.",
   "instruction": {

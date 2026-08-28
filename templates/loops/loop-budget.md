@@ -1,4 +1,4 @@
-﻿# Loop Budget
+# Loop Budget
 
 Schema version: 1
 

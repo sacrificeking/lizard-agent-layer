@@ -1,4 +1,4 @@
-﻿# ADR 0023: Records Retention, Legal Hold, and Cryptographic Deletion Lifecycle
+# ADR 0023: Records Retention, Legal Hold, and Cryptographic Deletion Lifecycle
 
 - Status: Accepted
 - Date: 2026-08-22

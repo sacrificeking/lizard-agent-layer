@@ -1,4 +1,4 @@
-﻿# lizard-agent-layer private runtime outputs
+# lizard-agent-layer private runtime outputs
 memory/episodic/
 memory/episodic/**
 data-layer/

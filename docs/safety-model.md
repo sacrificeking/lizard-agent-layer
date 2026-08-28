@@ -1,4 +1,4 @@
-﻿# Safety Model
+# Safety Model
 
 The layer is built around conservative filesystem and workflow behavior.
 

@@ -194,11 +194,8 @@ pwsh -NoProfile -File .\scripts\doctor.ps1 -TargetPath "C:\path\to\your-project"
 ```powershell
 # 1. Preview installation
 pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile enterprise-fullstack -Harnesses github-copilot -Packs frontend-engineering,database-backend,backend-api,security-hardening -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
-
-# 2. Apply installation
-$planSha = (Get-FileHash .\.tmp\install-plan.json -Algorithm SHA256).Hash.ToLowerInvariant()
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile enterprise-fullstack -Harnesses github-copilot -Packs frontend-engineering,database-backend,backend-api,security-hardening -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 $planSha -HumanApproved
 ```
+> **Note:** Because `enterprise-fullstack` carries a high risk level, applying mutations requires cryptographic signed plan approval (`-ApprovalEnvelopePath`, `-TrustStorePath`, `-ChallengePath`, `-ReplayLedgerPath`). See [`protocols/permissions.md`](protocols/permissions.md) and [`docs/safety-model.md`](docs/safety-model.md) for signed approval workflows.
 
 ### Future Updates & Modifications
 

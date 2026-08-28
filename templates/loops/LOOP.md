@@ -1,4 +1,4 @@
-﻿# lizard-agent-layer Loops
+# lizard-agent-layer Loops
 
 This project uses lizard-agent-layer loop engineering in report-only mode by default.
 

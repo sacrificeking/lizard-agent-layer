@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "generic-agents-md",
   "description": "Generic AGENTS.md adapter for tools that read repository instructions but have no dedicated harness path.",
   "compatibility": {

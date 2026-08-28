@@ -1,4 +1,4 @@
-﻿# Loop Constraints
+# Loop Constraints
 
 Schema version: 1
 Default mode: report-only

@@ -1,4 +1,4 @@
-﻿# Workspace
+# Workspace
 
 Current task state for agent handoff.
 

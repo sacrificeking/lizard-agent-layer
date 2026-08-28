@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "codex",
   "description": "OpenAI Codex adapter using AGENTS.md plus .agents/skills mirrors.",
   "compatibility": {

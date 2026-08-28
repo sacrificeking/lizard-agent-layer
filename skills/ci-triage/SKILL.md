@@ -1,4 +1,4 @@
-﻿---
+---
 name: ci-triage
 description: Classify CI failures for loop reports without modifying code, retrying flakes blindly, or hiding root causes.
 ---

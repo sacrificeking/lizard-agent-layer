@@ -1,4 +1,4 @@
-﻿# AGENTS.md - lizard-agent-layer
+# AGENTS.md - lizard-agent-layer
 
 This repository builds portable agent infrastructure for other repositories.
 

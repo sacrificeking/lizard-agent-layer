@@ -1,4 +1,4 @@
-﻿# Preferences
+# Preferences
 
 Fill this in per target project.
 

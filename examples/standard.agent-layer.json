@@ -1,4 +1,4 @@
-﻿{
+{
   "projectName": "product-app",
   "profile": "standard",
   "stack": ["typescript", "git"],

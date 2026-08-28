@@ -1,4 +1,4 @@
-﻿{
+{
   "projectName": "tiny-cli",
   "profile": "minimal",
   "stack": ["powershell"],

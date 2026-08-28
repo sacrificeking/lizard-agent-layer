@@ -80,13 +80,10 @@ pwsh -File "$HOME/.lizard-agent-layer/scripts/install.ps1" -TargetPath "." -Prof
 ```powershell
 if (-not (Test-Path "$HOME/.lizard-agent-layer")) { git clone https://github.com/sacrificeking/lizard-agent-layer.git "$HOME/.lizard-agent-layer" } else { git -C "$HOME/.lizard-agent-layer" pull --quiet }
 
-# 1. Generate canonical installation plan
+# 1. Generate canonical installation plan (dry-run preview)
 pwsh -File "$HOME/.lizard-agent-layer/scripts/install.ps1" -TargetPath "." -Profile enterprise-fullstack -Harnesses github-copilot -Packs frontend-engineering,database-backend,backend-api,security-hardening -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
-
-# 2. Apply verified installation plan
-$planSha = (Get-FileHash .\.tmp\install-plan.json -Algorithm SHA256).Hash.ToLowerInvariant()
-pwsh -File "$HOME/.lizard-agent-layer/scripts/install.ps1" -TargetPath "." -Profile enterprise-fullstack -Harnesses github-copilot -Packs frontend-engineering,database-backend,backend-api,security-hardening -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 $planSha -HumanApproved
 ```
+> **Note:** Because `enterprise-fullstack` carries a high risk level, applying mutations requires cryptographic signed plan approval (`-ApprovalEnvelopePath`, `-TrustStorePath`, `-ChallengePath`, `-ReplayLedgerPath`). See [`protocols/permissions.md`](protocols/permissions.md) and [`docs/safety-model.md`](docs/safety-model.md) for signed approval workflows.
 
 ---
 

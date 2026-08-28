@@ -1,4 +1,4 @@
-﻿---
+---
 name: dependency-upgrade
 description: Dependency update planning and risk-aware package workflow. Use when installing, removing, auditing, upgrading, or reviewing dependencies, package manifests, lockfiles, npm outdated output, or major-version risks.
 ---

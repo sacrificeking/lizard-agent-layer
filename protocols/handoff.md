@@ -1,4 +1,4 @@
-﻿# Handoff Protocol
+# Handoff Protocol
 
 Use this protocol whenever work may continue in another harness or model.
 

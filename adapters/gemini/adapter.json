@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "gemini",
   "description": "Gemini CLI adapter using GEMINI.md plus .gemini/skills mirrors.",
   "instruction": {

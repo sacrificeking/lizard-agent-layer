@@ -1,4 +1,4 @@
-﻿---
+---
 name: loop-budget
 description: Use when recurring agent loops need token caps, cadence limits, attempt budgets, early exits, and cheap-versus-strong model routing.
 ---

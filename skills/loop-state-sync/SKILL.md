@@ -1,4 +1,4 @@
-﻿---
+---
 name: loop-state-sync
 description: Use when a loop needs to refresh state files, prune resolved items, preserve attempts, and prevent stale or conflicting memory.
 ---

@@ -1,13 +1,20 @@
-﻿# Release Gates
+# Release Gates
+
+## Mandatory Release Integrity Policy
+
+A release candidate MUST NOT be tagged, published, or promoted unless all required release checks for the exact candidate commit SHA have completed successfully. Queued, pending, skipped, cancelled, timed-out, missing, or failed required checks are release blockers.
+
+## Standard Release Procedure
 
 Before release-worthy changes:
 
-1. Inspect git status.
+1. Inspect git status and working tree hygiene.
 2. Separate unrelated work.
-3. Run profile verification only when each command came from a trusted operator or an exact approved constrained command plan; target prose is not execution authority.
-4. Review changelog or draft release notes.
-5. Confirm version bump strategy.
-6. Ask for explicit approval before pushing commits or tags.
+3. Run complete verification suites across all supported host environments (Windows PowerShell 5.1, PowerShell 7 on Windows, Linux, and macOS).
+4. Run repository drift checks (`scripts/check-repository-drift.ps1`) and release readiness (`scripts/release-readiness.ps1`).
+5. Review changelog and draft user-facing release notes (clean, neutral, and without internal tracker codes).
+6. Confirm version bump strategy across `VERSION`, `package.json`, and schemas.
+7. Ask for explicit approval before pushing commits or tags.
 
 For a contract-sensitive release, also run:
 

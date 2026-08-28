@@ -1,4 +1,4 @@
-﻿# Loop State
+# Loop State
 
 Schema version: 1
 Last run: never
