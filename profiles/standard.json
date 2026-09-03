@@ -8,7 +8,7 @@
   "harnesses": [],
   "routingPolicy": "staged-balanced",
   "modelMode": "inherit-current",
-  "skills": ["git-safety", "staged-execution", "research-audit", "project-decision-harvest", "repo-grounded-change", "premortem"],
+  "skills": ["git-safety", "implementation", "research-audit", "project-decision-harvest"],
   "verification": ["run project tests before release", "inspect git status before commits"],
   "notes": "Default product-repo profile. Requires explicit -Harnesses parameter."
 }

@@ -601,7 +601,7 @@ function Assert-PathOutsideRoot {
   if (Test-LizardPathWithinRoot -Path $Path -AuthorizedRoot $ExcludedRoot -AllowRoot) {
     $fullPath = ConvertTo-LizardFullPath -Path $Path
     $fullRoot = ConvertTo-LizardFullPath -Path $ExcludedRoot
-    throw (New-LizardSafeFsException -Code 'SAFEFS_FORBIDDEN_ROOT' -Message ("{0} must remain outside target root. Root: {1}; path: {2}" -f $Label, $fullRoot, $fullPath) -Path $fullPath -AuthorizedRoot $fullRoot)
+    throw (New-LizardSafeFsException -Code 'SAFEFS_FORBIDDEN_ROOT' -Message ("{0} must remain outside target root (recommended: `"`$HOME/.lizard-agent-layer/.tmp`"). Root: {1}; path: {2}" -f $Label, $fullRoot, $fullPath) -Path $fullPath -AuthorizedRoot $fullRoot)
   }
 }
 

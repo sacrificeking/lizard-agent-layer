@@ -19,6 +19,8 @@ param(
   [int]$PlanTtlMinutes = 60,
   [string]$ApprovedPlanPath,
   [string]$ApprovedPlanSha256,
+  [ValidateSet('summary', 'digest', 'signed')]
+  [string]$PlanApprovalMode = 'summary',
   [switch]$HumanApproved,
   [switch]$RequireSignedApproval,
   [string]$ApprovalEnvelopePath,
@@ -64,11 +66,20 @@ $ApprovedPlan = $null
 
 if ($Apply) {
   if ($InternalPreflight -or $InternalPlanProbe) { throw 'PLAN_BINDING_INTERNAL_BYPASS: Internal plan switches cannot be combined with -Apply.' }
-  if ([string]::IsNullOrWhiteSpace($ApprovedPlanPath) -or [string]::IsNullOrWhiteSpace($ApprovedPlanSha256) -or -not $HumanApproved) {
-    throw 'PLAN_APPROVAL_REQUIRED: -Apply requires -ApprovedPlanPath, -ApprovedPlanSha256, and -HumanApproved.'
+  if ([string]::IsNullOrWhiteSpace($ApprovedPlanPath) -or -not $HumanApproved) {
+    throw 'PLAN_APPROVAL_REQUIRED: -Apply requires -ApprovedPlanPath and -HumanApproved.'
+  }
+  if ($PlanApprovalMode -eq 'digest' -and [string]::IsNullOrWhiteSpace($ApprovedPlanSha256)) {
+    throw 'PLAN_APPROVAL_REQUIRED: -PlanApprovalMode digest requires -ApprovedPlanSha256.'
   }
   Assert-PathOutsideRoot -Path $ApprovedPlanPath -ExcludedRoot $TargetRoot -Label 'ApprovedPlanPath'
-  $ApprovedPlan = Read-LizardApprovedPlan -Path $ApprovedPlanPath -ExpectedSha256 $ApprovedPlanSha256 -ExpectedOperationKind 'install'
+  $ApprovedPlan = Read-LizardApprovedPlan -Path $ApprovedPlanPath -Sha256 $ApprovedPlanSha256 -ExpectedOperationKind 'install'
+  if ([string]::IsNullOrWhiteSpace($ApprovedPlanSha256)) {
+    $planFull = ConvertTo-LizardFullPath -Path $ApprovedPlanPath
+    $planDir = Split-Path -Parent $planFull
+    $planSafeRoot = Resolve-SafeRoot -Path $planDir -RequireExisting
+    $ApprovedPlanSha256 = Get-SafeFileHash -AuthorizedRoot $planSafeRoot -Path $planFull
+  }
 } elseif ($ValidateApprovedPlanOnly) {
   throw 'PLAN_APPROVAL_REQUIRED: -ValidateApprovedPlanOnly requires the normal plan-bound -Apply contract.'
 }
@@ -253,6 +264,7 @@ if ($Apply -and -not $ValidateApprovedPlanOnly -and -not $JoinTransaction) {
     -OperationKind 'install' `
     -RiskLevel ([string]$ProfileDoc.riskLevel) `
     -Profile $Profile `
+    -ApprovalMode $PlanApprovalMode `
     -Force:$Force `
     -ForceManaged:$ForceManaged `
     -RequireSignedApproval:$RequireSignedApproval
@@ -490,7 +502,8 @@ if (Test-Path -LiteralPath $ExistingInstallManifestPath) {
 }
 $ExistingArtifactMap = Get-LizardArtifactMap -Manifest $existingInstallManifest -RequireLifecycle:($ExistingManifestSchema -ge 4)
 $PreviousMemoryMode = if ($null -ne $existingInstallManifest -and -not [string]::IsNullOrWhiteSpace([string]$existingInstallManifest.memory_mode)) { [string]$existingInstallManifest.memory_mode } else { $null }
-$EffectiveMemoryMode = if (-not [string]::IsNullOrWhiteSpace($MemoryMode)) { $MemoryMode } elseif (-not [string]::IsNullOrWhiteSpace($PreviousMemoryMode)) { $PreviousMemoryMode } else { [string]$ProfileDoc.memoryMode }
+$ProfileDefaultMemoryMode = [string]$ProfileDoc.memoryMode
+$EffectiveMemoryMode = if (-not [string]::IsNullOrWhiteSpace($MemoryMode)) { $MemoryMode } elseif (-not [string]::IsNullOrWhiteSpace($PreviousMemoryMode)) { $PreviousMemoryMode } else { $ProfileDefaultMemoryMode }
 if ($EffectiveMemoryMode -notin @('curated', 'private-episodic', 'off')) { throw "MEMORY_MODE_INVALID: Unsupported effective memory mode '$EffectiveMemoryMode'." }
 $MemoryModeTransition = -not [string]::IsNullOrWhiteSpace($PreviousMemoryMode) -and $PreviousMemoryMode -ne $EffectiveMemoryMode
 $MemoryTransitionName = if ($MemoryModeTransition) { "$PreviousMemoryMode->$EffectiveMemoryMode" } else { 'none' }
@@ -908,14 +921,35 @@ function New-InstallPlanMarkdown {
   $lines.Add('') | Out-Null
   $previewArguments = New-Object System.Collections.Generic.List[string]
   foreach ($argument in @('-TargetPath', $TargetRoot, '-Profile', $Profile, '-Harnesses', ($SelectedHarnesses -join ','))) { $previewArguments.Add([string]$argument) | Out-Null }
-  if ($RequestedPacks.Count -gt 0) { $previewArguments.Add('-Packs') | Out-Null; $previewArguments.Add(($RequestedPacks -join ',')) | Out-Null }
-  $previewArguments.Add('-RoutingPolicy') | Out-Null; $previewArguments.Add($EffectiveRoutingPolicy) | Out-Null
-  $previewArguments.Add('-ModelMode') | Out-Null; $previewArguments.Add($EffectiveModelMode) | Out-Null
-  if ($EffectiveModelInventory) { $previewArguments.Add('-ModelInventory') | Out-Null; $previewArguments.Add($EffectiveModelInventory) | Out-Null }
-  if ($EffectiveModelRuntime) { $previewArguments.Add('-ModelRuntime') | Out-Null; $previewArguments.Add($EffectiveModelRuntime) | Out-Null }
+  if ($RequestedPacks.Count -gt 0) { $previewArguments.Add('-Packs'); $previewArguments.Add(($RequestedPacks -join ',')) | Out-Null }
+  if (-not [string]::IsNullOrWhiteSpace($MemoryMode) -or $EffectiveMemoryMode -ne $ProfileDefaultMemoryMode) {
+    $previewArguments.Add('-MemoryMode'); $previewArguments.Add($EffectiveMemoryMode) | Out-Null
+  }
+  $previewArguments.Add('-RoutingPolicy'); $previewArguments.Add($EffectiveRoutingPolicy) | Out-Null
+  $previewArguments.Add('-ModelMode'); $previewArguments.Add($EffectiveModelMode) | Out-Null
+  if ($EffectiveModelInventory) { $previewArguments.Add('-ModelInventory'); $previewArguments.Add($EffectiveModelInventory) | Out-Null }
+  if ($EffectiveModelRuntime) { $previewArguments.Add('-ModelRuntime'); $previewArguments.Add($EffectiveModelRuntime) | Out-Null }
+  if ($PlanTtlMinutes -ne 60) { $previewArguments.Add('-PlanTtlMinutes'); $previewArguments.Add([string]$PlanTtlMinutes) | Out-Null }
+  if ($Force) { $previewArguments.Add('-Force') | Out-Null }
+  if ($ForceManaged) { $previewArguments.Add('-ForceManaged') | Out-Null }
+  if ($PlanApprovalMode -ne 'summary') { $previewArguments.Add('-PlanApprovalMode'); $previewArguments.Add($PlanApprovalMode) | Out-Null }
   $previewCommand = [string](New-LizardPowerShellFileInvocation -ScriptPath $InstallScriptPath -ArgumentList $previewArguments.ToArray() -ResolveCurrent).display
   $canonicalDisplay = if ($EffectiveCanonicalPlanPath) { $EffectiveCanonicalPlanPath } else { '<canonical-plan.json>' }
-  $applyArguments = @($previewArguments.ToArray()) + @('-Apply', '-ApprovedPlanPath', $canonicalDisplay, '-ApprovedPlanSha256', '<independently-reviewed-sha256>', '-HumanApproved')
+  $applyArguments = @($previewArguments.ToArray()) + @('-Apply', '-ApprovedPlanPath', $canonicalDisplay)
+  if ($PlanApprovalMode -eq 'digest') {
+    $applyArguments += @('-ApprovedPlanSha256', '<independently-reviewed-sha256>')
+  } elseif ($PlanApprovalMode -eq 'signed') {
+    $applyArguments += @(
+      '-ApprovedPlanSha256', '<independently-reviewed-sha256>',
+      '-ApprovalEnvelopePath', '<path-to-approval-envelope.json>',
+      '-TrustStorePath', '<path-to-trust-store.json>',
+      '-TrustStoreSha256', '<trust-store-sha256>',
+      '-ChallengePath', '<path-to-challenge.json>',
+      '-ChallengeSha256', '<challenge-sha256>',
+      '-ReplayLedgerPath', '<path-to-replay-ledger.jsonl>'
+    )
+  }
+  $applyArguments += '-HumanApproved'
   $applyCommand = [string](New-LizardPowerShellFileInvocation -ScriptPath $InstallScriptPath -ArgumentList $applyArguments -ResolveCurrent).display
   $lines.Add('Preview:') | Out-Null
   $lines.Add('') | Out-Null
@@ -927,6 +961,22 @@ function New-InstallPlanMarkdown {
   $lines.Add('') | Out-Null
   $lines.Add('```powershell') | Out-Null
   $lines.Add($applyCommand) | Out-Null
+  $lines.Add('```') | Out-Null
+  $lines.Add('') | Out-Null
+  $planIdDisplay = if ($script:CurrentOperationPlan) { [string]$script:CurrentOperationPlan.plan_id } else { '<plan_id>' }
+  $lines.Add('## Plan Approval Card') | Out-Null
+  $lines.Add('') | Out-Null
+  $lines.Add('```text') | Out-Null
+  $lines.Add(('Plan id:        {0}' -f $planIdDisplay)) | Out-Null
+  $lines.Add(('Operation:      install')) | Out-Null
+  $lines.Add(('Target:         {0}' -f $TargetRoot)) | Out-Null
+  $lines.Add(('Profile:        {0}' -f $Profile)) | Out-Null
+  $lines.Add(('Harnesses:      {0}' -f ($SelectedHarnesses -join ', '))) | Out-Null
+  $lines.Add(('Packs:          {0}' -f $packDisplay)) | Out-Null
+  $lines.Add(('Risk level:     {0}' -f $ProfileDoc.riskLevel)) | Out-Null
+  $lines.Add(('Planned paths:  {0}' -f $Planned.Count)) | Out-Null
+  $lines.Add(('Approval mode:  {0}' -f $PlanApprovalMode)) | Out-Null
+  $lines.Add(('Approval line:  APPROVE PLAN {0}' -f $planIdDisplay)) | Out-Null
   $lines.Add('```') | Out-Null
   $lines.Add('') | Out-Null
   Add-MarkdownList $lines 'Requested packs' @($RequestedPacks)
@@ -1049,10 +1099,9 @@ function Get-InstallInvocationOptions {
     model_runtime = $EffectiveModelRuntime
     force = $Force.IsPresent
     force_managed = $ForceManaged.IsPresent
-    write_plan = $ShouldWritePlan
-    plan_path = $EffectivePlanPath
     allow_target_report_write = $AllowTargetReportWrite.IsPresent
     plan_ttl_minutes = $PlanTtlMinutes
+    plan_approval_mode = $PlanApprovalMode
     test_fail_after_mutation = $TestFailAfterMutation
   }
 }
@@ -1288,6 +1337,8 @@ function Write-InstallManifest {
   $doc['merge_needed'] = @($MergeNeeded.ToArray())
   $doc['merge_suggestions'] = @($MergeSuggestions.ToArray())
   $doc['conflicts'] = @($Conflicts.ToArray())
+  $doc['layer_root'] = $LayerRoot.Replace('\', '/')
+  $doc['plan_approval_mode'] = $PlanApprovalMode
   if ($Apply -and $null -ne $ApprovedPlan) {
     $doc['applied_plan_id'] = [string]$ApprovedPlan.plan_id
     $doc['applied_plan_sha256'] = $ApprovedPlanSha256.ToLowerInvariant()
@@ -1363,7 +1414,7 @@ function Get-CurrentInstallProbePlan {
     '-InternalPlanProbe',
     '-SuppressPlanReport'
   ))
-  if (-not [string]::IsNullOrWhiteSpace($MemoryMode)) { $invokeArgs += @('-MemoryMode', $EffectiveMemoryMode) }
+  if (-not [string]::IsNullOrWhiteSpace($MemoryMode) -or $EffectiveMemoryMode -ne $ProfileDefaultMemoryMode) { $invokeArgs += @('-MemoryMode', $EffectiveMemoryMode) }
   if ($RequestedPacks.Count -gt 0) { $invokeArgs += @('-Packs', ($RequestedPacks -join ',')) }
   if (-not [string]::IsNullOrWhiteSpace($RoutingPolicy)) { $invokeArgs += @('-RoutingPolicy', $RoutingPolicy) }
   if (-not [string]::IsNullOrWhiteSpace($ModelMode)) { $invokeArgs += @('-ModelMode', $ModelMode) }
@@ -1371,10 +1422,8 @@ function Get-CurrentInstallProbePlan {
   if (-not [string]::IsNullOrWhiteSpace($ModelRuntime)) { $invokeArgs += @('-ModelRuntime', $ModelRuntime) }
   if ($Force) { $invokeArgs += '-Force' }
   if ($ForceManaged) { $invokeArgs += '-ForceManaged' }
-  if ($ShouldWritePlan) {
-    $invokeArgs += @('-WritePlan', '-PlanPath', $EffectivePlanPath)
-  }
   if ($AllowTargetReportWrite) { $invokeArgs += '-AllowTargetReportWrite' }
+  if ($PlanApprovalMode -ne 'summary') { $invokeArgs += @('-PlanApprovalMode', $PlanApprovalMode) }
 
   try {
     $global:LASTEXITCODE = 0
@@ -1533,8 +1582,8 @@ foreach ($adapterName in $SelectedHarnesses) {
 Register-RetiredArtifacts
 Assert-MemoryModePostcondition
 Write-InstallManifest
+if (-not $Apply) { $script:CurrentOperationPlan = Write-CanonicalInstallPlan }
 Write-PlanReport
-if (-not $Apply) { $null = Write-CanonicalInstallPlan }
 
 if ($Apply -and $OwnsTransaction) {
   $TransactionResult = Complete-LizardTransaction
@@ -1569,6 +1618,26 @@ if (-not $Apply) {
 if (-not $Apply -and $ShouldWriteCanonicalPlan) {
   Write-Host "Canonical approval plan: $EffectiveCanonicalPlanPath"
   Write-Host "Digest sidecar (convenience only): ${EffectiveCanonicalPlanPath}.sha256"
+  if ($null -ne $script:CurrentOperationPlan) {
+    Write-Host ""
+    Write-Host "------------------------------------------------------------"
+    Write-Host "Plan Approval Card"
+    Write-Host "  Plan id:        $($script:CurrentOperationPlan.plan_id)"
+    Write-Host "  Operation:      install"
+    Write-Host "  Target:         $TargetRoot"
+    Write-Host "  Profile:        $Profile"
+    Write-Host "  Harnesses:      $($SelectedHarnesses -join ', ')"
+    Write-Host "  Packs:          $packDisplay"
+    Write-Host "  Risk level:     $($ProfileDoc.riskLevel)"
+    Write-Host "  Planned paths:  $($Planned.Count)"
+    Write-Host "  Approval mode:  $PlanApprovalMode"
+    Write-Host "  Approval line:  APPROVE PLAN $($script:CurrentOperationPlan.plan_id)"
+    Write-Host "------------------------------------------------------------"
+    if ([string]$ProfileDoc.riskLevel -eq 'high' -and $PlanApprovalMode -eq 'summary') {
+      Write-Host "NOTE: This install includes high-risk configuration."
+      Write-Host "Summary approval is enabled by default. To require independent digest or signed RSA approval, rerun with -PlanApprovalMode digest or -PlanApprovalMode signed."
+    }
+  }
 }
 if ($Conflicts.Count -gt 0) {
   Write-Host "Ownership conflicts:"

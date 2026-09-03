@@ -5,6 +5,24 @@ All notable public changes to `lizard-agent-layer` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.5.0 - 2026-09-03
+
+### Added
+- **Human-Readable Plan Approval & Approval Card (ADR 0024):** Introduced a 3-tier authorization model (`summary` default, `digest` opt-in, `signed` opt-in/destructive) replacing the 64-hex SHA-256 typing ritual with a concise, human-readable Plan Approval Card (`APPROVE PLAN <plan_id>`) for standard installations and updates.
+- **Dedicated Operator Signed Approval CLI (`scripts/new-approval.ps1`):** One-step CLI generating RSA-256 keypairs, trust stores, challenges, replay ledgers, and signed evidence envelopes outside target repository bounds for high-assurance or destructive mutations.
+- **Native Windows & Cross-Platform Dispatchers:** Added `scripts/lizard.cmd` and `scripts/lizard.ps1` universal entrypoints automatically handling `pwsh` vs Windows PowerShell execution policies and `npm.cmd` invocations.
+- **Automatic Target Manifest `layer_root` Discovery:** Recorded source repository path `layer_root` in `.agent/lizard-agent-layer.install.json` enabling `scripts/doctor.ps1` to automatically locate its source engine without manual path arguments.
+- **Composite `implementation` Skill (`skills/implementation/`):** Unified staged 10-80-10 execution, repository-grounded sibling patterns, 3-question review packet generation, and risk-tiered premortem into a single high-efficiency load unit (39 lines, strictly under the 80-line budget).
+- **Sortable Pre-Mortem Failure Mode Ratings:** Added mandatory `likelihood: L|M|H` and `impact: L|M|H` ratings to `skills/premortem/SKILL.md` (bumped to version `1.0.1`) mapping Most Likely and Most Dangerous failure modes directly without prose inflation.
+- **Target Operator Guidance:** Added human operator reminders in `templates/operator-card.md` (`USING.md`) to prompt for premortem analysis before medium/high-risk edits.
+
+### Changed
+- **Streamlined 4-Skill Profile Diet:** Refactored `profiles/standard.json` and `profiles/enterprise-fullstack.json` default skills from 6 separate skills down to 4 focused skills: `git-safety`, `implementation`, `research-audit`, and `project-decision-harvest`.
+- **Adapter Matching-Skill Budget:** Replaced the rigid 2-skill cap in all 6 IDE adapters (`codex`, `claude-code`, `cursor`, `github-copilot`, `gemini`, `generic-agents-md`) with a flexible matching budget ("Load the one best matching skill ... usually implementation; add at most one specialist if needed").
+- **Target Trust Health Scoping:** Scoped mandatory `doctor.ps1` verification in adapter startup instructions to unknown repository trust or health triage, eliminating friction on routine edits in trusted workspaces.
+- **Installer Apply Option Binding & Mirroring:** Synchronized CLI option serialization in `scripts/install.ps1`, ensuring generated Markdown `Apply:` commands exactly match preview parameters and eliminate `PLAN_BINDING_OPTIONS_MISMATCH`.
+- **Front-Door Documentation Alignment:** Standardized single-harness examples across all public documentation, mandating `-Harnesses github-copilot` and isolating temporary preview paths to `$HOME/.lizard-agent-layer/.tmp`.
+
 ## 1.4.1 - 2026-08-27
 
 ### Added

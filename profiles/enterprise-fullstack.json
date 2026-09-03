@@ -10,11 +10,9 @@
   "modelMode": "inherit-current",
   "skills": [
     "git-safety",
-    "staged-execution",
+    "implementation",
     "research-audit",
-    "project-decision-harvest",
-    "repo-grounded-change",
-    "premortem"
+    "project-decision-harvest"
   ],
   "verification": [
     "run project typecheck and linter",

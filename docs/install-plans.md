@@ -11,13 +11,13 @@ Target projects often already have local instruction files such as `AGENTS.md`, 
 Default report path under `.tmp/install-plans/`:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -WritePlan -PlanPath .\.tmp\plans\project-plan.md -CanonicalPlanPath .\.tmp\plans\project-plan.json
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot -WritePlan -PlanPath .\.tmp\plans\project-plan.md -CanonicalPlanPath .\.tmp\plans\project-plan.json
 ```
 
 Custom report path:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -WritePlan -PlanPath .\.tmp\plans\project-plan.md
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot -WritePlan -PlanPath .\.tmp\plans\project-plan.md
 ```
 
 ## Contents
@@ -37,13 +37,13 @@ A plan report includes:
 After reviewing the Markdown report and canonical JSON, independently retain the lowercase SHA-256 shown in `project-plan.json.sha256` (or compute it yourself). The sidecar is convenience output, not approval evidence. Apply with the same options and the independently retained digest:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Apply -ApprovedPlanPath .\.tmp\plans\project-plan.json -ApprovedPlanSha256 <sha256> -HumanApproved
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot -Apply -ApprovedPlanPath .\.tmp\plans\project-plan.json -ApprovedPlanSha256 <sha256> -HumanApproved
 ```
 
 After reviewing the install plan, run `scripts/merge-suggestions.ps1` to generate concrete patch files and copy-ready Markdown blocks for existing instruction files.
 
 ```powershell
-pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard
+pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot
 ```
 
 ## Safety behavior

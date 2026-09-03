@@ -380,12 +380,14 @@ function Read-LizardApprovedPlan {
   param(
     [Alias('ParentRoot')][string]$AuthorizedRoot,
     [Parameter(Mandatory = $true)][Alias('PlanPath')][string]$Path,
-    [Parameter(Mandatory = $true)][Alias('PlanSha256', 'ExpectedSha256')][string]$Sha256,
+    [AllowNull()][Alias('PlanSha256', 'ExpectedSha256')][string]$Sha256,
     [Parameter(Mandatory = $true)][Alias('ExpectedOperationKind')][ValidateSet('install', 'update', 'uninstall', 'skill-lifecycle', 'records-lifecycle')][string]$OperationKind,
     [DateTimeOffset]$Now = [DateTimeOffset]::UtcNow,
     [ValidateRange(1024, 16777216)][int]$MaximumBytes = 8388608
   )
-  if ($Sha256 -notmatch '^[a-f0-9]{64}$') { throw (New-LizardPlanException -Code 'PLAN_BINDING_DIGEST_INVALID' -Message 'Approved plan digest must be lowercase SHA-256.') }
+  if (-not [string]::IsNullOrWhiteSpace($Sha256)) {
+    if ($Sha256 -notmatch '^[a-f0-9]{64}$') { throw (New-LizardPlanException -Code 'PLAN_BINDING_DIGEST_INVALID' -Message 'Approved plan digest must be lowercase SHA-256.') }
+  }
   $fullRequested = ConvertTo-LizardFullPath -Path $Path
   $effectiveRoot = if ([string]::IsNullOrWhiteSpace($AuthorizedRoot)) { Split-Path -Parent $fullRequested } else { $AuthorizedRoot }
   $root = Resolve-SafeRoot -Path $effectiveRoot -RequireExisting
@@ -405,7 +407,24 @@ function Read-LizardApprovedPlan {
   try { $raw = (New-Object System.Text.UTF8Encoding($false, $true)).GetString($bytes) }
   catch { throw (New-LizardPlanException -Code 'PLAN_BINDING_UTF8_INVALID' -Message $_.Exception.Message) }
   $computed = Get-LizardPlanSha256 -CanonicalJson $raw
-  if ($computed -ne $Sha256) { throw (New-LizardPlanException -Code 'PLAN_BINDING_DIGEST_MISMATCH' -Message 'Approved plan bytes do not match the supplied SHA-256.') }
+  if (-not [string]::IsNullOrWhiteSpace($Sha256)) {
+    if ($computed -ne $Sha256.ToLowerInvariant()) { throw (New-LizardPlanException -Code 'PLAN_BINDING_DIGEST_MISMATCH' -Message 'Approved plan bytes do not match the supplied SHA-256.') }
+  } else {
+    $sidecarPath = "$candidate.sha256"
+    if (Test-Path -LiteralPath $sidecarPath -PathType Leaf) {
+      try {
+        $sidecarBytes = Get-SafeBytes -AuthorizedRoot $root -Path $sidecarPath -MaximumBytes 1024
+        $sidecarContent = (New-Object System.Text.UTF8Encoding($false, $true)).GetString($sidecarBytes).Trim()
+        if ($sidecarContent -match '^[a-f0-9]{64}$') {
+          if ($computed -ne $sidecarContent.ToLowerInvariant()) {
+            throw (New-LizardPlanException -Code 'PLAN_BINDING_DIGEST_MISMATCH' -Message 'Approved plan bytes do not match the recorded plan sidecar.')
+          }
+        }
+      } catch [System.InvalidOperationException] {
+        if ($_.Data['plan_code'] -eq 'PLAN_BINDING_DIGEST_MISMATCH') { throw }
+      } catch { }
+    }
+  }
   try { $plan = ConvertFrom-LizardJson -InputObject $raw }
   catch { throw (New-LizardPlanException -Code 'PLAN_BINDING_JSON_INVALID' -Message $_.Exception.Message) }
   $shape = Assert-LizardOperationPlanDocument $plan
@@ -495,22 +514,19 @@ function Get-LizardOperationApprovalPolicy {
     [string]$Profile,
     [string]$Scope,
     [string]$Action,
+    [ValidateSet('summary', 'digest', 'signed')][string]$ApprovalMode = 'summary',
     [switch]$Force,
     [switch]$ForceManaged,
     [switch]$RequireSignedApproval
   )
 
   $normalizedRisk = [string]$RiskLevel.ToLowerInvariant()
-  $isHighRisk = $normalizedRisk -eq 'high'
   $signedRequired = $false
   $reason = 'standard-exact-plan'
 
-  if ($RequireSignedApproval.IsPresent) {
+  if ($RequireSignedApproval.IsPresent -or $ApprovalMode -eq 'signed') {
     $signedRequired = $true
     $reason = 'explicit-requirement'
-  } elseif ($isHighRisk) {
-    $signedRequired = $true
-    $reason = 'high-risk-profile-or-pack'
   } elseif ($OperationKind -eq 'uninstall' -and ($Scope -eq 'complete' -or $Scope -eq 'export-then-complete')) {
     $signedRequired = $true
     $reason = 'complete-uninstall-scope'
@@ -527,6 +543,7 @@ function Get-LizardOperationApprovalPolicy {
     reason = $reason
     operation_kind = $OperationKind
     risk_level = $normalizedRisk
+    approval_mode = $ApprovalMode
   }
 }
 

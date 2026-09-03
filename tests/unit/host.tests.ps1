@@ -59,6 +59,11 @@ try {
   $analysisResult = Invoke-TestPowerShell -ScriptPath (Join-Path $LayerRoot 'scripts/analyze-target.ps1') -Arguments @('-TargetPath', $generatedTarget, '-ApprovedHarnesses', 'generic-agents-md', '-Json')
   Assert-Equal 0 $analysisResult.exit_code "Analyzer invocation generation failed: $($analysisResult.output)"
   $analysis = $analysisResult.output | ConvertFrom-LizardJson
+  $generatedPlan = Join-Path $LayerRoot '.tmp/install-plan.md'
+  $generatedJsonPlan = Join-Path $LayerRoot '.tmp/install-plan.json'
+  if (Test-Path -LiteralPath $generatedPlan) { Remove-Item -LiteralPath $generatedPlan -Force }
+  if (Test-Path -LiteralPath $generatedJsonPlan) { Remove-Item -LiteralPath $generatedJsonPlan -Force }
+  if (Test-Path -LiteralPath "$generatedJsonPlan.sha256") { Remove-Item -LiteralPath "$generatedJsonPlan.sha256" -Force }
   $originalLocation = (Get-Location).Path
   try {
     Set-Location -LiteralPath $generatedCwd
@@ -67,7 +72,6 @@ try {
   } finally { Set-Location -LiteralPath $originalLocation }
   Assert-Equal 0 $generatedExit "Exact analyzer executable/argv did not execute on the current host: $generatedOutput"
   Assert-False (Test-Path -LiteralPath (Join-Path $generatedTarget '.agent')) 'Generated analyzer preview invocation mutated the target.'
-  $generatedPlan = Join-Path $generatedCwd '.tmp/install-plan.md'
   Assert-True (Test-Path -LiteralPath $generatedPlan -PathType Leaf) 'Generated analyzer preview invocation did not write its outside-target plan.'
   $generatedPlanText = Get-Content -LiteralPath $generatedPlan -Raw
   Assert-True ($generatedPlanText -match [regex]::Escape([string]$analysis.previewInvocation.executable)) 'Install plan did not render the current host executable.'
@@ -77,4 +81,7 @@ try {
   Write-Host 'PASS tests\unit\host.tests.ps1'
 } finally {
   if (Test-Path -LiteralPath $fixtureRoot) { Clear-TestDirectory -Path $fixtureRoot -AllowedRoot (Join-Path $LayerRoot '.tmp') }
+  if (Test-Path -LiteralPath (Join-Path $LayerRoot '.tmp/install-plan.md')) { Remove-Item -LiteralPath (Join-Path $LayerRoot '.tmp/install-plan.md') -Force }
+  if (Test-Path -LiteralPath (Join-Path $LayerRoot '.tmp/install-plan.json')) { Remove-Item -LiteralPath (Join-Path $LayerRoot '.tmp/install-plan.json') -Force }
+  if (Test-Path -LiteralPath (Join-Path $LayerRoot '.tmp/install-plan.json.sha256')) { Remove-Item -LiteralPath (Join-Path $LayerRoot '.tmp/install-plan.json.sha256') -Force }
 }

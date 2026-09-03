@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "wp11-apply-binding-and-front-door-contract",
+  "date": "2026-09-03",
+  "summary": "Fix apply command option binding (0004) and align front-door documentation and analyzer with safe path and harness contracts (0001).",
+  "changed_paths": [
+    "changes/wp11-apply-binding-and-front-door-contract.json",
+    "INSTALL.md",
+    "QUICKSTART.md",
+    "UNINSTALL.md",
+    "docs/install-plans.md",
+    "docs/loop-engineering.md",
+    "docs/packs.md",
+    "docs/update-target.md",
+    "scripts/analyze-target.ps1",
+    "scripts/install.ps1",
+    "tests/integration/install-plan-binding.tests.ps1",
+    "tests/unit/host.tests.ps1",
+    "tests/unit/overlay-calorie-budget.tests.ps1"
+  ],
+  "decision_records": [
+    "docs/adr/0010-exact-plan-approval-binding.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0013-handle-bound-filesystem-access.md",
+    "docs/adr/0015-effective-memory-modes.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0020-bounded-target-analysis.md",
+    "docs/adr/0021-host-invocations-and-git-ref-validation.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Preview-only report options write_plan and plan_path are removed from intent options; markdown Apply command snippet now mirrors all remaining active CLI flags. Existing target installations and manifests remain unaffected."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Fixes copy-paste execution of printed Apply snippets and eliminates path rejections in public documentation examples."
+  }
+}

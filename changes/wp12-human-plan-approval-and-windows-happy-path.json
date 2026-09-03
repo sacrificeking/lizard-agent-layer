@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "wp12-human-plan-approval-and-windows-happy-path",
+  "date": "2026-09-03",
+  "summary": "Human-readable plan approval (ADR 0024), three-tier authorization, new-approval.ps1, and Windows operator happy path wrappers with manifest layer_root.",
+  "changed_paths": [
+    "changes/wp12-human-plan-approval-and-windows-happy-path.json",
+    "docs/adr/0024-human-readable-plan-approval.md",
+    "INSTALL.md",
+    "QUICKSTART.md",
+    "registry/contracts.json",
+    "schemas/install-manifest.schema.json",
+    "scripts/Lizard.Plan.psm1",
+    "scripts/Lizard.SafeFs.psm1",
+    "scripts/doctor.ps1",
+    "scripts/install.ps1",
+    "scripts/lizard.cmd",
+    "scripts/lizard.ps1",
+    "scripts/new-approval.ps1",
+    "scripts/uninstall.ps1",
+    "scripts/update-target.ps1",
+    "tests/adversarial/approval-policy.tests.ps1",
+    "tests/integration/human-plan-approval.tests.ps1",
+    "tests/unit/windows-happy-path.tests.ps1"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0002-filesystem-and-report-containment.md",
+    "docs/adr/0003-ownership-and-manifest-identity.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0010-exact-plan-approval-binding.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0013-handle-bound-filesystem-access.md",
+    "docs/adr/0014-transactional-uninstall.md",
+    "docs/adr/0015-effective-memory-modes.md",
+    "docs/adr/0016-regulated-data-default-review.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0019-authenticated-evidence-trust.md",
+    "docs/adr/0021-host-invocations-and-git-ref-validation.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md",
+    "docs/adr/0024-human-readable-plan-approval.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Summary mode plan approval cards allow human authorization without manual SHA-256 typing, while existing callers passing explicit SHA-256 continue to be verified via digest mode. Manifest layer_root enables source discovery."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Introduces three authorization modes, lizard wrappers, and new-approval operator CLI without breaking existing valid plans or manifests."
+  }
+}

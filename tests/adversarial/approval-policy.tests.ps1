@@ -21,10 +21,14 @@ $explicit = Get-LizardOperationApprovalPolicy -OperationKind 'install' -RiskLeve
 Assert-True $explicit.signed_approval_required 'Explicit RequireSignedApproval flag requires signed approval'
 Assert-Equal 'explicit-requirement' $explicit.reason 'Explicit requirement reason expected'
 
-# 3. Test high risk profile
-$highRisk = Get-LizardOperationApprovalPolicy -OperationKind 'install' -RiskLevel 'high' -Profile 'enterprise-fullstack'
-Assert-True $highRisk.signed_approval_required 'High risk enterprise profile requires signed approval'
-Assert-Equal 'high-risk-profile-or-pack' $highRisk.reason 'High risk profile reason expected'
+# 3. Test high risk profile (summary mode default vs explicit signed mode)
+$highRiskSummary = Get-LizardOperationApprovalPolicy -OperationKind 'install' -RiskLevel 'high' -Profile 'enterprise-fullstack' -ApprovalMode 'summary'
+Assert-False $highRiskSummary.signed_approval_required 'High risk enterprise profile in summary mode does not require signed approval'
+Assert-Equal 'standard-exact-plan' $highRiskSummary.reason 'Standard exact plan reason expected'
+
+$highRiskSigned = Get-LizardOperationApprovalPolicy -OperationKind 'install' -RiskLevel 'high' -Profile 'enterprise-fullstack' -ApprovalMode 'signed'
+Assert-True $highRiskSigned.signed_approval_required 'High risk enterprise profile in signed mode requires signed approval'
+Assert-Equal 'explicit-requirement' $highRiskSigned.reason 'Explicit requirement reason expected'
 
 # 4. Test complete uninstall scope
 $uninstallComplete = Get-LizardOperationApprovalPolicy -OperationKind 'uninstall' -RiskLevel 'low' -Scope 'complete'

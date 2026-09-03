@@ -146,14 +146,14 @@ Present created, skipped, conflicting, sidecar, and manual-merge paths. Confirm 
 
 Ask:
 
-> Do you approve this exact installation plan and authorize the local target writes shown above?
+> Do you approve this exact installation plan (`APPROVE PLAN <plan_id>`) and authorize the local target writes shown above?
 
-Record the canonical plan path and independently verify or retain its lowercase SHA-256. Do not treat the generated `.sha256` sidecar as approval by itself.
+Under ADR 0024, default installations use summary mode: the operator approves the Plan Card and apply verifies the canonical plan, internal digest, and expiry without requiring manual SHA-256 typing. (For regulated or high-assurance workflows, opt-in digest mode is available via `-PlanApprovalMode digest`).
 
 Only an explicit approval permits:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -MemoryMode <curated|private-episodic|off> -RoutingPolicy <routing-policy> -ModelMode inherit-current -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -MemoryMode <curated|private-episodic|off> -RoutingPolicy <routing-policy> -ModelMode inherit-current -Apply -ApprovedPlanPath .\.tmp\install-plan.json -HumanApproved
 ```
 
 Do not add `-Force` or `-ForceManaged` during initial installation.
@@ -180,9 +180,8 @@ For experienced developers who prefer running direct commands without the intera
 # 1. Preview installation (safe, dry-run)
 pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile standard -Harnesses github-copilot -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
 
-# 2. Apply installation
-$planSha = (Get-FileHash .\.tmp\install-plan.json -Algorithm SHA256).Hash.ToLowerInvariant()
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile standard -Harnesses github-copilot -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 $planSha -HumanApproved
+# 2. Apply installation (Summary mode default)
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile standard -Harnesses github-copilot -Apply -ApprovedPlanPath .\.tmp\install-plan.json -HumanApproved
 
 # 3. Verify health
 pwsh -NoProfile -File .\scripts\doctor.ps1 -TargetPath "C:\path\to\your-project" -Strict
@@ -195,39 +194,39 @@ pwsh -NoProfile -File .\scripts\doctor.ps1 -TargetPath "C:\path\to\your-project"
 # 1. Preview installation
 pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile enterprise-fullstack -Harnesses github-copilot -Packs frontend-engineering,database-backend,backend-api,security-hardening -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
 ```
-> **Note:** Because `enterprise-fullstack` carries a high risk level, applying mutations requires cryptographic signed plan approval (`-ApprovalEnvelopePath`, `-TrustStorePath`, `-ChallengePath`, `-ReplayLedgerPath`). See [`protocols/permissions.md`](protocols/permissions.md) and [`docs/safety-model.md`](docs/safety-model.md) for signed approval workflows.
+> **Note:** By default, all profiles use summary mode approval (or opt-in `-PlanApprovalMode digest`). If your organization requires cryptographic signed approval, use `scripts/new-approval.ps1` to mint approval materials. On Windows without PowerShell 7 (`pwsh`), use `scripts\lizard.cmd` or `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ...`.
 
 ### Future Updates & Modifications
 
 #### 📋 Copy-Paste Update Prompt for AI Assistant:
 ```text
-Read `docs/update-target.md` in lizard-agent-layer. Run a preview update against this target repository using `scripts/update-target.ps1 -TargetPath "<this-repo-path>" -OutputDir .tmp/update-plan`. Verify that all local memory files and project source code are preserved, show me the plan diff, and wait for my approval before applying.
+Read `docs/update-target.md` in lizard-agent-layer. Run a preview update against this target repository using `scripts/update-target.ps1 -TargetPath "<this-repo-path>" -OutputDir "$HOME/.lizard-agent-layer/.tmp/update-plan"`. Verify that all local memory files and project source code are preserved, show me the plan diff, and wait for my approval before applying.
 ```
 
 #### 💻 Terminal Commands for Updating:
 ```powershell
 # 1. Preview update against latest layer source
-pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath "C:\path\to\your-project" -OutputDir .\.tmp\update-plan
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath "C:\path\to\your-project" -OutputDir "$HOME/.lizard-agent-layer/.tmp/update-plan"
 
 # 2. Apply approved update
-pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath "C:\path\to\your-project" -OutputDir .\.tmp\update-plan -Apply -ApprovedPlanPath .\.tmp\update-plan\update-plan.json -ApprovedPlanSha256 <sha256-from-preview> -HumanApproved
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath "C:\path\to\your-project" -OutputDir "$HOME/.lizard-agent-layer/.tmp/update-plan" -Apply -ApprovedPlanPath "$HOME/.lizard-agent-layer/.tmp/update-plan/update-plan.json" -ApprovedPlanSha256 <sha256-from-preview> -HumanApproved
 ```
 
 ### Clean Uninstallation
 
 #### 📋 Copy-Paste Uninstall Prompt for AI Assistant:
 ```text
-Read `UNINSTALL.md` in lizard-agent-layer. Run a preview uninstallation plan using `scripts/uninstall.ps1 -TargetPath "<this-repo-path>" -Scope managed-only -CanonicalPlanPath .tmp/uninstall-plan.json`. Confirm that only layer-owned files will be removed, show me the plan, and wait for my approval before executing the deletion.
+Read `UNINSTALL.md` in lizard-agent-layer. Run a preview uninstallation plan using `scripts/uninstall.ps1 -TargetPath "<this-repo-path>" -Scope managed-only -CanonicalPlanPath "$HOME/.lizard-agent-layer/.tmp/uninstall-plan.json"`. Confirm that only layer-owned files will be removed, show me the plan, and wait for my approval before executing the deletion.
 ```
 
 #### 💻 Terminal Commands for Uninstalling:
 ```powershell
 # 1. Preview uninstall plan (safe, dry-run)
-pwsh -NoProfile -File .\scripts\uninstall.ps1 -TargetPath "C:\path\to\your-project" -Scope managed-only -CanonicalPlanPath .\.tmp\uninstall-plan.json
+pwsh -NoProfile -File .\scripts\uninstall.ps1 -TargetPath "C:\path\to\your-project" -Scope managed-only -CanonicalPlanPath "$HOME/.lizard-agent-layer/.tmp/uninstall-plan.json"
 
 # 2. Apply verified uninstall
-$planSha = (Get-FileHash .\.tmp\uninstall-plan.json -Algorithm SHA256).Hash.ToLowerInvariant()
-pwsh -NoProfile -File .\scripts\uninstall.ps1 -TargetPath "C:\path\to\your-project" -Scope managed-only -Apply -ApprovedPlanPath .\.tmp\uninstall-plan.json -ApprovedPlanSha256 $planSha -HumanApproved
+$planSha = (Get-FileHash "$HOME/.lizard-agent-layer/.tmp/uninstall-plan.json" -Algorithm SHA256).Hash.ToLowerInvariant()
+pwsh -NoProfile -File .\scripts\uninstall.ps1 -TargetPath "C:\path\to\your-project" -Scope managed-only -Apply -ApprovedPlanPath "$HOME/.lizard-agent-layer/.tmp/uninstall-plan.json" -ApprovedPlanSha256 $planSha -HumanApproved
 ```
 
 ### Diagnostic Health Checks

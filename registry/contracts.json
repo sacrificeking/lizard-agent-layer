@@ -149,6 +149,22 @@
         "tests/integration/records-lifecycle.tests.ps1",
         "tests/schema/fixtures/records-*.valid.json"
       ]
+    },
+    {
+      "id": "human-readable-plan-approval",
+      "adr": "docs/adr/0024-human-readable-plan-approval.md",
+      "migration_required": false,
+      "paths": [
+        "scripts/Lizard.Plan.psm1",
+        "scripts/new-approval.ps1",
+        "scripts/install.ps1",
+        "scripts/update-target.ps1",
+        "scripts/uninstall.ps1",
+        "scripts/lizard.ps1",
+        "scripts/lizard.cmd",
+        "tests/integration/human-plan-approval.tests.ps1",
+        "tests/unit/windows-happy-path.tests.ps1"
+      ]
     }
   ]
 }

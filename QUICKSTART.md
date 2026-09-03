@@ -54,8 +54,8 @@ You are an expert software engineer. Please install and configure lizard-agent-l
    - Check if an existing agent setup is present (e.g., `.cursorrules`, `.cursor/rules/`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, etc.).
    - If an existing setup is found: Extract all project-specific rules and architecture decisions into `.agent/memory/` (DECISIONS.md, LESSONS.md) and preserve existing project instructions non-destructively through sidecars.
    - Recommend the best profile (standard, minimal, or enterprise-fullstack) and approved IDE harness (e.g. github-copilot, cursor, or codex).
-4. Run a safe preview first using `scripts/install.ps1 -TargetPath "<this-repo-path>" -Profile <profile> -Harnesses <harness> -WritePlan -PlanPath .tmp/install-plan.md -CanonicalPlanPath .tmp/install-plan.json`.
-5. Show me the planned changes and ask for my explicit confirmation before applying with the approved plan SHA-256.
+4. Run a safe preview first using `scripts/install.ps1 -TargetPath "<this-repo-path>" -Profile <profile> -Harnesses <harness> -WritePlan -PlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.md" -CanonicalPlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.json"`.
+5. Show me the Plan Approval Card and ask for my explicit confirmation (`APPROVE PLAN <plan_id>`) before applying.
 ```
 
 ---
@@ -69,11 +69,10 @@ Run these commands in PowerShell from your repository root (replace `github-copi
 if (-not (Test-Path "$HOME/.lizard-agent-layer")) { git clone https://github.com/sacrificeking/lizard-agent-layer.git "$HOME/.lizard-agent-layer" } else { git -C "$HOME/.lizard-agent-layer" pull --quiet }
 
 # 1. Generate canonical installation plan (dry-run preview)
-pwsh -File "$HOME/.lizard-agent-layer/scripts/install.ps1" -TargetPath "." -Profile standard -Harnesses github-copilot -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
+pwsh -File "$HOME/.lizard-agent-layer/scripts/install.ps1" -TargetPath "." -Profile standard -Harnesses github-copilot -WritePlan -PlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.md" -CanonicalPlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.json"
 
-# 2. Apply verified installation plan
-$planSha = (Get-FileHash .\.tmp\install-plan.json -Algorithm SHA256).Hash.ToLowerInvariant()
-pwsh -File "$HOME/.lizard-agent-layer/scripts/install.ps1" -TargetPath "." -Profile standard -Harnesses github-copilot -Apply -ApprovedPlanPath .\.tmp\install-plan.json -ApprovedPlanSha256 $planSha -HumanApproved
+# 2. Review Plan Approval Card, then apply (summary mode default):
+pwsh -File "$HOME/.lizard-agent-layer/scripts/install.ps1" -TargetPath "." -Profile standard -Harnesses github-copilot -Apply -ApprovedPlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.json" -HumanApproved
 ```
 
 ### For Enterprise Full-Stack (Database / API / Frontend / Security):
@@ -81,9 +80,9 @@ pwsh -File "$HOME/.lizard-agent-layer/scripts/install.ps1" -TargetPath "." -Prof
 if (-not (Test-Path "$HOME/.lizard-agent-layer")) { git clone https://github.com/sacrificeking/lizard-agent-layer.git "$HOME/.lizard-agent-layer" } else { git -C "$HOME/.lizard-agent-layer" pull --quiet }
 
 # 1. Generate canonical installation plan (dry-run preview)
-pwsh -File "$HOME/.lizard-agent-layer/scripts/install.ps1" -TargetPath "." -Profile enterprise-fullstack -Harnesses github-copilot -Packs frontend-engineering,database-backend,backend-api,security-hardening -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
+pwsh -File "$HOME/.lizard-agent-layer/scripts/install.ps1" -TargetPath "." -Profile enterprise-fullstack -Harnesses github-copilot -Packs frontend-engineering,database-backend,backend-api,security-hardening -WritePlan -PlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.md" -CanonicalPlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.json"
 ```
-> **Note:** Because `enterprise-fullstack` carries a high risk level, applying mutations requires cryptographic signed plan approval (`-ApprovalEnvelopePath`, `-TrustStorePath`, `-ChallengePath`, `-ReplayLedgerPath`). See [`protocols/permissions.md`](protocols/permissions.md) and [`docs/safety-model.md`](docs/safety-model.md) for signed approval workflows.
+> **Note:** By default, all profiles use summary mode approval (or opt-in `-PlanApprovalMode digest`). If your organization requires cryptographic signed approval, use `scripts/new-approval.ps1` to mint approval materials. On Windows without PowerShell 7 (`pwsh`), you can run `scripts\lizard.cmd` or `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ...`.
 
 ---
 
@@ -144,20 +143,20 @@ You are an expert software engineer. Please safely update lizard-agent-layer for
 1. Reference the official repository: https://github.com/sacrificeking/lizard-agent-layer
    (Pull latest changes to local cache or clone to temporary directory).
 2. Read `docs/update-target.md` in lizard-agent-layer.
-3. Run a preview update first: `scripts/update-target.ps1 -TargetPath "<this-repo-path>" -OutputDir .tmp/update-plan`.
+3. Run a preview update first: `scripts/update-target.ps1 -TargetPath "<this-repo-path>" -OutputDir "$HOME/.lizard-agent-layer/.tmp/update-plan"`.
 4. Present the update summary to me and verify that my local memory and project code are 100% preserved.
-5. Ask for my confirmation, then apply the approved update plan with `-Apply -ApprovedPlanPath .tmp/update-plan/update-plan.json -ApprovedPlanSha256 <sha256> -HumanApproved`.
+5. Ask for my confirmation, then apply the approved update plan with `-Apply -ApprovedPlanPath "$HOME/.lizard-agent-layer/.tmp/update-plan/update-plan.json" -ApprovedPlanSha256 <sha256> -HumanApproved`.
 ```
 
 ### 💻 Option B: Terminal Commands for Updates:
 ```powershell
 if (Test-Path "$HOME/.lizard-agent-layer") { git -C "$HOME/.lizard-agent-layer" pull --quiet }
 # 1. Preview update
-pwsh -File "$HOME/.lizard-agent-layer/scripts/update-target.ps1" -TargetPath "." -OutputDir .\.tmp\update-plan
+pwsh -File "$HOME/.lizard-agent-layer/scripts/update-target.ps1" -TargetPath "." -OutputDir "$HOME/.lizard-agent-layer/.tmp/update-plan"
 
 # 2. Apply approved update
-$updateSha = (Get-FileHash .\.tmp\update-plan\update-plan.json -Algorithm SHA256).Hash.ToLowerInvariant()
-pwsh -File "$HOME/.lizard-agent-layer/scripts/update-target.ps1" -TargetPath "." -OutputDir .\.tmp\update-plan -Apply -ApprovedPlanPath .\.tmp\update-plan\update-plan.json -ApprovedPlanSha256 $updateSha -HumanApproved
+$updateSha = (Get-FileHash "$HOME/.lizard-agent-layer/.tmp/update-plan/update-plan.json" -Algorithm SHA256).Hash.ToLowerInvariant()
+pwsh -File "$HOME/.lizard-agent-layer/scripts/update-target.ps1" -TargetPath "." -OutputDir "$HOME/.lizard-agent-layer/.tmp/update-plan" -Apply -ApprovedPlanPath "$HOME/.lizard-agent-layer/.tmp/update-plan/update-plan.json" -ApprovedPlanSha256 $updateSha -HumanApproved
 ```
 
 ---
@@ -171,20 +170,20 @@ If you ever wish to remove the agent layer, the uninstaller will cleanly remove 
 You are an expert software engineer. Please safely uninstall lizard-agent-layer from this repository:
 
 1. Reference `UNINSTALL.md` in lizard-agent-layer: https://github.com/sacrificeking/lizard-agent-layer
-2. Run a preview uninstall plan first: `scripts/uninstall.ps1 -TargetPath "<this-repo-path>" -Scope managed-only -CanonicalPlanPath .tmp/uninstall-plan.json`.
+2. Run a preview uninstall plan first: `scripts/uninstall.ps1 -TargetPath "<this-repo-path>" -Scope managed-only -CanonicalPlanPath "$HOME/.lizard-agent-layer/.tmp/uninstall-plan.json"`.
 3. Confirm to me that only layer-owned files will be removed and no application source files will be touched.
-4. Ask for my explicit confirmation, then apply the verified deletion with `-Apply -ApprovedPlanPath .tmp/uninstall-plan.json -ApprovedPlanSha256 <sha256> -HumanApproved`.
+4. Ask for my explicit confirmation, then apply the verified deletion with `-Apply -ApprovedPlanPath "$HOME/.lizard-agent-layer/.tmp/uninstall-plan.json" -ApprovedPlanSha256 <sha256> -HumanApproved`.
 5. Present the external deletion receipt (`uninstall-receipt.json`) as cryptographic proof.
 ```
 
 ### 💻 Option B: Terminal Commands for Clean Uninstall:
 ```powershell
 # 1. Preview uninstall plan (safe, dry-run)
-pwsh -File "$HOME/.lizard-agent-layer/scripts/uninstall.ps1" -TargetPath "." -Scope managed-only -CanonicalPlanPath .\.tmp\uninstall-plan.json
+pwsh -File "$HOME/.lizard-agent-layer/scripts/uninstall.ps1" -TargetPath "." -Scope managed-only -CanonicalPlanPath "$HOME/.lizard-agent-layer/.tmp/uninstall-plan.json"
 
 # 2. Apply verified uninstall
-$uninstallSha = (Get-FileHash .\.tmp\uninstall-plan.json -Algorithm SHA256).Hash.ToLowerInvariant()
-pwsh -File "$HOME/.lizard-agent-layer/scripts/uninstall.ps1" -TargetPath "." -Scope managed-only -Apply -ApprovedPlanPath .\.tmp\uninstall-plan.json -ApprovedPlanSha256 $uninstallSha -HumanApproved
+$uninstallSha = (Get-FileHash "$HOME/.lizard-agent-layer/.tmp/uninstall-plan.json" -Algorithm SHA256).Hash.ToLowerInvariant()
+pwsh -File "$HOME/.lizard-agent-layer/scripts/uninstall.ps1" -TargetPath "." -Scope managed-only -Apply -ApprovedPlanPath "$HOME/.lizard-agent-layer/.tmp/uninstall-plan.json" -ApprovedPlanSha256 $uninstallSha -HumanApproved
 ```
 
 ---

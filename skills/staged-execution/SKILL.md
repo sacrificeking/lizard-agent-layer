@@ -10,7 +10,7 @@ Use when a multi-step task benefits from deliberate planning, bounded implementa
 
 ## Success Criteria
 - Pre-check: If DECISIONS.md contains `Status: placeholder`, run `project-decision-harvest` and stop.
-- Strategy: Ground implementation in existing sibling patterns (`repo-grounded-change`), run `premortem` for medium/high-risk plans, clarify target files, constraints, and testable acceptance criteria before editing.
+- Strategy: Default implementation path is the `implementation` skill. When using staged-execution standalone, ground implementation in existing sibling patterns (`repo-grounded-change`); for medium/high-risk plans, load `premortem` as the matching specialist skill (do not expect a third matching skill without explicit user prompt); clarify target files, constraints, and testable acceptance criteria before editing.
 - Execution: Perform changes incrementally with bounded checkpoints.
 - Verification: Perform a fresh review pass against original criteria using visible evidence.
 

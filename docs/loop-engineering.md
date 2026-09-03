@@ -31,8 +31,8 @@ Patterns live in `loops/*.json` and are listed in `loops/registry.json`.
 Install the reusable skills first:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs loop-engineering -WritePlan -PlanPath .\.tmp\loop-pack-plan.md -CanonicalPlanPath .\.tmp\loop-pack-plan.json
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs loop-engineering -Apply -ApprovedPlanPath .\.tmp\loop-pack-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot -Packs loop-engineering -WritePlan -PlanPath .\.tmp\loop-pack-plan.md -CanonicalPlanPath .\.tmp\loop-pack-plan.json
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot -Packs loop-engineering -Apply -ApprovedPlanPath .\.tmp\loop-pack-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
 ```
 
 Create the target loop runtime with a preview plan:

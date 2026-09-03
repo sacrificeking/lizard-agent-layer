@@ -19,6 +19,8 @@ param(
   [int]$PlanTtlMinutes = 60,
   [string]$ApprovedPlanPath,
   [string]$ApprovedPlanSha256,
+  [ValidateSet('summary', 'digest', 'signed')]
+  [string]$PlanApprovalMode = 'summary',
   [switch]$HumanApproved,
   [switch]$RequireSignedApproval,
   [string]$ApprovalEnvelopePath,
@@ -51,11 +53,20 @@ $versionPath = Join-Path $LayerRoot 'VERSION'
 $ApprovedUpdatePlan = $null
 
 if ($Apply) {
-  if ([string]::IsNullOrWhiteSpace($ApprovedPlanPath) -or [string]::IsNullOrWhiteSpace($ApprovedPlanSha256) -or -not $HumanApproved) {
-    throw 'PLAN_APPROVAL_REQUIRED: Update -Apply requires -ApprovedPlanPath, -ApprovedPlanSha256, and -HumanApproved.'
+  if ([string]::IsNullOrWhiteSpace($ApprovedPlanPath) -or -not $HumanApproved) {
+    throw 'PLAN_APPROVAL_REQUIRED: Update -Apply requires -ApprovedPlanPath and -HumanApproved.'
+  }
+  if ($PlanApprovalMode -eq 'digest' -and [string]::IsNullOrWhiteSpace($ApprovedPlanSha256)) {
+    throw 'PLAN_APPROVAL_REQUIRED: -PlanApprovalMode digest requires -ApprovedPlanSha256.'
   }
   Assert-PathOutsideRoot -Path $ApprovedPlanPath -ExcludedRoot $TargetRoot -Label 'ApprovedPlanPath'
-  $ApprovedUpdatePlan = Read-LizardApprovedPlan -Path $ApprovedPlanPath -ExpectedSha256 $ApprovedPlanSha256 -ExpectedOperationKind update
+  $ApprovedUpdatePlan = Read-LizardApprovedPlan -Path $ApprovedPlanPath -Sha256 $ApprovedPlanSha256 -ExpectedOperationKind update
+  if ([string]::IsNullOrWhiteSpace($ApprovedPlanSha256)) {
+    $planFull = ConvertTo-LizardFullPath -Path $ApprovedPlanPath
+    $planDir = Split-Path -Parent $planFull
+    $planSafeRoot = Resolve-SafeRoot -Path $planDir -RequireExisting
+    $ApprovedPlanSha256 = Get-SafeFileHash -AuthorizedRoot $planSafeRoot -Path $planFull
+  }
   $effectiveRisk = 'medium'
   if (Test-Path -LiteralPath $profilePath -PathType Leaf) {
     try {
@@ -74,6 +85,7 @@ if ($Apply) {
   $approvalPolicy = Get-LizardOperationApprovalPolicy `
     -OperationKind 'update' `
     -RiskLevel $effectiveRisk `
+    -ApprovalMode $PlanApprovalMode `
     -Force:$Force `
     -ForceManaged:$ForceManaged `
     -RequireSignedApproval:$RequireSignedApproval

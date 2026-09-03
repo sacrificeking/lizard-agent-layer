@@ -5,6 +5,7 @@ This guide explains how to use AI coding assistants in this repository.
 ## 1. Daily Prompts
 
 - Type ordinary work requests: specify the relevant area/files, what is needed or broken, and how to verify completion (e.g. run a test or typecheck).
+- Before medium/high-risk edits (migrations, auth, security, CI, dependency upgrades, large refactorings), instruct the assistant to run a premortem first.
 - Keep your current IDE model. You do not need to operate routing scripts, model pickers, or loop commands manually.
 
 ## 2. Untrusted Pastes & Secrets
@@ -23,6 +24,6 @@ This guide explains how to use AI coding assistants in this repository.
 
 If you are setting up or updating the layer for this repository:
 1. Generate and inspect an installation plan (`install.ps1 -WritePlan`).
-2. Apply the verified plan with its exact SHA-256 digest (`-Apply -ApprovedPlanPath ... -ApprovedPlanSha256 ... -HumanApproved`).
+2. Apply the verified plan with human approval (summary mode default: `-Apply -ApprovedPlanPath ... -HumanApproved`, or with `-ApprovedPlanSha256` in digest mode).
 3. Run diagnostic health verification (`doctor.ps1 -Strict`).
 4. Review and merge any generated sidecars (`merge-suggestions.ps1`) before onboarding team members.

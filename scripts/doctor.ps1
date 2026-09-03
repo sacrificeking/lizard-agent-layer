@@ -1,11 +1,36 @@
 param(
   [string]$TargetPath = (Get-Location).Path,
+  [string]$LayerRoot,
   [switch]$Strict
 )
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$LayerRoot = Split-Path -Parent $ScriptDir
+Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
+
+if ([string]::IsNullOrWhiteSpace($LayerRoot)) {
+  $targetManifestPath = Join-Path $TargetPath '.agent/lizard-agent-layer.install.json'
+  if (Test-Path -LiteralPath $targetManifestPath -PathType Leaf) {
+    try {
+      $mRaw = Get-Content -LiteralPath $targetManifestPath -Raw
+      $mJson = ConvertFrom-LizardJson -InputObject $mRaw
+      if ($mJson -and $mJson.layer_root) {
+        $candidateLayerRoot = [string]$mJson.layer_root
+        if (Test-Path -LiteralPath $candidateLayerRoot -PathType Container) {
+          $LayerRoot = $candidateLayerRoot
+        } else {
+          throw "LAYER_ROOT_MISSING: Layer root recorded in target manifest does not exist: $candidateLayerRoot"
+        }
+      }
+    } catch [System.Management.Automation.RuntimeException] {
+      if ($_.Exception.Message -match 'LAYER_ROOT_MISSING') { throw }
+    } catch { }
+  }
+}
+
+if ([string]::IsNullOrWhiteSpace($LayerRoot)) {
+  $LayerRoot = Split-Path -Parent $ScriptDir
+}
 Import-Module (Join-Path $ScriptDir 'Lizard.SafeFs.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Json.psm1') -Force
 Import-Module (Join-Path $ScriptDir 'Lizard.Manifest.psm1') -Force

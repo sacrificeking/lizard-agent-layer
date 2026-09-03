@@ -228,7 +228,9 @@ $previewArgs.Add('-TargetPath'); $previewArgs.Add($TargetRoot)
 $previewArgs.Add('-Profile'); $previewArgs.Add($profile)
 $previewArgs.Add('-Harnesses'); $previewArgs.Add(($harnesses -join ','))
 if ($packs.Count -gt 0) { $previewArgs.Add('-Packs'); $previewArgs.Add((@(Sort-OrdinalStrings $packs.ToArray()) -join ',')) }
-$previewArgs.Add('-WritePlan'); $previewArgs.Add('-PlanPath'); $previewArgs.Add('.\.tmp\install-plan.md'); $previewArgs.Add('-CanonicalPlanPath'); $previewArgs.Add('.\.tmp\install-plan.json')
+$previewPlanMd = Join-Path $LayerRoot '.tmp/install-plan.md'
+$previewPlanJson = Join-Path $LayerRoot '.tmp/install-plan.json'
+$previewArgs.Add('-WritePlan'); $previewArgs.Add('-PlanPath'); $previewArgs.Add($previewPlanMd); $previewArgs.Add('-CanonicalPlanPath'); $previewArgs.Add($previewPlanJson)
 $previewInvocation = New-LizardPowerShellFileInvocation -ScriptPath (Join-Path $LayerRoot 'scripts/install.ps1') -ArgumentList $previewArgs.ToArray() -ResolveCurrent
 $previewCommand = [string]$previewInvocation.display
 

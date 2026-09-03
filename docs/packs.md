@@ -28,13 +28,13 @@ Use packs when a project needs more precision than `minimal`, `standard`, or `en
 Preview a profile with one pack:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs frontend-engineering
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot -Packs frontend-engineering
 ```
 
 Preview an enterprise fullstack app with multiple packs:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile enterprise-fullstack -Packs frontend-engineering,database-backend,backend-api,security-hardening -WritePlan
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile enterprise-fullstack -Harnesses github-copilot -Packs frontend-engineering,database-backend,backend-api,security-hardening -WritePlan
 ```
 
 The installer merges pack values into the selected profile before it plans or applies:
@@ -94,7 +94,7 @@ Target projects can define local packs without changing this repository:
 Install an overlay pack by name:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Packs project-overlay
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath D:\path\to\project -Profile standard -Harnesses github-copilot -Packs project-overlay
 ```
 
 Overlay packs can extend built-in packs:

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "wp13-composite-implementation-and-matching-budget",
+  "date": "2026-09-03",
+  "summary": "Composite implementation skill (0006), 4-skill profile diet, adapter matching-skill budget, and premortem L/M/H rating honesty (0003).",
+  "changed_paths": [
+    "changes/wp13-composite-implementation-and-matching-budget.json",
+    "skills/implementation/SKILL.md",
+    "skills/implementation/skill.json",
+    "skills/premortem/SKILL.md",
+    "skills/premortem/skill.json",
+    "skills/staged-execution/SKILL.md",
+    "templates/operator-card.md",
+    "profiles/standard.json",
+    "profiles/enterprise-fullstack.json",
+    "adapters/codex/AGENTS.lizard.md",
+    "adapters/claude-code/CLAUDE.lizard.md",
+    "adapters/cursor/lizard-agent-layer.mdc",
+    "adapters/github-copilot/copilot-instructions.lizard.md",
+    "adapters/gemini/GEMINI.lizard.md",
+    "adapters/generic-agents-md/AGENTS.generic.lizard.md",
+    "tests/unit/overlay-calorie-budget.tests.ps1",
+    "tests/unit/composite-implementation-skill.tests.ps1",
+    "package.json",
+    "package-lock.json"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0002-filesystem-and-report-containment.md",
+    "docs/adr/0003-ownership-and-manifest-identity.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0009-provider-neutral-staged-routing.md",
+    "docs/adr/0015-effective-memory-modes.md",
+    "docs/adr/0017-context-overlay-diet.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Standard and enterprise profiles adopt a 4-skill diet with composite implementation. Existing standalone skills remain active for direct invocation."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Adds implementation composite skill and L/M/H ratings to premortem without breaking existing skill package consumers."
+  }
+}

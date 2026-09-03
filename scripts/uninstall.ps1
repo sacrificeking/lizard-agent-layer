@@ -7,6 +7,8 @@ param(
   [string]$ReceiptPath,
   [string]$ApprovedPlanPath,
   [string]$ApprovedPlanSha256,
+  [ValidateSet('summary', 'digest', 'signed')]
+  [string]$PlanApprovalMode = 'summary',
   [switch]$HumanApproved,
   [switch]$RequireSignedApproval,
   [string]$ApprovalEnvelopePath,
@@ -55,21 +57,31 @@ $ExportRelativePaths = @(Expand-UninstallValueList $ExportRelativePaths)
 
 $ApprovedPlan = $null
 if ($Apply) {
-  if ([string]::IsNullOrWhiteSpace($ApprovedPlanPath) -or [string]::IsNullOrWhiteSpace($ApprovedPlanSha256) -or -not $HumanApproved) {
-    throw 'PLAN_APPROVAL_REQUIRED: Uninstall -Apply requires -ApprovedPlanPath, -ApprovedPlanSha256, and -HumanApproved.'
+  if ([string]::IsNullOrWhiteSpace($ApprovedPlanPath) -or -not $HumanApproved) {
+    throw 'PLAN_APPROVAL_REQUIRED: Uninstall -Apply requires -ApprovedPlanPath and -HumanApproved.'
+  }
+  if ($PlanApprovalMode -eq 'digest' -and [string]::IsNullOrWhiteSpace($ApprovedPlanSha256)) {
+    throw 'PLAN_APPROVAL_REQUIRED: -PlanApprovalMode digest requires -ApprovedPlanSha256.'
   }
   Assert-PathOutsideRoot -Path $ApprovedPlanPath -ExcludedRoot $TargetRoot -Label 'ApprovedPlanPath'
-  $ApprovedPlan = Read-LizardApprovedPlan -Path $ApprovedPlanPath -ExpectedSha256 $ApprovedPlanSha256 -ExpectedOperationKind uninstall
+  $ApprovedPlan = Read-LizardApprovedPlan -Path $ApprovedPlanPath -Sha256 $ApprovedPlanSha256 -ExpectedOperationKind uninstall
+  if ([string]::IsNullOrWhiteSpace($ApprovedPlanSha256)) {
+    $planFull = ConvertTo-LizardFullPath -Path $ApprovedPlanPath
+    $planDir = Split-Path -Parent $planFull
+    $planSafeRoot = Resolve-SafeRoot -Path $planDir -RequireExisting
+    $ApprovedPlanSha256 = Get-SafeFileHash -AuthorizedRoot $planSafeRoot -Path $planFull
+  }
   $manifestRisk = if ($ApprovedPlan.intent.risk_level) { [string]$ApprovedPlan.intent.risk_level } else { 'medium' }
   $approvalPolicy = Get-LizardOperationApprovalPolicy `
     -OperationKind 'uninstall' `
     -RiskLevel $manifestRisk `
     -Scope $Scope `
+    -ApprovalMode $PlanApprovalMode `
     -RequireSignedApproval:$RequireSignedApproval
 
   if ($approvalPolicy.signed_approval_required) {
     if ([string]::IsNullOrWhiteSpace($ApprovalEnvelopePath) -or [string]::IsNullOrWhiteSpace($TrustStorePath) -or [string]::IsNullOrWhiteSpace($TrustStoreSha256) -or [string]::IsNullOrWhiteSpace($ChallengePath) -or [string]::IsNullOrWhiteSpace($ChallengeSha256)) {
-      throw "PLAN_SIGNED_APPROVAL_REQUIRED: Signed apply approval is mandatory for this operation ($($approvalPolicy.reason))."
+      throw "PLAN_SIGNED_APPROVAL_REQUIRED: Signed apply approval is mandatory for this operation ($($approvalPolicy.reason)). Use scripts/new-approval.ps1 to generate approval materials."
     }
     if ([string]::IsNullOrWhiteSpace($ReplayLedgerPath)) {
       throw 'PLAN_REPLAY_LEDGER_REQUIRED: A replay ledger path is mandatory for signed apply approval verification.'

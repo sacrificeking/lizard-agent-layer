@@ -137,10 +137,11 @@ $report = [pscustomobject][ordered]@{
 if ($Json.IsPresent) {
   $report | ConvertTo-Json -Depth 5
 } else {
-  Write-Host ("=== Release Readiness Report: Version {0} ===" -f $ExpectedVersion)
-  Write-Host ("Overall Status: {0}" -f (if ($isReady) { 'READY FOR RELEASE' } else { 'BLOCKED' }))
+  $readyLabel = if ($isReady) { 'READY FOR RELEASE' } else { 'BLOCKED' }
+  Write-Host ("Overall Status: {0}" -f $readyLabel)
   foreach ($c in $checks) {
-    Write-Host (" [{0}] {1}: {2}" -f (if ($c.status -eq 'pass') { 'PASS' } else { 'FAIL' }), $c.name, $c.details)
+    $statLabel = if ($c.status -eq 'pass') { 'PASS' } else { 'FAIL' }
+    Write-Host (" [{0}] {1}: {2}" -f $statLabel, $c.name, $c.details)
   }
   if (-not $isReady) {
     Write-Host "`nRelease Blockers:"
