@@ -12,3 +12,4 @@ Ideas that belong in the product stay here until an explicit implementation requ
 | [0004](0004-apply-command-option-binding.md) | Generated Apply command omits bound options (`PLAN_BINDING_OPTIONS_MISMATCH`) | P0 installer + test that uses the Markdown Apply block |
 | [0005](0005-windows-operator-happy-path.md) | Windows wrappers, npm.cmd, manifest `layer_root`, risk-tiered doctor | Docs + `lizard.ps1`/`lizard.cmd` + doctor flag; no scripts in target |
 | [0006](0006-implementation-skill-and-matching-budget.md) | Composite `implementation` skill; matching budget instead of rigid two | One skill + four-name diet + adapter prose |
+| [0007](0007-portable-execution-tiers.md) | Portable fast vs rigorous execution tiers; not a Codex-only `.agents/rules` file | Fold into 0005/0006 + USING; target-local lists stay committed |

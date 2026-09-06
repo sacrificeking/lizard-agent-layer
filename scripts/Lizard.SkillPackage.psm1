@@ -162,7 +162,6 @@ function Assert-LizardSkillRepository {
 }
 
 Export-ModuleMember -Function @(
-  'Assert-LizardSkillPackageDocument',
   'Assert-LizardSkillRepository',
   'ConvertTo-LizardSkillVersion',
   'Read-LizardSkillPackage',

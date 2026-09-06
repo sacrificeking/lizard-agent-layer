@@ -203,8 +203,8 @@ foreach ($detected in @($detectedHarnesses)) {
 
 $skills = switch ($profile) {
   'minimal' { @('git-safety', 'research-audit') }
-  'standard' { @('git-safety', 'staged-execution', 'research-audit', 'project-decision-harvest', 'repo-grounded-change', 'premortem') }
-  'enterprise-fullstack' { @('git-safety', 'staged-execution', 'research-audit', 'project-decision-harvest', 'repo-grounded-change', 'premortem') }
+  'standard' { @('git-safety', 'implementation', 'research-audit', 'project-decision-harvest') }
+  'enterprise-fullstack' { @('git-safety', 'implementation', 'research-audit', 'project-decision-harvest') }
 }
 if ($signals.Contains('frontend-ui') -or $signals.Contains('bundler') -or $signals.Contains('fullstack-framework')) { Add-Pack 'frontend-engineering' }
 if ($signals.Contains('design-system') -or $signals.Contains('design-ui')) { Add-Pack 'design-system' }

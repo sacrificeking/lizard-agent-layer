@@ -133,6 +133,6 @@ function New-LizardRecordId {
 }
 
 Export-ModuleMember -Function @(
-  'Assert-LizardRecordsHoldPayload', 'Assert-LizardRetentionPolicyDocument', 'ConvertTo-LizardRecordsTimestamp',
+  'Assert-LizardRecordsHoldPayload', 'ConvertTo-LizardRecordsTimestamp',
   'Get-LizardRecordsHoldBinding', 'New-LizardRecordId', 'Read-LizardRetentionPolicy', 'Test-LizardRecordHeld'
 )

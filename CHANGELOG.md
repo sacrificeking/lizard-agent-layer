@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Installer Apply Option Binding & Mirroring:** Synchronized CLI option serialization in `scripts/install.ps1`, ensuring generated Markdown `Apply:` commands exactly match preview parameters and eliminate `PLAN_BINDING_OPTIONS_MISMATCH`.
 - **Front-Door Documentation Alignment:** Standardized single-harness examples across all public documentation, mandating `-Harnesses github-copilot` and isolating temporary preview paths to `$HOME/.lizard-agent-layer/.tmp`.
 
+### Removed
+- **Deprecated SafeFS & Trust Primitives:** Removed legacy `Get-LizardSafeFileSnapshot`, `Assert-LizardSafeFileUnchanged`, `Get-LizardTrustSha256`, and `Read-LizardEvidenceEnvelope` superseded by OS handle leases and canonical crypto envelopes.
+- **Historical Remediation Documents:** Cleaned up obsolete v1.4.1 release-integrity remediation plans.
+- **Module Export Hygiene:** Restricted `Export-ModuleMember` across core helper modules to public API surface.
+
 ## 1.4.1 - 2026-08-27
 
 ### Added

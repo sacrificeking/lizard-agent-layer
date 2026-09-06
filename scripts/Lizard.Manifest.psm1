@@ -207,5 +207,5 @@ function Resolve-LizardAdapterComposition {
 Export-ModuleMember -Function @(
   'Get-LizardArtifactLifecycle', 'Get-LizardArtifactMap', 'Get-LizardArtifactState', 'Get-LizardSha256',
   'ConvertTo-LizardArtifactPath', 'Get-LizardStringSha256', 'New-LizardArtifactRecord',
-  'Resolve-LizardAdapterComposition', 'Test-LizardArtifactPathsOverlap'
+  'Resolve-LizardAdapterComposition'
 )

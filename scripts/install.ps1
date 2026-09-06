@@ -529,7 +529,7 @@ $activeProtocols.Add('permissions.md')
 $activeProtocols.Add('secret-handling.md')
 
 $effectiveSkills = @($ProfileDoc.skills)
-if ($effectiveSkills -contains 'staged-execution') {
+if ($effectiveSkills -contains 'staged-execution' -or $effectiveSkills -contains 'implementation') {
   $activeProtocols.Add('staged-execution.md')
   $activeProtocols.Add('context-hygiene.md')
 }

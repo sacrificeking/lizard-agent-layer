@@ -177,7 +177,7 @@ $expectedFiles.Add('.agent\skills\_index.md')
 $expectedFiles.Add('.agent\skills\_manifest.jsonl')
 
 if ($manifest) {
-  if ($manifest.skills -contains 'staged-execution') {
+  if ($manifest.skills -contains 'staged-execution' -or $manifest.skills -contains 'implementation') {
     $expectedFiles.Add('.agent\protocols\staged-execution.md')
     $expectedFiles.Add('.agent\protocols\context-hygiene.md')
   }

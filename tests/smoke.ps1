@@ -395,7 +395,7 @@ Run-Step 'install preview standard multi-harness' {
 
 Run-Step 'install apply standard multi-harness' {
   Invoke-SmokePlannedInstall @('-TargetPath', $standardTarget, '-Profile', 'standard', '-Harnesses', 'codex,claude-code,gemini,github-copilot')
-  foreach ($expected in @('AGENTS.md', 'CLAUDE.md', 'GEMINI.md', '.agents\skills\staged-execution\SKILL.md', '.claude\skills\staged-execution\SKILL.md', '.gemini\skills\staged-execution\SKILL.md')) {
+  foreach ($expected in @('AGENTS.md', 'CLAUDE.md', 'GEMINI.md', '.agents\skills\implementation\SKILL.md', '.claude\skills\implementation\SKILL.md', '.gemini\skills\implementation\SKILL.md')) {
     if (-not (Test-Path -LiteralPath (Join-Path $standardTarget $expected))) { throw "Expected missing standard artifact: $expected" }
   }
 }

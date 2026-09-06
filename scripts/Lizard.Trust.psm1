@@ -11,13 +11,6 @@ function New-LizardTrustException {
   return $exception
 }
 
-function Get-LizardTrustSha256 {
-  param([Parameter(Mandatory = $true)][byte[]]$Bytes)
-  $sha = [System.Security.Cryptography.SHA256]::Create()
-  try { return ([BitConverter]::ToString($sha.ComputeHash($Bytes))).Replace('-', '').ToLowerInvariant() }
-  finally { $sha.Dispose() }
-}
-
 function Get-LizardTrustFileSha256 {
   param([Parameter(Mandatory = $true)][string]$Path)
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw (New-LizardTrustException 'TRUST_FILE_MISSING' "File is missing: $Path") }

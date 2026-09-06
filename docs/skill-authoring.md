@@ -43,3 +43,27 @@ Target repositories can define custom, team-specific skills under `.agent/skills
 - **Lifecycle:** Never clobbered or overwritten by `update-target.ps1` or `install.ps1`.
 - **Integrity:** `doctor.ps1 -Strict` reports them as user-managed without requiring catalog hashes.
 - **Contract:** Follow the same contract shape (When / Success / Boundaries / Evidence / Output / Stop) and point to `.agent/protocols/permissions.md`. Local skills cannot expand permissions.
+
+### Customizing Execution Tiers Locally
+
+Projects can define stack-specific fast vs. rigorous boundaries by committing a local skill, e.g. `.agent/skills-local/execution-tiers/SKILL.md`:
+
+```markdown
+---
+name: execution-tiers
+description: Project-specific fast vs rigorous execution boundaries for this repository.
+---
+
+# Project Execution Tiers
+
+## Tier 1 (Fast Path)
+- Skip planning tax and premortem for: Tailwind CSS styling, copy/text tweaks, localized unit test renames.
+- Execute directly and verify with `npm run test:unit`.
+
+## Tier 2 (Rigorous Path)
+- Require full implementation workflow and premortem for: Supabase schema migrations, auth token handling, CI workflow changes, or new npm dependencies.
+- Verify with `npm run test:integration` and visible terminal output.
+```
+
+> [!IMPORTANT]
+> **Commit Local Skills to Version Control:** Never hide local execution rules in `.git/info/exclude`. Local rules that alter model behavior must be committed and reviewed by the team so that safety posture and execution standards remain consistent across all machines and CI pipelines.

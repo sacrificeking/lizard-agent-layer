@@ -29,18 +29,6 @@ function New-LizardEvidenceEnvelope {
   }
 }
 
-function Read-LizardEvidenceEnvelope {
-  param([Parameter(Mandatory = $true)][string]$Path, [Parameter(Mandatory = $true)][int]$SchemaVersion)
-  if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw "EVIDENCE_FILE_MISSING: $Path" }
-  try { $envelope = ConvertFrom-LizardJson -InputObject (Get-Content -LiteralPath $Path -Raw) }
-  catch { throw "EVIDENCE_JSON_INVALID: $($_.Exception.Message)" }
-  if ([int]$envelope.schema_version -ne $SchemaVersion) { throw "EVIDENCE_SCHEMA_UNSUPPORTED: Expected $SchemaVersion, got $($envelope.schema_version)." }
-  if ($null -eq $envelope.payload -or [string]::IsNullOrWhiteSpace([string]$envelope.payload_hash)) { throw 'EVIDENCE_ENVELOPE_INVALID: payload and payload_hash are required.' }
-  $actualHash = Get-LizardEvidencePayloadHash -Payload $envelope.payload
-  if ($actualHash -ne [string]$envelope.payload_hash) { throw "EVIDENCE_HASH_MISMATCH: Expected $($envelope.payload_hash), got $actualHash." }
-  return $envelope
-}
-
 function Get-LizardVerifierTrustBinding {
   [CmdletBinding()]
   param(
@@ -137,6 +125,5 @@ Export-ModuleMember -Function @(
   'Get-LizardLifecycleTrustBinding',
   'Get-LizardNormalizedGitPath',
   'Get-LizardVerifierTrustBinding',
-  'New-LizardEvidenceEnvelope',
-  'Read-LizardEvidenceEnvelope'
+  'New-LizardEvidenceEnvelope'
 )

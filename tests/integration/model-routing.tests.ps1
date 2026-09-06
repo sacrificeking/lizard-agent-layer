@@ -43,7 +43,7 @@ try {
     '.agent\routing\policy.json',
     '.agent\protocols\staged-execution.md',
     '.agent\protocols\context-hygiene.md',
-    '.agent\skills\staged-execution\SKILL.md'
+    '.agent\skills\implementation\SKILL.md'
   )) { Assert-True (Test-Path -LiteralPath (Join-Path $target $relative)) "Expected installed staged execution artifact $relative." }
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.agent/routing/models')) 'Portable install must not create a stale built-in model catalog.'
   Assert-False (Test-Path -LiteralPath (Join-Path $target '.agent/routing/inventory.json')) 'Portable install must not fabricate model availability.'

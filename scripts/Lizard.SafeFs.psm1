@@ -355,46 +355,6 @@ function Resolve-SafeRoot {
   return $fullPath
 }
 
-function Get-LizardSafeFileSnapshot {
-  param(
-    [Parameter(Mandatory = $true)][string]$AuthorizedRoot,
-    [Parameter(Mandatory = $true)][string]$Path
-  )
-
-  $fullRoot = Resolve-SafeRoot -Path $AuthorizedRoot -RequireExisting
-  $safePath = Resolve-SafeTargetDestination -AuthorizedRoot $fullRoot -DestinationPath $Path
-  $item = Get-LizardExistingItem -Path $safePath
-  if ($null -eq $item) {
-    throw (New-LizardSafeFsException -Code 'SAFEFS_FILE_MISSING' -Message ("File does not exist: {0}" -f $safePath) -Path $safePath -AuthorizedRoot $fullRoot)
-  }
-  if (Test-LizardReparsePoint -Item $item) {
-    throw (New-LizardSafeFsException -Code 'SAFEFS_REPARSE_POINT' -Message ("Linked terminal file is not allowed: {0}" -f $safePath) -Path $safePath -AuthorizedRoot $fullRoot)
-  }
-  if ($item.PSIsContainer) {
-    throw (New-LizardSafeFsException -Code 'SAFEFS_NOT_FILE' -Message ("Expected a file, but found a directory: {0}" -f $safePath) -Path $safePath -AuthorizedRoot $fullRoot)
-  }
-
-  return [pscustomobject]@{
-    authorized_root = $fullRoot
-    path = $safePath
-    length = [int64]$item.Length
-    last_write_utc_ticks = [int64]$item.LastWriteTimeUtc.Ticks
-  }
-}
-
-function Assert-LizardSafeFileUnchanged {
-  param(
-    [Parameter(Mandatory = $true)]$Before,
-    [Parameter(Mandatory = $true)]$After
-  )
-
-  if (-not ([string]$Before.path).Equals([string]$After.path, (Get-LizardPathComparison)) -or
-      [int64]$Before.length -ne [int64]$After.length -or
-      [int64]$Before.last_write_utc_ticks -ne [int64]$After.last_write_utc_ticks) {
-    throw (New-LizardSafeFsException -Code 'SAFEFS_CHANGED_DURING_READ' -Message ("File identity changed while it was being read: {0}" -f $Before.path) -Path ([string]$Before.path) -AuthorizedRoot ([string]$Before.authorized_root))
-  }
-}
-
 function Get-SafeFileMetadata {
   [CmdletBinding()]
   param(

@@ -756,7 +756,6 @@ Export-ModuleMember -Function @(
   'Complete-LizardTransaction',
   'Complete-LizardTransactionCleanup',
   'Copy-LizardTransactionalFile',
-  'Get-LizardTransactionLock',
   'Get-LizardTransactionRecoveryInfo',
   'Join-LizardTransaction',
   'New-LizardTransactionalDirectory',

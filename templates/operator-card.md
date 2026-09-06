@@ -5,7 +5,8 @@ This guide explains how to use AI coding assistants in this repository.
 ## 1. Daily Prompts
 
 - Type ordinary work requests: specify the relevant area/files, what is needed or broken, and how to verify completion (e.g. run a test or typecheck).
-- Before medium/high-risk edits (migrations, auth, security, CI, dependency upgrades, large refactorings), instruct the assistant to run a premortem first.
+- **Fast Path (Routine edits):** Small UI styling, typo fixes, local test tweaks, and minor copy edits proceed directly with test verification, without planning ceremony or doctor checks.
+- **Rigorous Path (High-risk edits):** For database migrations, auth/secrets, dependencies, CI, or wide refactors, instruct the assistant to run a premortem first, ground changes in sibling patterns, and provide named test evidence.
 - Keep your current IDE model. You do not need to operate routing scripts, model pickers, or loop commands manually.
 
 ## 2. Untrusted Pastes & Secrets

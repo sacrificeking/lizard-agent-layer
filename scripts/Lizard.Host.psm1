@@ -86,10 +86,8 @@ function Get-LizardHostId {
 
 Export-ModuleMember -Function @(
   'Get-LizardPowerShellFilePrefix',
-  'Get-LizardPowerShellCommandName',
   'Get-LizardPowerShellHostPath',
   'Get-LizardHostId',
-  'ConvertTo-LizardCommandDisplay',
   'New-LizardPowerShellFileInvocation',
   'Test-LizardWindowsHost'
 )

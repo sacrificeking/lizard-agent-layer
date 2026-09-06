@@ -2,7 +2,7 @@
 
 **Work package:** one new composite skill + profile diet + adapter wording. Does not raise a runtime cap. Does not absorb catalog slogan skills.
 **Live evidence:** Codex `AGENTS.md` allowed two skills; staged-execution implied grounding + premortem; packs added more installed trees. Installed count ≠ load quota. The rigid “at most two” line fights the workflow it documents.
-**Related:** [0003](0003-premortem-matching-honesty.md) (L/M/H + USING). Prefer this WP for the load-unit problem; keep 0003 for labels.
+**Related:** [0003](0003-premortem-matching-honesty.md) (L/M/H + USING). [0007](0007-portable-execution-tiers.md) is the fast vs rigorous **when**; this WP is the **what** gets loaded.
 
 Do not change product files until this idea is explicitly approved for implementation.
 
