@@ -27,3 +27,18 @@ Confirm every impacted contract links an accepted ADR, migration disposition, co
 Loop-runtime changes must pass duplicate-run, budget, attempt, rollback, stale-lease recovery, event-tamper, and L2 verifier-rejection fixtures. Generated runtime state, lease, events, and reports must satisfy their executable schemas.
 
 High-risk projects should also verify migrations, external API boundaries, and UI contract compliance.
+
+## Automated GitHub Release Publishing
+
+Pushing a release tag (`v*`) to the repository automatically triggers the GitHub Actions release workflow (`.github/workflows/release.yml`). The pipeline:
+1. Validates exact commit SHA provenance and clean working tree.
+2. Runs `scripts/release-readiness.ps1`.
+3. Verifies green status of all required CI test matrix jobs on the candidate commit.
+4. Extracts version-specific release notes from `CHANGELOG.md`.
+5. Computes SHA256 checksums across all layer artifacts (`.tmp/release/SHA256SUMS`).
+6. Publishes the official GitHub Release with notes and checksum assets.
+
+For manual pre-flight verification or operator publishing, run:
+```powershell
+pwsh -NoProfile -File ./scripts/publish-release.ps1 -Version <version> [-DryRun] [-Push]
+```

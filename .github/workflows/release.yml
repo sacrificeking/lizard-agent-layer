@@ -1,15 +1,18 @@
 name: Release
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g. 1.4.1)'
-        required: true
+        description: 'Release version (e.g. 1.5.1)'
+        required: false
         type: string
       commit_sha:
         description: 'Exact commit SHA to release'
-        required: true
+        required: false
         type: string
       dry_run:
         description: 'Dry run (verify release readiness without tagging or publishing)'
@@ -27,19 +30,44 @@ jobs:
     name: Verify Release Candidate
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      version: ${{ steps.vars.outputs.version }}
+      tag_name: ${{ steps.vars.outputs.tag_name }}
+      commit_sha: ${{ steps.vars.outputs.commit_sha }}
+      dry_run: ${{ steps.vars.outputs.dry_run }}
 
     steps:
+      - name: Determine Version and Commit SHA
+        id: vars
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG_NAME="${GITHUB_REF_NAME}"
+            VERSION="${TAG_NAME#v}"
+            COMMIT_SHA="${{ github.sha }}"
+            DRY_RUN="false"
+          else
+            VERSION="${{ inputs.version }}"
+            TAG_NAME="v${VERSION}"
+            COMMIT_SHA="${{ inputs.commit_sha }}"
+            DRY_RUN="${{ inputs.dry_run }}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "commit_sha=${COMMIT_SHA}" >> $GITHUB_OUTPUT
+          echo "dry_run=${DRY_RUN}" >> $GITHUB_OUTPUT
+
       - name: Checkout Candidate SHA
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ inputs.commit_sha }}
+          ref: ${{ steps.vars.outputs.commit_sha }}
           fetch-depth: 0
 
       - name: Assert Exact SHA
         run: |
           ACTUAL_SHA=$(git rev-parse HEAD)
-          if [ "$ACTUAL_SHA" != "${{ inputs.commit_sha }}" ]; then
-            echo "ERROR: Checked out SHA ($ACTUAL_SHA) does not match requested SHA (${{ inputs.commit_sha }})"
+          if [ "$ACTUAL_SHA" != "${{ steps.vars.outputs.commit_sha }}" ]; then
+            echo "ERROR: Checked out SHA ($ACTUAL_SHA) does not match requested SHA (${{ steps.vars.outputs.commit_sha }})"
             exit 1
           fi
 
@@ -55,29 +83,51 @@ jobs:
       - name: Run Release Readiness Checks
         shell: pwsh
         run: |
-          ./scripts/release-readiness.ps1 -ExpectedVersion '${{ inputs.version }}' -CandidateSha '${{ inputs.commit_sha }}' -RequireCleanWorkingTree
+          ./scripts/release-readiness.ps1 -ExpectedVersion '${{ steps.vars.outputs.version }}' -CandidateSha '${{ steps.vars.outputs.commit_sha }}' -RequireCleanWorkingTree
 
       - name: Verify CI Run Status on Exact SHA
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Verifying CI workflow status for SHA: ${{ inputs.commit_sha }}"
-          RUNS_JSON=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=${{ inputs.commit_sha }}&workflow_id=lizard-agent-layer-ci.yml")
-          TOTAL_COUNT=$(echo "$RUNS_JSON" | jq -r '.total_count')
-          if [ "$TOTAL_COUNT" -eq 0 ]; then
-            echo "ERROR: No CI workflow runs found for commit ${{ inputs.commit_sha }}"
-            exit 1
-          fi
-          
-          # Find latest successful CI run
-          LATEST_STATUS=$(echo "$RUNS_JSON" | jq -r '.workflow_runs[0].status')
-          LATEST_CONCLUSION=$(echo "$RUNS_JSON" | jq -r '.workflow_runs[0].conclusion')
-          echo "Latest CI run status: $LATEST_STATUS, conclusion: $LATEST_CONCLUSION"
-          
-          if [ "$LATEST_STATUS" != "completed" ] || [ "$LATEST_CONCLUSION" != "success" ]; then
-            echo "ERROR: CI run for ${{ inputs.commit_sha }} is not completed and successful (status: $LATEST_STATUS, conclusion: $LATEST_CONCLUSION)"
-            exit 1
-          fi
+          COMMIT_SHA="${{ steps.vars.outputs.commit_sha }}"
+          echo "Verifying CI workflow status for SHA: $COMMIT_SHA"
+          MAX_ATTEMPTS=45
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            RUNS_JSON=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=${COMMIT_SHA}&workflow_id=lizard-agent-layer-ci.yml" 2>/dev/null || echo '{"total_count":0}')
+            TOTAL_COUNT=$(echo "$RUNS_JSON" | jq -r '.total_count // 0')
+            if [ "$TOTAL_COUNT" -gt 0 ]; then
+              LATEST_STATUS=$(echo "$RUNS_JSON" | jq -r '.workflow_runs[0].status')
+              LATEST_CONCLUSION=$(echo "$RUNS_JSON" | jq -r '.workflow_runs[0].conclusion')
+              echo "Attempt $i/$MAX_ATTEMPTS: CI run status: $LATEST_STATUS, conclusion: $LATEST_CONCLUSION"
+              if [ "$LATEST_STATUS" = "completed" ]; then
+                if [ "$LATEST_CONCLUSION" = "success" ]; then
+                  echo "CI verification passed."
+                  break
+                else
+                  echo "ERROR: CI run failed with conclusion: $LATEST_CONCLUSION"
+                  exit 1
+                fi
+              fi
+            else
+              echo "Attempt $i/$MAX_ATTEMPTS: Waiting for CI run to appear..."
+            fi
+            if [ "$i" -eq "$MAX_ATTEMPTS" ]; then
+              echo "ERROR: Timed out waiting for CI run to complete successfully."
+              exit 1
+            fi
+            sleep 20
+          done
+
+      - name: Extract Release Notes
+        shell: pwsh
+        run: |
+          $version = '${{ steps.vars.outputs.version }}'
+          $changelog = Get-Content CHANGELOG.md -Raw
+          $escaped = [regex]::Escape($version)
+          $pattern = "(?s)## $escaped\s*-\s*[^\r\n]*\r?\n(.*?)(?=\r?\n## |\Z)"
+          $notes = if ($changelog -match $pattern) { $matches[1].Trim() } else { "Release v$version" }
+          New-Item -ItemType Directory -Path .tmp/release -Force | Out-Null
+          Set-Content -LiteralPath .tmp/release/RELEASE_NOTES.md -Value $notes -Encoding UTF8
 
       - name: Generate Checksums
         run: |
@@ -88,13 +138,15 @@ jobs:
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
-          name: release-checksums
-          path: .tmp/release/SHA256SUMS
+          name: release-artifacts
+          path: |
+            .tmp/release/SHA256SUMS
+            .tmp/release/RELEASE_NOTES.md
 
   publish-release:
     name: Publish Release
     needs: verify-release
-    if: inputs.dry_run == false
+    if: needs.verify-release.outputs.dry_run != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -102,27 +154,40 @@ jobs:
       - name: Checkout Candidate SHA
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ inputs.commit_sha }}
+          ref: ${{ needs.verify-release.outputs.commit_sha }}
           fetch-depth: 0
 
-      - name: Download Checksums
+      - name: Download Release Artifacts
         uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
         with:
-          name: release-checksums
+          name: release-artifacts
           path: .tmp/release
 
-      - name: Create Git Tag and Publish GitHub Release
+      - name: Create or Update GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME="v${{ inputs.version }}"
-          echo "Tagging commit ${{ inputs.commit_sha }} as $TAG_NAME..."
-          git tag -a "$TAG_NAME" "${{ inputs.commit_sha }}" -m "Release $TAG_NAME"
-          git push origin "$TAG_NAME"
+          TAG_NAME="${{ needs.verify-release.outputs.tag_name }}"
+          COMMIT_SHA="${{ needs.verify-release.outputs.commit_sha }}"
           
-          echo "Creating GitHub Release $TAG_NAME..."
-          gh release create "$TAG_NAME" \
-            --title "$TAG_NAME" \
-            --notes-file CHANGELOG.md \
-            --target "${{ inputs.commit_sha }}" \
-            .tmp/release/SHA256SUMS
+          # If tag does not exist locally, tag the commit
+          if ! git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tagging commit $COMMIT_SHA as $TAG_NAME..."
+            git tag -a "$TAG_NAME" "$COMMIT_SHA" -m "Release $TAG_NAME"
+            git push origin "$TAG_NAME"
+          fi
+          
+          echo "Checking if GitHub Release for $TAG_NAME already exists..."
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Release $TAG_NAME already exists, updating notes and uploading checksums..."
+            gh release edit "$TAG_NAME" --notes-file .tmp/release/RELEASE_NOTES.md
+            gh release upload "$TAG_NAME" .tmp/release/SHA256SUMS --clobber
+          else
+            echo "Creating GitHub Release for $TAG_NAME..."
+            gh release create "$TAG_NAME" \
+              --title "$TAG_NAME" \
+              --notes-file .tmp/release/RELEASE_NOTES.md \
+              --target "$COMMIT_SHA" \
+              .tmp/release/SHA256SUMS
+          fi
+          echo "Release $TAG_NAME successfully published on GitHub."
