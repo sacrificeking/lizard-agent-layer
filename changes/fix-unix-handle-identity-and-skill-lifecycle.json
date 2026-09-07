@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "fix-unix-handle-identity-and-skill-lifecycle",
+  "date": "2026-09-07",
+  "summary": "Incorporate birth time and inode generation in Unix handle identity and fix cross-platform path separators in skill lifecycle.",
+  "changed_paths": [
+    "scripts/native/Lizard.UnixHandleFs.cs",
+    "scripts/skill-lifecycle.ps1",
+    "changes/fix-unix-handle-identity-and-skill-lifecycle.json"
+  ],
+  "decision_records": [
+    "docs/adr/0013-handle-bound-filesystem-access.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Hardens physical object identity derivation on Linux ext4 and ensures portable skill lifecycle path resolution without breaking existing targets."
+  },
+  "compatibility": {
+    "impact": "none",
+    "note": "Fully backward-compatible fix for object identity and Unix path resolution."
+  }
+}

@@ -68,8 +68,12 @@ namespace Lizard.AgentLayer.Native
         internal const int AtNoAutomount = 0x800;
         internal const uint StatxBasicStats = 0x7ff;
         internal const uint StatxMountId = 0x1000;
+        internal const uint StatxBtime = 0x800;
+        private const uint FsIocGetVersion64 = 0x80087601U;
+        private const uint FsIocGetVersion32 = 0x80047601U;
         private static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+        [DllImport("libc", EntryPoint = "ioctl", SetLastError = true)] private static extern int ioctl_getversion(int fd, uint request, out int generation);
         [DllImport("libc", SetLastError = true)] internal static extern int open(string path, int flags, int mode);
         [DllImport("libc", SetLastError = true)] internal static extern int openat(int directory, string path, int flags, int mode);
         [DllImport("libc", SetLastError = true)] internal static extern int mkdirat(int directory, string path, uint mode);
@@ -89,6 +93,27 @@ namespace Lizard.AgentLayer.Native
         [DllImport("libc", EntryPoint = "fstat", SetLastError = true)] private static extern int fstat_unversioned(int fd, IntPtr buffer);
         [DllImport("libc", EntryPoint = "fstatfs$INODE64", SetLastError = true)] private static extern int fstatfs_inode64(int fd, IntPtr buffer);
         [DllImport("libc", EntryPoint = "fstatfs", SetLastError = true)] private static extern int fstatfs_unversioned(int fd, IntPtr buffer);
+
+        internal static ulong MixObjectIdentity(ulong rawInode, int generation, long btimeSec, uint btimeNsec)
+        {
+            ulong mixed = rawInode;
+            if (generation != 0)
+            {
+                mixed ^= ((ulong)(uint)generation << 32) | (uint)generation;
+                mixed = (mixed ^ (mixed >> 30)) * 0xbf58476d1ce4e5b9UL;
+                mixed = (mixed ^ (mixed >> 27)) * 0x94d049bb133111ebUL;
+                mixed ^= (mixed >> 31);
+            }
+            if (btimeSec != 0 || btimeNsec != 0)
+            {
+                ulong btimeVal = unchecked(((ulong)btimeSec << 32) | btimeNsec);
+                mixed ^= btimeVal;
+                mixed = (mixed ^ (mixed >> 30)) * 0xbf58476d1ce4e5b9UL;
+                mixed = (mixed ^ (mixed >> 27)) * 0x94d049bb133111ebUL;
+                mixed ^= (mixed >> 31);
+            }
+            return mixed;
+        }
 
         internal static bool IsMac { get { return RuntimeInformation.IsOSPlatform(OSPlatform.OSX); } }
 
@@ -183,7 +208,7 @@ namespace Lizard.AgentLayer.Native
             try
             {
                 for (int i = 0; i < 256; i++) Marshal.WriteByte(buffer, i, 0);
-                if (statx(handle.FileDescriptor, "", AtEmptyPath | AtNoAutomount, StatxBasicStats | StatxMountId, buffer) != 0)
+                if (statx(handle.FileDescriptor, "", AtEmptyPath | AtNoAutomount, StatxBasicStats | StatxMountId | StatxBtime, buffer) != 0)
                     throw NativeFailure("statx", path);
                 uint mask = (uint)Marshal.ReadInt32(buffer, 0);
                 if ((mask & (StatxBasicStats | StatxMountId)) != (StatxBasicStats | StatxMountId))
@@ -191,7 +216,7 @@ namespace Lizard.AgentLayer.Native
                 UnixObjectIdentity identity = new UnixObjectIdentity();
                 identity.Links = (uint)Marshal.ReadInt32(buffer, 16);
                 identity.Mode = (uint)(ushort)Marshal.ReadInt16(buffer, 28);
-                identity.Inode = (ulong)Marshal.ReadInt64(buffer, 32);
+                ulong rawInode = (ulong)Marshal.ReadInt64(buffer, 32);
                 identity.Size = Marshal.ReadInt64(buffer, 40);
                 long seconds = Marshal.ReadInt64(buffer, 112);
                 long nanoseconds = (uint)Marshal.ReadInt32(buffer, 120);
@@ -201,6 +226,29 @@ namespace Lizard.AgentLayer.Native
                 identity.Device = (deviceMajor << 32) | deviceMinor;
                 identity.MountId = Marshal.ReadInt64(buffer, 144);
                 identity.MountPoint = identity.MountId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+                long btimeSec = 0;
+                uint btimeNsec = 0;
+                if ((mask & StatxBtime) != 0)
+                {
+                    btimeSec = Marshal.ReadInt64(buffer, 80);
+                    btimeNsec = (uint)Marshal.ReadInt32(buffer, 88);
+                }
+                int generation = 0;
+                try
+                {
+                    if (ioctl_getversion(handle.FileDescriptor, FsIocGetVersion64, out generation) != 0)
+                    {
+                        if (ioctl_getversion(handle.FileDescriptor, FsIocGetVersion32, out generation) != 0)
+                            generation = 0;
+                    }
+                }
+                catch
+                {
+                    generation = 0;
+                }
+
+                identity.Inode = MixObjectIdentity(rawInode, generation, btimeSec, btimeNsec);
                 return identity;
             }
             finally { Marshal.FreeHGlobal(buffer); }
@@ -219,7 +267,10 @@ namespace Lizard.AgentLayer.Native
                 identity.Device = (uint)Marshal.ReadInt32(statBuffer, 0);
                 identity.Mode = (uint)(ushort)Marshal.ReadInt16(statBuffer, 4);
                 identity.Links = (uint)(ushort)Marshal.ReadInt16(statBuffer, 6);
-                identity.Inode = (ulong)Marshal.ReadInt64(statBuffer, 8);
+                ulong rawInode = (ulong)Marshal.ReadInt64(statBuffer, 8);
+                long btimeSec = Marshal.ReadInt64(statBuffer, 80);
+                uint btimeNsec = (uint)Marshal.ReadInt32(statBuffer, 88);
+                identity.Inode = MixObjectIdentity(rawInode, 0, btimeSec, btimeNsec);
                 identity.Size = Marshal.ReadInt64(statBuffer, 96);
                 identity.LastWriteUtcTicks = TicksFromUnix(Marshal.ReadInt64(statBuffer, 48), Marshal.ReadInt64(statBuffer, 56));
                 long fsid0 = (uint)Marshal.ReadInt32(fsBuffer, 48);

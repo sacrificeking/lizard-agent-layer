@@ -144,7 +144,7 @@ function Assert-TreeMatchesState {
 
 function Get-OtherState {
   param([string]$Name)
-  $path = Join-Path $TargetRoot ".agent\skill-lifecycle\$Name.json"
+  $path = Join-Path $TargetRoot ".agent/skill-lifecycle/$Name.json"
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return $null }
   try {
     $state = ConvertFrom-LizardJson -InputObject (Get-SafeContent -AuthorizedRoot $TargetRoot -Path $path -Raw -MaximumBytes 1048576)
@@ -228,8 +228,8 @@ if ($Action -eq 'Validate') {
   return
 }
 
-$packagePath = Join-Path $TargetRoot ".agent\skills\$SkillName"
-$statePath = Join-Path $TargetRoot ".agent\skill-lifecycle\$SkillName.json"
+$packagePath = Join-Path $TargetRoot ".agent/skills/$SkillName"
+$statePath = Join-Path $TargetRoot ".agent/skill-lifecycle/$SkillName.json"
 $state = Read-State -Path $statePath -Optional
 $sourceTree = Get-SkillTree -AuthorizedRoot $package.root -PackageRoot $package.root
 $targetTree = Get-SkillTree -AuthorizedRoot $TargetRoot -PackageRoot $packagePath
