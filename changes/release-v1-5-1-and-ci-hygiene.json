@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "id": "release-v1-5-1-and-ci-hygiene",
+  "date": "2026-09-06",
+  "summary": "Bump version to 1.5.1, establish 1.5.1 changelog, add release gates protocol, and streamline CI matrix.",
+  "changed_paths": [
+    "package.json",
+    "package-lock.json",
+    "VERSION",
+    "CHANGELOG.md",
+    "protocols/release-gates.md",
+    "scripts/publish-release.ps1",
+    "scripts/Lizard.SafeFs.psm1",
+    ".github/workflows/release.yml",
+    ".github/workflows/lizard-agent-layer-ci.yml",
+    "changes/release-v1-5-1-and-ci-hygiene.json"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0013-handle-bound-filesystem-access.md",
+    "docs/adr/0015-effective-memory-modes.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Non-breaking version bump to 1.5.1 and release automation; existing installations remain fully compatible."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Adds publish-release CLI and release-gates protocol; no breaking contract changes."
+  }
+}

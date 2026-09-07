@@ -97,61 +97,21 @@ if ($Push.IsPresent) {
   }
 }
 
-# 8. GitHub Releases API Integration
-function Get-GitHubAuthToken {
-  if (-not [string]::IsNullOrWhiteSpace($env:GH_TOKEN)) { return $env:GH_TOKEN }
-  if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_TOKEN)) { return $env:GITHUB_TOKEN }
-  try {
-    $credInfo = "protocol=https`nhost=github.com`n`n" | git credential fill 2>$null
-    if ($credInfo) {
-      foreach ($line in ($credInfo -split "`r?`n")) {
-        if ($line -match '^password=(.+)$') { return $matches[1] }
-      }
-    }
-  } catch {}
-  return $null
-}
-
-$githubToken = Get-GitHubAuthToken
-if ([string]::IsNullOrWhiteSpace($githubToken)) {
-  Write-Warning "No GitHub token found (checked GH_TOKEN, GITHUB_TOKEN, git credential helper). GitHub Release cannot be published via API directly."
-  Write-Host "Note: When the tag is pushed to GitHub, .github/workflows/release.yml will automatically publish the release."
-  return
-}
-
-$repoOwner = 'sacrificeking'
-$repoName = 'lizard-agent-layer'
-$headers = @{
-  'Authorization' = "Bearer $githubToken"
-  'Accept' = 'application/vnd.github+json'
-  'User-Agent' = 'PowerShell-Lizard-Release-Publisher'
-}
-
-$releaseUrl = "https://api.github.com/repos/$repoOwner/$repoName/releases/tags/$tagName"
-$existingRelease = $null
-try {
-  $existingRelease = Invoke-RestMethod -Uri $releaseUrl -Headers $headers -Method Get -ErrorAction Stop
-} catch {
-  # 404 means release does not exist yet
-}
-
-if ($null -ne $existingRelease) {
-  Write-Host "GitHub Release '$tagName' already exists: $($existingRelease.html_url)"
-} else {
-  Write-Host "Publishing GitHub Release for '$tagName'..."
-  $payload = @{
-    tag_name = $tagName
-    target_commitish = $CandidateSha
-    name = $Title
-    body = $releaseNotes
-    draft = $false
-    prerelease = $false
-  } | ConvertTo-Json -Depth 5
-
-  if (-not $DryRun.IsPresent) {
-    $newRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/$repoOwner/$repoName/releases" -Method Post -Headers $headers -Body $payload -ContentType 'application/json; charset=utf-8'
-    Write-Host "Successfully published GitHub Release: $($newRelease.html_url)"
+# 8. GitHub Releases CLI Integration
+$gh = Get-Command gh -ErrorAction SilentlyContinue
+if ($null -ne $gh) {
+  $null = & $gh.Source release view $tagName 2>$null
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "GitHub Release '$tagName' already exists."
   } else {
-    Write-Host "[DRY RUN] Would publish GitHub Release for $tagName"
+    if (-not $DryRun.IsPresent) {
+      Write-Host "Publishing GitHub Release for '$tagName' via gh CLI..."
+      & $gh.Source release create $tagName --title $Title --notes $releaseNotes --target $CandidateSha
+      Write-Host "Successfully published GitHub Release: $tagName"
+    } else {
+      Write-Host "[DRY RUN] Would publish GitHub Release for $tagName via gh CLI"
+    }
   }
+} else {
+  Write-Host "Note: When tag '$tagName' is pushed, .github/workflows/release.yml will automatically publish the release."
 }

@@ -734,7 +734,6 @@ function Remove-SafeItem {
 
 Export-ModuleMember -Function @(
   'Add-SafeContent',
-  'Assert-NoReparsePointEscape',
   'Assert-PathOutsideRoot',
   'ConvertTo-LizardCanonicalTemporaryPath',
   'ConvertTo-LizardFullPath',
