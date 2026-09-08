@@ -421,7 +421,7 @@ function Read-LizardApprovedPlan {
           }
         }
       } catch [System.InvalidOperationException] {
-        if ($_.Data['plan_code'] -eq 'PLAN_BINDING_DIGEST_MISMATCH') { throw }
+        if ($_.Exception.Data['plan_code'] -eq 'PLAN_BINDING_DIGEST_MISMATCH') { throw }
       } catch { }
     }
   }

@@ -34,15 +34,15 @@ function Set-TestTimestamp {
 
 function Invoke-Records {
   param([string]$Action, [string]$ReceiptId, [string]$PlanPath, [switch]$Apply, [string]$Sha256, [int]$FailAfterMutation = 0, [string[]]$Classes, [switch]$WithHold, [string]$SelectedExportRoot = $exportRoot)
-  $args = @('-LayerRoot', $LayerRoot, '-TargetRoot', $target, '-Action', $Action, '-PolicyPath', $policyPath, '-PolicySha256', $policySha, '-AsOf', $asOf.ToString('o'))
-  if (-not [string]::IsNullOrWhiteSpace($ReceiptId)) { $args += @('-ReceiptId', $ReceiptId) }
-  if (@($Classes).Count -gt 0) { $args += @('-Classes', ($Classes -join ',')) }
-  if (-not [string]::IsNullOrWhiteSpace($SelectedExportRoot)) { $args += @('-ExportRoot', $SelectedExportRoot) }
-  if ($WithHold) { $args += @('-HoldEvidencePath', $script:holdPath, '-HoldTrustStorePath', $script:trust.trust_store_path, '-HoldTrustStoreSha256', $script:trust.trust_store_sha256, '-HoldChallengePath', $script:trust.challenge_path, '-HoldChallengeSha256', $script:trust.challenge_sha256) }
-  if ($Apply) { $args += @('-Apply', '-ApprovedPlanPath', $PlanPath, '-ApprovedPlanSha256', $Sha256, '-HumanApproved') }
-  elseif (-not [string]::IsNullOrWhiteSpace($PlanPath)) { $args += @('-CanonicalPlanPath', $PlanPath) }
-  if ($FailAfterMutation -gt 0) { $args += @('-FailAfterMutation', [string]$FailAfterMutation) }
-  return Invoke-TestPowerShell -ScriptPath $script -Arguments $args
+  $arguments = @('-LayerRoot', $LayerRoot, '-TargetRoot', $target, '-Action', $Action, '-PolicyPath', $policyPath, '-PolicySha256', $policySha, '-AsOf', $asOf.ToString('o'))
+  if (-not [string]::IsNullOrWhiteSpace($ReceiptId)) { $arguments += @('-ReceiptId', $ReceiptId) }
+  if (@($Classes).Count -gt 0) { $arguments += @('-Classes', ($Classes -join ',')) }
+  if (-not [string]::IsNullOrWhiteSpace($SelectedExportRoot)) { $arguments += @('-ExportRoot', $SelectedExportRoot) }
+  if ($WithHold) { $arguments += @('-HoldEvidencePath', $script:holdPath, '-HoldTrustStorePath', $script:trust.trust_store_path, '-HoldTrustStoreSha256', $script:trust.trust_store_sha256, '-HoldChallengePath', $script:trust.challenge_path, '-HoldChallengeSha256', $script:trust.challenge_sha256) }
+  if ($Apply) { $arguments += @('-Apply', '-ApprovedPlanPath', $PlanPath, '-ApprovedPlanSha256', $Sha256, '-HumanApproved') }
+  elseif (-not [string]::IsNullOrWhiteSpace($PlanPath)) { $arguments += @('-CanonicalPlanPath', $PlanPath) }
+  if ($FailAfterMutation -gt 0) { $arguments += @('-FailAfterMutation', [string]$FailAfterMutation) }
+  return Invoke-TestPowerShell -ScriptPath $script -Arguments $arguments
 }
 
 try {
@@ -89,7 +89,7 @@ try {
   Write-TestUtf8 $script:holdPath ($holdEnvelope | ConvertTo-Json -Depth 20)
 
   $noAuthority = Invoke-Records -Action Purge -ReceiptId 'purge-no-authority' -PlanPath (Join-Path $plans 'no-authority.json')
-  Assert-True ($noAuthority.exit_code -ne 0 -and $noAuthority.output -match 'RECORDS_HOLD_AUTHORITY_REQUIRED') 'Purge without authenticated hold authority must fail before plan creation.'
+  Assert-True ($noAuthority.exit_code -ne 0 -and $noAuthority.output -match 'RECORDS_HOLD_AUTHORITY_REQUIRED') "Purge without authenticated hold authority must fail before plan creation. ExitCode: $($noAuthority.exit_code) Output: $($noAuthority.output)"
 
   $planPath = Join-Path $plans 'purge.json'
   $preview = Invoke-Records -Action Purge -ReceiptId 'purge-01' -PlanPath $planPath -WithHold

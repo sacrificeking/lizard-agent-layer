@@ -1,0 +1,31 @@
+﻿{
+  "schema_version": 1,
+  "id": "fix-plan-host-and-lifecycle-cross-platform",
+  "date": "2026-09-08",
+  "summary": "Fix Exception.Data property access in plan approval, quote call operator in host display, and harden cross-platform lifecycle assertions.",
+  "changed_paths": [
+    "scripts/Lizard.Host.psm1",
+    "scripts/Lizard.Plan.psm1",
+    "tests/integration/records-lifecycle.tests.ps1",
+    "tests/integration/skill-lifecycle.tests.ps1",
+    "changes/fix-plan-host-and-lifecycle-cross-platform.json"
+  ],
+  "decision_records": [
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0010-exact-plan-approval-binding.md",
+    "docs/adr/0014-transactional-uninstall.md",
+    "docs/adr/0019-authenticated-evidence-trust.md",
+    "docs/adr/0021-host-invocations-and-git-ref-validation.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md",
+    "docs/adr/0023-records-retention-and-legal-hold.md",
+    "docs/adr/0024-human-readable-plan-approval.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Strictly non-breaking bug fixes for PowerShell 7 strict mode error property access, command execution display, and test stability."
+  },
+  "compatibility": {
+    "impact": "none",
+    "note": "Fully backward-compatible runtime fixes with no breaking changes to target manifests, schemas, or contracts."
+  }
+}

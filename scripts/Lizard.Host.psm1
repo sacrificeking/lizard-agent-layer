@@ -52,7 +52,9 @@ function ConvertTo-LizardCommandDisplay {
     if ($Value -match '^[A-Za-z0-9_./:\\,=+-]+$') { return $Value }
     return '"' + $Value.Replace('"', '`"') + '"'
   }
-  return ((Quote-LizardDisplayArgument $Executable) + ' ' + ((@($ArgumentList) | ForEach-Object { Quote-LizardDisplayArgument ([string]$_) }) -join ' ')).Trim()
+  $execDisplay = Quote-LizardDisplayArgument $Executable
+  $prefix = if ($execDisplay.StartsWith('"')) { '& ' } else { '' }
+  return ($prefix + $execDisplay + ' ' + ((@($ArgumentList) | ForEach-Object { Quote-LizardDisplayArgument ([string]$_) }) -join ' ')).Trim()
 }
 
 function New-LizardPowerShellFileInvocation {
