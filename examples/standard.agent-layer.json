@@ -8,5 +8,5 @@
   "harnesses": ["codex", "claude-code", "gemini", "github-copilot"],
   "routingPolicy": "staged-balanced",
   "modelMode": "inherit-current",
-  "skills": ["git-safety", "release", "dependency-upgrade", "research-audit", "staged-execution"]
+  "skills": ["git-safety", "implementation", "research-audit", "project-decision-harvest"]
 }

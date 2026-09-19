@@ -1,6 +1,6 @@
 ---
 name: data-quality
-description: Source fidelity, financial data quality, provenance, seed data, migration assertions, confidence labels, and auditability. Use for data-heavy workflows, finance data, source checks, fallback semantics, migration output, or verification rules.
+description: Data validation, financial precision, and schema migration assertions. Use when validating critical data feeds, seed data, or calculation provenance.
 ---
 
 # Data Quality

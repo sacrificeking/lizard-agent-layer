@@ -1,6 +1,6 @@
 ---
 name: research-audit
-description: Structured research, source checking, repository analysis, product/technical audits, comparison, and implementation recommendations. Use for analyze, audit, compare, evaluate, research, recommendation, external repo, or architecture assessment tasks.
+description: Structured research, comparative analysis, third-party repo audits, and external technology evaluations. Use when conducting multi-source research or architectural option comparisons.
 ---
 
 # Research Audit

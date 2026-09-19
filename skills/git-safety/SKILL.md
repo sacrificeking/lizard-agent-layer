@@ -1,6 +1,6 @@
 ---
 name: git-safety
-description: Safe git workflow for branches, commits, pushes, tags, merges, rebases, and history-sensitive operations. Use when a task mentions git, commit, push, branch, merge, rebase, tag, staging, or remote repository changes.
+description: Safe git mutation workflow for staging, commits, branches, merges, rebases, tags, pushes, and remote repository changes. Use when mutating git state or history.
 ---
 
 # Git Safety

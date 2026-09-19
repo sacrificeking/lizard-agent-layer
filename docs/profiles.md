@@ -4,7 +4,7 @@
 > **⚡ Ultra High-Dense Quick Check:**
 > - `minimal`: Low risk; light overlay for scripts, libraries, and small tools.
 > - `standard`: Medium risk (recommended default); team overlay; requires explicit `-Harnesses`.
-> - `enterprise-fullstack`: High risk label; **same six core skills as `standard`**. Domain stacks come from `-Packs`, not from the profile skill list.
+> - `enterprise-fullstack`: High risk label; **same four core skills as `standard`**. Domain stacks come from `-Packs`, not from the profile skill list.
 
 Profiles describe how much agent infrastructure a target project should receive.
 
@@ -14,11 +14,11 @@ For small scripts, libraries, or experiments. Default skills: `git-safety`, `res
 
 ## standard
 
-For normal product repositories. Requires explicit `-Harnesses` at install time (fails closed without it). Default skills (matching, not always-on): `git-safety`, `staged-execution`, `research-audit`, `project-decision-harvest`, `repo-grounded-change`, `premortem`. Release, dependency-upgrade, and domain packs are **not** included unless you pass `-Packs` or extra skills.
+For normal product repositories. Requires explicit `-Harnesses` at install time (fails closed without it). Default skills (matching, not always-on): `git-safety`, `implementation`, `research-audit`, `project-decision-harvest`. Release, dependency-upgrade, and domain packs are **not** included unless you pass `-Packs` or extra skills.
 
 ## enterprise-fullstack
 
-For high-risk fullstack repositories (databases, APIs, UI, precision). Requires explicit `-Harnesses`. **Skill list matches `standard`.** Oracle/PostgreSQL/MSSQL, frontend frameworks, and API stacks are **not** implied by the profile name. Add them with `-Packs` (for example `database-backend`, `frontend-engineering`, `backend-api`, `security-hardening`, `precision-domain`). Risk level is `high`; that does not install slogan skills.
+For high-risk fullstack repositories (databases, APIs, UI, precision). Requires explicit `-Harnesses`. **Skill list matches `standard` (4 core skills).** Oracle/PostgreSQL/MSSQL, frontend frameworks, and API stacks are **not** implied by the profile name. Add them with `-Packs` (for example `database-backend`, `frontend-engineering`, `backend-api`, `security-hardening`, `precision-domain`). Risk level is `high`; that does not install slogan skills.
 
 
 ## Harness override

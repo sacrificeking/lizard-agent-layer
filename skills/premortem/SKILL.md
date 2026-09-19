@@ -1,6 +1,6 @@
 ---
 name: premortem
-description: Use before executing medium/high-risk implementation, database, security, or release plans to identify concrete failure modes and repo-bound mitigations.
+description: Explicit user-load specialist: structured failure mode analysis (L/M/H) and mitigation planning. Use only when explicitly requested or standalone.
 ---
 
 # Plan Premortem with Repo-Bound Mitigations

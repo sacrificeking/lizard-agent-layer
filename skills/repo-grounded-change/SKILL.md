@@ -1,6 +1,6 @@
 ---
 name: repo-grounded-change
-description: Use for non-trivial implementation, diff review, or refactoring to ensure changes follow existing sibling patterns and produce a 3-question review packet.
+description: Explicit user-load specialist: ensure code changes strictly mimic existing sibling patterns and produce a 3-question review packet. Use only when explicitly requested.
 ---
 
 # Repo-Grounded Change & Review Packet

@@ -14,6 +14,6 @@ This repository uses `lizard-agent-layer` for verified project instructions and 
 
 - **Success:** Satisfy the user request and provide named verification evidence from this repository.
 - **Autonomy:** Follow `.agent/protocols/permissions.md` as the authoritative boundary. Do not ask for routine edits.
-- **Evidence:** Cite tests defined in this repository. Never claim PASS without visible output.
-- **Output:** Report changed files, verification results, and residual risks.
-- **Stop:** Stop when the goal is achieved or a gate fires. In `inherit-current` mode, use the active model for all stages.
+- **Evidence:** Scale verification to the diff; report visible output from repository checks (never claim PASS without output).
+- **Output:** Report changed files and verification results. Include residual risks only if a gate fired or the change involves migrations, dependencies, auth, breaking contracts, or destructive actions.
+- **Stop:** Stop when the goal is achieved or a gate fires. When pausing, cite the file path and rule line; do not invent gates. In `inherit-current` mode, use the active model for all stages.

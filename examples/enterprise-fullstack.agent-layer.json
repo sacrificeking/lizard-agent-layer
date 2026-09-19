@@ -20,6 +20,6 @@
     "precision-domain",
     "security-hardening",
     "research-audit",
-    "staged-execution"
+    "implementation"
   ]
 }

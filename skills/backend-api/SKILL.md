@@ -1,6 +1,6 @@
 ---
 name: backend-api
-description: Backend service architecture, REST/GraphQL/gRPC API contracts, serverless/edge functions, DTO validation, input sanitization, middleware, and error handling across Node/Nest, Java/Spring, Python/FastAPI, Go, and .NET. Use when designing, implementing, or modifying backend endpoints, microservices, and server-side integrations.
+description: Backend API architecture, server endpoints, and service contract changes across REST, GraphQL, or gRPC. Use when modifying backend routing, controllers, middleware, or service boundaries.
 ---
 
 # Backend API & Services

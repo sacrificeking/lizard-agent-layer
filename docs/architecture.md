@@ -107,7 +107,7 @@ These gaps are **intentional**. Closing them inside this repository would be a s
 | Not in this layer | Why it stays out |
 | --- | --- |
 | Forcing Copilot/Cursor to load only the 80-line always-on set | The host concatenates context. Calorie CI measures overlay files, not the provider prompt. Tenant content exclusion and instruction scope are organization controls. |
-| A runtime cap that blocks a third skill file | Skills are Markdown. A quota needs a vendor skill loader (harness OS). Adapters state “at most two matching skills”; they cannot enforce it. |
+| A runtime cap that blocks a third skill file | Skills are Markdown. A quota needs a vendor skill loader (harness OS). Adapters state “one best matching skill, adding at most one specialist if needed”; they cannot enforce it. |
 | Running `doctor.ps1` from the chat session | The adapter **asks** for a current strict doctor + manifest-diff. The host does not execute that. Auto-doctor from the agent would be a new privileged runner and would weaken [ADR 0018](adr/0018-prompt-trust-and-constrained-verification.md). Champions run doctor after install/update. |
 | L2 verifier executing `mvn test` / `npm test` | Target scripts are untrusted executable code ([ADR 0018](adr/0018-prompt-trust-and-constrained-verification.md)). Loop PASS is identity + plan + definition-of-done **packets**, not a substitute for the team’s test suite. |
 | Deleting catalog slogan skills (`frontend-engineering`, …) | Defaults do not install them. `-Packs` is the honest opt-in. Removing the catalog forces every stack into `DECISIONS.md` or a fork. |

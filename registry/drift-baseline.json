@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-09-03T05:48:55.1558768Z",
-    "layer_version":  "1.5.0",
+    "generated_at":  "2026-09-16T08:49:22.0669638Z",
+    "layer_version":  "1.5.1",
     "artifact_count":  176,
-    "total_bytes":  285234,
-    "token_estimate":  71381,
+    "total_bytes":  288290,
+    "token_estimate":  72146,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -18,11 +18,11 @@
                       {
                           "kind":  "adapter",
                           "path":  "adapters/claude-code/CLAUDE.lizard.md",
-                          "sha256":  "2be53668d1dd4b6587b588fbc9e42f2f1bb6de89dda6e866f446fb0b554009e2",
-                          "bytes":  1464,
+                          "sha256":  "004a699e84febcac566877b285f7267ed6f03eaabefd1b5745e991565e9482f4",
+                          "bytes":  1691,
                           "lines":  20,
-                          "words":  197,
-                          "token_estimate":  366
+                          "words":  232,
+                          "token_estimate":  423
                       },
                       {
                           "kind":  "adapter",
@@ -36,11 +36,11 @@
                       {
                           "kind":  "adapter",
                           "path":  "adapters/codex/AGENTS.lizard.md",
-                          "sha256":  "245dc70cd5145fbaeb17cdd72d328e839b734bbb2e66c2343eb8050d95695661",
-                          "bytes":  1458,
+                          "sha256":  "8d20fd21e150365e86f4e3723df9604e254f5f52a6286c64dbdfe7f37ce91072",
+                          "bytes":  1685,
                           "lines":  20,
-                          "words":  196,
-                          "token_estimate":  365
+                          "words":  231,
+                          "token_estimate":  422
                       },
                       {
                           "kind":  "adapter",
@@ -54,11 +54,11 @@
                       {
                           "kind":  "adapter",
                           "path":  "adapters/cursor/lizard-agent-layer.mdc",
-                          "sha256":  "7d1bd9a176d31b3ae5962e6ebf9a49ce68cca501de41dc2814f1738d5c6bf393",
-                          "bytes":  1580,
+                          "sha256":  "005211226804626b68640a63ff4d9a20aa0f4af6f70c8e189781837381f2d71f",
+                          "bytes":  1807,
                           "lines":  25,
-                          "words":  211,
-                          "token_estimate":  395
+                          "words":  246,
+                          "token_estimate":  452
                       },
                       {
                           "kind":  "adapter",
@@ -72,11 +72,11 @@
                       {
                           "kind":  "adapter",
                           "path":  "adapters/gemini/GEMINI.lizard.md",
-                          "sha256":  "78d8316acc6bb2e81ed9dd25dc3ce5c07e2511583899d17225a47faaab019768",
-                          "bytes":  1459,
+                          "sha256":  "be4651a97e3970a97f0065743ebfe1b34865eb872e60997f56b6ef3d55373c9e",
+                          "bytes":  1686,
                           "lines":  20,
-                          "words":  196,
-                          "token_estimate":  365
+                          "words":  231,
+                          "token_estimate":  422
                       },
                       {
                           "kind":  "adapter",
@@ -90,11 +90,11 @@
                       {
                           "kind":  "adapter",
                           "path":  "adapters/generic-agents-md/AGENTS.generic.lizard.md",
-                          "sha256":  "c5a668648a7a344451694c1fd8700f0f17f8612a4a5589d93f5dfcd40267c017",
-                          "bytes":  1447,
+                          "sha256":  "b4f43d5787d9a24f954f657425b8e8ad339116693484f480e6988132ee96fb0a",
+                          "bytes":  1674,
                           "lines":  20,
-                          "words":  194,
-                          "token_estimate":  362
+                          "words":  229,
+                          "token_estimate":  419
                       },
                       {
                           "kind":  "adapter",
@@ -108,11 +108,11 @@
                       {
                           "kind":  "adapter",
                           "path":  "adapters/github-copilot/copilot-instructions.lizard.md",
-                          "sha256":  "f97b19920968b04fd83aa2e1f0ac03831bf92596037cbc666605c2186126546a",
-                          "bytes":  1466,
+                          "sha256":  "acfb3d4ce07d42d3c1e3b4b0e854b3e797f78535c92a3148c3f3a5bdc928f0f0",
+                          "bytes":  1693,
                           "lines":  20,
-                          "words":  197,
-                          "token_estimate":  367
+                          "words":  232,
+                          "token_estimate":  424
                       },
                       {
                           "kind":  "skill",
@@ -144,11 +144,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/backend-api/SKILL.md",
-                          "sha256":  "3b0298cba8160aead26bb763822b32223a02eb1c15d4902e2e993a1ef2ea85d8",
-                          "bytes":  1705,
+                          "sha256":  "5a0b86a4ca32d83b6265195a3ba8debc4172ff5a11bf9e6df48671025893ecbb",
+                          "bytes":  1564,
                           "lines":  28,
-                          "words":  222,
-                          "token_estimate":  427
+                          "words":  211,
+                          "token_estimate":  391
                       },
                       {
                           "kind":  "skill",
@@ -198,11 +198,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/data-quality/SKILL.md",
-                          "sha256":  "7a2bd1c5b3ffcb701d160ffdba5961725f4beb5c2902fbcbf3d140b7d6b4b7d5",
-                          "bytes":  580,
+                          "sha256":  "c18311abe74be73b2717f3427248f8c5de8971e82537ac41042fe51a0dd65ae2",
+                          "bytes":  487,
                           "lines":  15,
-                          "words":  83,
-                          "token_estimate":  145
+                          "words":  73,
+                          "token_estimate":  122
                       },
                       {
                           "kind":  "skill",
@@ -234,11 +234,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/design-system/SKILL.md",
-                          "sha256":  "6a3058133d756f3544a9e72174c6b7dfd6e8fee44bac48fb90abe3f3206478cd",
-                          "bytes":  626,
+                          "sha256":  "ea56dea0331243fab92157ce3ad13c85fe12a4d7c16fdf510e9fe52740879ad4",
+                          "bytes":  549,
                           "lines":  15,
-                          "words":  88,
-                          "token_estimate":  157
+                          "words":  80,
+                          "token_estimate":  138
                       },
                       {
                           "kind":  "skill",
@@ -252,11 +252,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/frontend-engineering/SKILL.md",
-                          "sha256":  "194f3e85f91e566b680944d8ae722ca22c475128c8acdaadb7b1d9568714be1c",
-                          "bytes":  964,
+                          "sha256":  "3c88901087cb05fbb8a28efe8e4f1dce66e8bc4d6fbc4cd18aaa10ee611fb509",
+                          "bytes":  929,
                           "lines":  16,
-                          "words":  125,
-                          "token_estimate":  241
+                          "words":  122,
+                          "token_estimate":  233
                       },
                       {
                           "kind":  "skill",
@@ -270,11 +270,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/git-safety/SKILL.md",
-                          "sha256":  "ca1bc0a3bf77bfd43dafe4e487e35e1c736b3716b267ea244cd2e79c79612625",
-                          "bytes":  724,
+                          "sha256":  "571fc039035a19ea5c3b5057cf6d3adbfd46769479d93c4913d0561128be8277",
+                          "bytes":  668,
                           "lines":  22,
-                          "words":  112,
-                          "token_estimate":  181
+                          "words":  105,
+                          "token_estimate":  167
                       },
                       {
                           "kind":  "skill",
@@ -288,11 +288,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/implementation/SKILL.md",
-                          "sha256":  "464b6a4193bf747021c505eb80db46b822c59b072ecb3437ae2a0a0959be579c",
-                          "bytes":  2642,
-                          "lines":  38,
-                          "words":  347,
-                          "token_estimate":  661
+                          "sha256":  "d7a051c337806bf5c114ed32bb3e2896a05b76e51edc3c041f1e44b119c30715",
+                          "bytes":  3718,
+                          "lines":  44,
+                          "words":  502,
+                          "token_estimate":  930
                       },
                       {
                           "kind":  "skill",
@@ -441,11 +441,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/premortem/SKILL.md",
-                          "sha256":  "a2faa599e40354459d21d84326261880009968f403b726a4cda7429143aea065",
-                          "bytes":  2404,
+                          "sha256":  "a5f98648fc6bc200a449fef4fa258109106fb035cdaa5c7c4d894384a206c32e",
+                          "bytes":  2397,
                           "lines":  36,
                           "words":  335,
-                          "token_estimate":  601
+                          "token_estimate":  600
                       },
                       {
                           "kind":  "skill",
@@ -513,11 +513,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/repo-grounded-change/SKILL.md",
-                          "sha256":  "007998c039d504cf6fae9a3ba8cd52706e3046ab0c9dc22beef5d25449ad1bea",
-                          "bytes":  2329,
+                          "sha256":  "e1a6be6e2c718a98e6a2de085f2a144c4048ecba5a94767353706a5a03a61366",
+                          "bytes":  2342,
                           "lines":  38,
-                          "words":  322,
-                          "token_estimate":  583
+                          "words":  323,
+                          "token_estimate":  586
                       },
                       {
                           "kind":  "skill",
@@ -540,11 +540,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/research-audit/SKILL.md",
-                          "sha256":  "ef814ea828c3f47748db95561e748a95091cf86b5c811c6f1c5afda8a29a53fd",
-                          "bytes":  1286,
+                          "sha256":  "7f199482897acd2fc4e593cf18bcfd2b7d9fffdb8423cce791d812a5d24a14f5",
+                          "bytes":  1219,
                           "lines":  32,
-                          "words":  163,
-                          "token_estimate":  322
+                          "words":  157,
+                          "token_estimate":  305
                       },
                       {
                           "kind":  "skill",
@@ -567,11 +567,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/security-hardening/SKILL.md",
-                          "sha256":  "2d48f6b62d75cca7862e4f1d8e81d50bfac9f479240fedd8db9070836079be56",
-                          "bytes":  1203,
+                          "sha256":  "eb619bf0833f6bea3c6656d0be57af72f6b473d237fb210b64de7ce7efc5d3cc",
+                          "bytes":  1104,
                           "lines":  28,
-                          "words":  169,
-                          "token_estimate":  301
+                          "words":  158,
+                          "token_estimate":  276
                       },
                       {
                           "kind":  "skill",
@@ -585,11 +585,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/staged-execution/SKILL.md",
-                          "sha256":  "2438b8444eeb844c38c61ef368c9b04b0052efe14ffd4d0175bcdd248f631441",
-                          "bytes":  1757,
+                          "sha256":  "8a7fe57b6fe42622702501bf1181afe90074befc47d6423d0ef0de38ad711c16",
+                          "bytes":  1755,
                           "lines":  31,
-                          "words":  231,
-                          "token_estimate":  440
+                          "words":  230,
+                          "token_estimate":  439
                       },
                       {
                           "kind":  "skill",
@@ -666,20 +666,20 @@
                       {
                           "kind":  "protocol",
                           "path":  "protocols/prompt-trust.md",
-                          "sha256":  "e457620d0826c00197315a91184958742e28f850889662e490df0e63210876eb",
-                          "bytes":  865,
+                          "sha256":  "e63d8121a2d191119a79dbf5ad533e9e40563b9411dfce5df08eb22cb3c7ffb9",
+                          "bytes":  1000,
                           "lines":  16,
-                          "words":  123,
-                          "token_estimate":  217
+                          "words":  145,
+                          "token_estimate":  250
                       },
                       {
                           "kind":  "protocol",
                           "path":  "protocols/release-gates.md",
-                          "sha256":  "67faee2efb9162589dc74ad98a25acf59b3c92a363845f1603f7bc25796d5063",
-                          "bytes":  1733,
-                          "lines":  30,
-                          "words":  213,
-                          "token_estimate":  434
+                          "sha256":  "addebb02724336f6d9ff3fbb5e3a6a57e9babe1e67db68b7dce8bc31850da006",
+                          "bytes":  2515,
+                          "lines":  45,
+                          "words":  309,
+                          "token_estimate":  629
                       },
                       {
                           "kind":  "protocol",
@@ -1035,11 +1035,11 @@
                       {
                           "kind":  "template",
                           "path":  "templates/operator-card.md",
-                          "sha256":  "a56cdbf6e0c20f7976cfae4fcd64912469db772d0484bd7e55239128137cfd6f",
-                          "bytes":  1696,
-                          "lines":  30,
-                          "words":  256,
-                          "token_estimate":  424
+                          "sha256":  "0fb4764148ea1219ef4d2105fa66a6d2a6243f610102cb0cb90d8a91c29c5de5",
+                          "bytes":  1961,
+                          "lines":  31,
+                          "words":  296,
+                          "token_estimate":  491
                       },
                       {
                           "kind":  "template",

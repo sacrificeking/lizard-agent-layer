@@ -1,6 +1,6 @@
 ---
 name: frontend-engineering
-description: Universal frontend architecture, component hierarchy, UI state management, bundle discipline, responsive layout, type safety, and accessibility across React, Angular, Vue, Svelte, Next.js, and Nuxt.
+description: Frontend architecture, component structure, state management, and accessibility. Use when building or modifying web UI components, frontend pages, or state stores.
 ---
 
 # Frontend Engineering

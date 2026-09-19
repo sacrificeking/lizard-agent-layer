@@ -29,3 +29,8 @@ The installer expands every selected adapter before writing. Undeclared equal or
 `github-copilot` has a distinct destination at `.github/copilot-instructions.md`. Existing Copilot instructions receive a dedicated sidecar and metadata-only merge guidance.
 
 Focused tests evaluate every built-in adapter pair in both orders. `doctor.ps1 -Strict` and `manifest-diff.ps1 -Strict` require the exact effective instruction or sidecar hash instead of accepting a shared keyword.
+
+## Cursor MDC and calorie budget
+
+Cursor uses `.cursor/rules/lizard-agent-layer.mdc` with frontmatter `alwaysApply: false`. This ensures that Cursor activates the rule only on demand or when scoped, preventing always-on calorie budget bloat and avoiding global catch-all globs.
+

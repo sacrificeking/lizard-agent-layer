@@ -1,6 +1,6 @@
 ---
 name: staged-execution
-description: Use when non-trivial implementation, review, research, or migration work benefits from a provider-neutral 10-80-10 workflow without manual model switches.
+description: Explicit user-load specialist: provider-neutral 10-80-10 staged execution workflow across plan, execute, and verify. Use only when explicitly requested.
 ---
 
 # Staged Execution

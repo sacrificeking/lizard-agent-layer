@@ -1,6 +1,6 @@
 ---
 name: security-hardening
-description: Security review, threat modeling, permission boundaries, dependency risk, secret exposure, destructive action risk, and release hardening. Use when tasks mention security, auth, secrets, permissions, production risk, dependency vulnerabilities, or hardening.
+description: Security posture review, secrets defense, and destructive action controls. Use when auditing authentication, sensitive data handling, or high-risk permissions.
 ---
 
 # Security Hardening

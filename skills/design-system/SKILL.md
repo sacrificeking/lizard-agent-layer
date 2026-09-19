@@ -1,6 +1,6 @@
 ---
 name: design-system
-description: Enforce project visual contracts, tokens, typography, layout, responsive behavior, and UI consistency. Use for design systems, DESIGN.md, UI/UX, components, layout, styling, tokens, visual polish, or frontend presentation work.
+description: Visual design contracts, typography, layout tokens, and UI consistency. Use when updating design tokens, theme variables, or component library styles.
 ---
 
 # Design System

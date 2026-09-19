@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "wp15-implementation-diet-and-execution-tiers",
+  "date": "2026-09-16",
+  "summary": "Composite implementation autonomy, skill description diet, adapter task contract output diet, and documentation alignment (0006, 0007).",
+  "changed_paths": [
+    "changes/wp15-implementation-diet-and-execution-tiers.json",
+    "adapters/claude-code/CLAUDE.lizard.md",
+    "adapters/codex/AGENTS.lizard.md",
+    "adapters/cursor/lizard-agent-layer.mdc",
+    "adapters/gemini/GEMINI.lizard.md",
+    "adapters/generic-agents-md/AGENTS.generic.lizard.md",
+    "adapters/github-copilot/copilot-instructions.lizard.md",
+    "docs/adapter-matrix.md",
+    "docs/architecture.md",
+    "docs/profiles.md",
+    "examples/enterprise-fullstack.agent-layer.json",
+    "examples/standard.agent-layer.json",
+    "implementation-ideas/0006-implementation-skill-and-matching-budget.md",
+    "implementation-ideas/0007-portable-execution-tiers.md",
+    "implementation-ideas/README.md",
+    "skills/backend-api/SKILL.md",
+    "skills/data-quality/SKILL.md",
+    "skills/design-system/SKILL.md",
+    "skills/frontend-engineering/SKILL.md",
+    "skills/git-safety/SKILL.md",
+    "skills/implementation/SKILL.md",
+    "skills/premortem/SKILL.md",
+    "skills/repo-grounded-change/SKILL.md",
+    "skills/research-audit/SKILL.md",
+    "skills/security-hardening/SKILL.md",
+    "skills/staged-execution/SKILL.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0004-adapter-composition-and-precedence.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0009-provider-neutral-staged-routing.md",
+    "docs/adr/0015-effective-memory-modes.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Skill descriptions narrowed to eliminate competing routing triggers; adapters adopt output diet where residual risks are only reported for gates or high-risk operations. Stop on repeated verification failures prevents infinite fix loops."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Preserves all adapter and protocol boundaries while reducing context overhead and improving model routing precision."
+  }
+}
