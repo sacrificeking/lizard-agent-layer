@@ -43,6 +43,7 @@ Target repositories can define custom, team-specific skills under `.agent/skills
 - **Lifecycle:** Never clobbered or overwritten by `update-target.ps1` or `install.ps1`.
 - **Integrity:** `doctor.ps1 -Strict` reports them as user-managed without requiring catalog hashes.
 - **Contract:** Follow the same contract shape (When / Success / Boundaries / Evidence / Output / Stop) and point to `.agent/protocols/permissions.md`. Local skills cannot expand permissions.
+- **Harvesting:** When `project-decision-harvest` extracts a repeatable repository-specific technique, propose it as a target-owned `.agent/skills-local/<name>/SKILL.md` stub, never as a layer catalog addition.
 
 ### Customizing Execution Tiers Locally
 

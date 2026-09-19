@@ -76,4 +76,17 @@ foreach ($relPath in $adapters) {
   Assert-True ($content -match 'unknown repo trust or health triage') "Adapter $relPath must scope doctor to unknown trust."
 }
 
+# 8. Verify project-decision-harvest classification buckets and operator-card routing
+$harvestPath = Join-Path $LayerRoot 'skills/project-decision-harvest/SKILL.md'
+$harvestContent = Get-Content -LiteralPath $harvestPath -Raw
+Assert-True ($harvestContent -match 'bucket') 'project-decision-harvest must require bucket classification.'
+Assert-True ($harvestContent -match 'decision') 'project-decision-harvest must classify decisions.'
+Assert-True ($harvestContent -match 'lesson') 'project-decision-harvest must classify lessons.'
+Assert-True ($harvestContent -match 'preference') 'project-decision-harvest must classify preferences.'
+Assert-True ($harvestContent -match 'local-skill') 'project-decision-harvest must classify local-skill.'
+Assert-True ($harvestContent -match 'permissions-gate') 'project-decision-harvest must classify permissions-gate.'
+Assert-True ($harvestContent -match 'nowhere') 'project-decision-harvest must classify nowhere.'
+$operatorCardContent = Get-Content -LiteralPath (Join-Path $LayerRoot 'templates/operator-card.md') -Raw
+Assert-True ($operatorCardContent -match 'Correction Routing') 'templates/operator-card.md must include Correction Routing guidance.'
+
 Write-Host "PASS tests\unit\composite-implementation-skill.tests.ps1"

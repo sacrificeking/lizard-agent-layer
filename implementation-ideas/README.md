@@ -17,7 +17,7 @@ Same-topic sources merge in place. Product edits still need an explicit Go (e.g.
 | [0007](0007-portable-execution-tiers.md) | Fast vs rigorous; no Codex `.agents/rules/` | **Shipped** (wp15) | USING shipped; adapter Output residual diet; Stop rules; Cursor MDC docs |
 | [0008](0008-measurable-loop-control.md) | Optional loop `control` + dampener | **Later** | After 0006/0007 residuals. Pack only. |
 | [0009](0009-instruction-debt-audit.md) | Optional instruction-debt paper audit | **Keep** | Paper audit for champions. Not always-on. |
-| [0010](0010-correction-routing-not-company-brain.md) | Harvest `bucket`; reject HQ | **Keep** | Harvest routing into DECISIONS/LESSONS/PREFERENCES. No company-brain OS. |
+| [0010](0010-correction-routing-not-company-brain.md) | Harvest `bucket`; reject HQ | **Shipped** (wp16) | Harvest bucket routing into DECISIONS, LESSONS, PREFERENCES, skills-local. No company-brain OS. |
 | [0011](0011-post-151-contract-hygiene.md) | Stale claims after 1.5.1 | **Shipped** (wp14) | Drift baseline 1.5.1, validate allowlist, visual-architecture RS256/26 packages |
 
 ## Recommended remaining Go order

@@ -1,10 +1,10 @@
 ﻿{
     "schema_version":  1,
-    "generated_at":  "2026-09-16T08:49:22.0669638Z",
+    "generated_at":  "2026-09-19T09:24:37.4392114Z",
     "layer_version":  "1.5.1",
     "artifact_count":  176,
-    "total_bytes":  288290,
-    "token_estimate":  72146,
+    "total_bytes":  290081,
+    "token_estimate":  72592,
     "artifacts":  [
                       {
                           "kind":  "adapter",
@@ -459,11 +459,11 @@
                       {
                           "kind":  "skill",
                           "path":  "skills/project-decision-harvest/SKILL.md",
-                          "sha256":  "d110c938516de29f79bf9e5c35749ce1cd53fbf25dddbe3dfb96182b9c005164",
-                          "bytes":  1921,
-                          "lines":  37,
-                          "words":  268,
-                          "token_estimate":  481
+                          "sha256":  "77953314ed5cca5f77529afd42bb595194225a0a335796a8e729fd6ab625914e",
+                          "bytes":  3319,
+                          "lines":  50,
+                          "words":  432,
+                          "token_estimate":  830
                       },
                       {
                           "kind":  "skill",
@@ -1035,11 +1035,11 @@
                       {
                           "kind":  "template",
                           "path":  "templates/operator-card.md",
-                          "sha256":  "0fb4764148ea1219ef4d2105fa66a6d2a6243f610102cb0cb90d8a91c29c5de5",
-                          "bytes":  1961,
-                          "lines":  31,
-                          "words":  296,
-                          "token_estimate":  491
+                          "sha256":  "e4269d34b3f68981c521c29b712bf978e11013bff7121e7c749eb6c8d542adb0",
+                          "bytes":  2354,
+                          "lines":  32,
+                          "words":  334,
+                          "token_estimate":  588
                       },
                       {
                           "kind":  "template",

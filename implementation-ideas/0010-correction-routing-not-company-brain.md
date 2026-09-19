@@ -4,9 +4,7 @@
 **Source:** VibeMarketer_ “company brain” / HQ thread (X 2092243372929151135, https://x.com/VibeMarketer_/status/2092243372929151135). Distill the routing table; do not absorb HQ or the marketing folder taxonomy.
 **Related:** `skills/project-decision-harvest`; `templates/memory/semantic/{DECISIONS,LESSONS}.md`; `PREFERENCES.md`; `protocols/permissions.md`; `skills-local`; [0006](0006-implementation-skill-and-matching-budget.md) matching; [0009](0009-instruction-debt-audit.md) apply-nothing.
 
-**Status (2026-09-10):** **Keep, not started.** Harvest still proposes only `DECISIONS.md`. HQ/OpenViking auto-extract stay rejected. Do not jump the queue ahead of 0005/0001/0006 residuals.
-
-Do not change product files until this idea is explicitly approved for implementation.
+**Status (2026-09-19):** **Shipped** (wp16). Harvest skill classifies learnings into `decision`, `lesson`, `preference`, `local-skill`, `permissions-gate`, or `nowhere`. Operator card provides correction routing guidance. Reject SaaS company-brain layer.
 
 ## Verdict
 

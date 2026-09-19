@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "wp16-correction-routing-and-harvest-buckets",
+  "date": "2026-09-19",
+  "summary": "Add classification buckets to project-decision-harvest and operator correction routing guidance (0010).",
+  "changed_paths": [
+    "changes/wp16-correction-routing-and-harvest-buckets.json",
+    "skills/project-decision-harvest/SKILL.md",
+    "templates/operator-card.md",
+    "docs/skill-authoring.md",
+    "tests/unit/composite-implementation-skill.tests.ps1",
+    "implementation-ideas/0010-correction-routing-not-company-brain.md",
+    "implementation-ideas/README.md"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0015-effective-memory-modes.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Harvest proposals classify learnings into DECISIONS, LESSONS, PREFERENCES, or skills-local before proposing changes, stopping for human confirmation without modifying existing memory."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Adds bucket routing taxonomy without changing default profile skills or creating always-on overhead."
+  }
+}
