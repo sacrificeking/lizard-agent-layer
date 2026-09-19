@@ -932,6 +932,7 @@ function New-InstallPlanMarkdown {
   if ($PlanTtlMinutes -ne 60) { $previewArguments.Add('-PlanTtlMinutes'); $previewArguments.Add([string]$PlanTtlMinutes) | Out-Null }
   if ($Force) { $previewArguments.Add('-Force') | Out-Null }
   if ($ForceManaged) { $previewArguments.Add('-ForceManaged') | Out-Null }
+  if ($AllowTargetReportWrite) { $previewArguments.Add('-AllowTargetReportWrite') | Out-Null }
   if ($PlanApprovalMode -ne 'summary') { $previewArguments.Add('-PlanApprovalMode'); $previewArguments.Add($PlanApprovalMode) | Out-Null }
   $previewCommand = [string](New-LizardPowerShellFileInvocation -ScriptPath $InstallScriptPath -ArgumentList $previewArguments.ToArray() -ResolveCurrent).display
   $canonicalDisplay = if ($EffectiveCanonicalPlanPath) { $EffectiveCanonicalPlanPath } else { '<canonical-plan.json>' }

@@ -68,6 +68,27 @@ try {
   $mismatchRes = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts/install.ps1') -Arguments $mismatchArgs
   Assert-True ($mismatchRes.output -match 'PLAN_BINDING_OPTIONS_MISMATCH') "Conflicting memory mode must fail closed with PLAN_BINDING_OPTIONS_MISMATCH: $($mismatchRes.output)"
 
+  # 4. Verify that -AllowTargetReportWrite in preview is included in Markdown Apply command
+  $target3 = Join-Path $fixtureRoot 'target-allow-report-write'
+  New-Item -ItemType Directory -Path $target3 -Force | Out-Null
+  $planMdPath3 = Join-Path $target3 'in-target-plan.md'
+  $canonicalPlanPath3 = Join-Path $fixtureRoot 'canonical-outside-target-plan.json'
+  $previewArgs3 = @(
+    '-TargetPath', $target3,
+    '-Profile', 'minimal',
+    '-Harnesses', 'generic-agents-md',
+    '-AllowTargetReportWrite',
+    '-WritePlan',
+    '-PlanPath', $planMdPath3,
+    '-CanonicalPlanPath', $canonicalPlanPath3
+  )
+  $previewRes3 = Invoke-TestPowerShell -ScriptPath (Join-Path $RepoRoot 'scripts/install.ps1') -Arguments $previewArgs3
+  Assert-Equal 0 $previewRes3.exit_code "Preview with -AllowTargetReportWrite must succeed: $($previewRes3.output)"
+  $mdContent3 = Get-Content -LiteralPath $planMdPath3 -Raw
+  $match3 = [regex]::Match($mdContent3, '(?ms)Apply:\s*```powershell\s*\r?\n(.*?)\r?\n```')
+  Assert-True $match3.Success 'Markdown plan must contain an Apply command block.'
+  Assert-True ($match3.Groups[1].Value -match '-AllowTargetReportWrite') 'Markdown Apply command must include -AllowTargetReportWrite when bound.'
+
   Write-Host 'PASS tests\integration\install-plan-binding.tests.ps1'
 } finally {
   if (Test-Path -LiteralPath $fixtureRoot) { Clear-TestDirectory -Path $fixtureRoot -AllowedRoot (Join-Path $RepoRoot '.tmp') }

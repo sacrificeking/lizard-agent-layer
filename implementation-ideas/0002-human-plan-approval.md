@@ -7,7 +7,7 @@
 
 **Live install (degen-resource-hub):** operator confirmed signed approvals were disproportionate for a local private Codex workspace, and that the layer still has no pleasant end-user command to mint trust store / challenge / envelope / replay ledger. That is this idea, not a new one.
 
-Do not change product files until this idea is explicitly approved for implementation.
+**Status (2026-09-10):** **Shipped** in 1.5.0 (ADR 0024, `summary` default, `scripts/new-approval.ps1`, `docs/signed-apply-approval.md`). Keep this file as history. Do not reopen SHA-parrot or high-risk-auto-RSA. Residual apply-snippet flags are [0004](0004-apply-command-option-binding.md), not this WP.
 
 ## Problem
 

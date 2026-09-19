@@ -1,9 +1,18 @@
 # 0001 — Front-door install contract
 
-**Work package:** WP-A docs and regression tests only. Mandatory signed-apply kit is **withdrawn** — see [0002](0002-human-plan-approval.md).
-**Trigger:** Live install into an external target (`degen-resource-hub`) failed because public lizard docs describe commands that `install.ps1` / `update-target.ps1` / `uninstall.ps1` reject.
+**Status (2026-09-16):** **Shipped** (1.5.0 + wp14). Public install/update/uninstall snippets rewritten to `$HOME/.lizard-agent-layer/.tmp` across README, INSTALL.md, and docs. `tests/unit/overlay-calorie-budget.tests.ps1` widened to assert all public doc snippets reject relative `.tmp`.
 
-Do not change product files until this idea is explicitly approved for implementation.
+## Shipped
+
+- `INSTALL_HARNESSES_REQUIRED` fail-closed. Calorie allowlist includes install-plans/packs/loop-engineering/UNINSTALL and requires `-Harnesses` on standard/enterprise snippets.
+- Public plan paths standardized to `$HOME/.lizard-agent-layer/.tmp` across README, INSTALL.md, getting-started, install-plans, loop-engineering, merge-suggestions, and update-target.
+- Calorie budget test widened to reject relative `.\.tmp` across all snippets in public docs allowlist.
+
+## Residuals (Resolved in wp14)
+
+1. README, INSTALL.md Step 5–6, `docs/getting-started.md`, `docs/install-plans.md`, `docs/loop-engineering.md`, `docs/update-target.md` **body** still use CWD-relative `.\.tmp\...` with an **absolute** `-TargetPath`. SafeFs rejects that when cwd is the target. CHANGELOG 1.5.0 claimed `$HOME/.lizard-agent-layer/.tmp`; only QUICKSTART / UNINSTALL 1-liner / update-target 1-liner actually use it.
+2. Calorie test only fails relative `.tmp` when `-TargetPath` is `"."`. Absolute target + `.\.tmp` stays green. Widen the assertion (this file’s implementation step 4 was incomplete).
+3. Do not weaken `Assert-PathOutsideRoot`.
 
 ## Problem
 
@@ -114,6 +123,6 @@ Covered by 0002: update-target risk bypass, records-lifecycle policy claims, dig
 
 ## Done when
 
-- A human (and an AI following public Markdown) can preview `standard` + one `-Harnesses` into a **separate** target without rewriting flags or putting plans inside the target.
-- Focused tests fail if harness omission or in-target `.tmp` plan paths reappear in the listed public files.
-- Apply UX and optional digest/signed-apply are tracked in 0002, not here.
+- A human (and an AI following public Markdown) can preview `standard` + one `-Harnesses` into a **separate** target without rewriting flags or putting plans inside the target — including snippets with **absolute** `-TargetPath` and cwd = target.
+- Focused tests fail if harness omission or in-target `.tmp` plan paths reappear in the listed public files, **including** absolute `-TargetPath` + `.\.tmp`.
+- Apply UX and optional digest/signed-apply are tracked in 0002, not here. Markdown Apply flags are [0004](0004-apply-command-option-binding.md).

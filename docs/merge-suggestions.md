@@ -8,7 +8,7 @@ Install plans tell you that a merge is needed. Merge suggestions go one step fur
 
 ## Usage
 
-Default output under `.tmp/merge-suggestions/`:
+Default output under `$HOME/.lizard-agent-layer/.tmp/merge-suggestions/`:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard
@@ -17,7 +17,7 @@ pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\pro
 Custom output directory:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -OutputDir .\.tmp\merge-review\project
+pwsh -NoProfile -File .\scripts\merge-suggestions.ps1 -TargetPath D:\path\to\project -Profile standard -OutputDir "$HOME/.lizard-agent-layer/.tmp/merge-review/project"
 ```
 
 Harness override:

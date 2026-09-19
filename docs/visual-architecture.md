@@ -3,7 +3,7 @@
 > [!NOTE]
 > **⚡ Ultra High-Dense Quick Check:**
 > - **Source vs. Target:** The layer lives externally and projects a structured `.agent/` core into target repositories without altering application code.
-> - **4 Security Pillars:** Handle-Bound SafeFS (I/O isolation), Zero-Trust RSA/Ed25519 Signatures, Transactional Rollback Engine, and Records Retention (ADR-0023).
+> - **4 Security Pillars:** Handle-Bound SafeFS (I/O isolation), Zero-Trust RS256 Cryptographic Signatures, Transactional Rollback Engine, and Records Retention (ADR-0023).
 > - **10-80-10 Execution:** 10% Plan & Clarify $\to$ 80% Constrained Implementation $\to$ 10% Independent Test Verification.
 > - **Non-Clobbering Wiring:** Native IDE files (Cursor, Copilot, Claude, Gemini) receive safe sidecars with merge suggestions if pre-existing.
 
@@ -17,7 +17,7 @@
 │                                                                                  │
 │  📁 profiles/        --> (minimal, standard, enterprise-fullstack)               │
 │  📁 packs/           --> (frontend, database, api, security, precision, loops)   │
-│  📁 skills/          --> (22 Reusable packages with versioned skill.json)        │
+│  📁 skills/          --> (26 Reusable packages with versioned skill.json)        │
 │  📁 protocols/       --> (Permissions, Secret-Handling, Release-Gates, Handoff)  │
 │  📁 adapters/        --> (Cursor, GitHub Copilot, Claude Code, Gemini, Codex)    │
 │  📁 schemas/         --> (25+ Draft 2020-12 Validation Contracts)                │

@@ -92,8 +92,8 @@ foreach ($relDoc in $publicDocsAllowlist) {
       if ($line -match 'install\.ps1\b' -and ($line -match '-Profile\s+standard\b' -or $line -match '-Profile\s+enterprise-fullstack\b')) {
         Assert-True ($line -match '-Harnesses\b') "Snippet in $relDoc with standard/enterprise-fullstack profile must specify -Harnesses: $line"
       }
-      if ($line -match '(install|update-target|uninstall)\.ps1\b' -and $line -match '-TargetPath\s+["'']?\.') {
-        Assert-False ($line -match '-(PlanPath|CanonicalPlanPath|ApprovedPlanPath|OutputDir)\s+["'']?(\.\\|\./)?\.tmp[\\/]') "Snippet in $relDoc with -TargetPath '.' must not use relative .tmp for plan/output path: $line"
+      if ($line -match '(install|update-target|uninstall|merge-suggestions)\.ps1\b') {
+        Assert-False ($line -match '-(PlanPath|CanonicalPlanPath|ApprovedPlanPath|OutputDir)\s+["'']?(\.\\|\./)?\.tmp[\\/]') "Snippet in $relDoc must not use relative .tmp for plan/output path: $line"
       }
     }
   }

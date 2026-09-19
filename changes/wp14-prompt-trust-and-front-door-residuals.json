@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "wp14-prompt-trust-and-front-door-residuals",
+  "date": "2026-09-15",
+  "summary": "Align prompt-trust protocol with adapter doctor skip, include allow_target_report_write in plan markdown, and standardize front-door plan paths.",
+  "changed_paths": [
+    "changes/wp14-prompt-trust-and-front-door-residuals.json",
+    "INSTALL.md",
+    "README.md",
+    "docs/getting-started.md",
+    "docs/install-plans.md",
+    "docs/loop-engineering.md",
+    "docs/merge-suggestions.md",
+    "docs/update-target.md",
+    "docs/visual-architecture.md",
+    "protocols/prompt-trust.md",
+    "registry/drift-baseline.json",
+    "scripts/install.ps1",
+    "scripts/validate.ps1",
+    "tests/integration/install-plan-binding.tests.ps1",
+    "tests/unit/overlay-calorie-budget.tests.ps1"
+  ],
+  "decision_records": [
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0010-exact-plan-approval-binding.md",
+    "docs/adr/0011-continuous-artifact-lifecycle.md",
+    "docs/adr/0013-handle-bound-filesystem-access.md",
+    "docs/adr/0015-effective-memory-modes.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0021-host-invocations-and-git-ref-validation.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md",
+    "docs/adr/0024-human-readable-plan-approval.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Startup integrity gate in prompt-trust.md now aligns with adapter skip on routine edits; plan generation includes allow_target_report_write when present. Existing targets remain fully compatible."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Eliminates redundant doctor invocations in trusted workspaces and aligns plan paths with SafeFs boundaries in all documentation examples."
+  }
+}

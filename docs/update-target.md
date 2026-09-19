@@ -17,10 +17,10 @@ It reads the target's `.agent/lizard-agent-layer.install.json`, preserves the in
 Generate a reviewable update plan without changing the target project:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir .\.tmp\project-update
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir "$HOME/.lizard-agent-layer/.tmp/project-update"
 ```
 
-The preview writes reports under `.tmp/updates/<timestamp>/` in this layer repo by default:
+The preview writes reports under `$HOME/.lizard-agent-layer/.tmp/updates/<timestamp>/` by default:
 
 - `update-plan.md`
 - `update-plan.json` and `update-plan.json.sha256`
@@ -38,7 +38,7 @@ Custom `-OutputDir` and `-PlanPath` values must remain outside the target by def
 After reviewing the plan, apply the update while preserving existing target files:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir .\.tmp\project-update -Apply -ApprovedPlanPath .\.tmp\project-update\update-plan.json -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir "$HOME/.lizard-agent-layer/.tmp/project-update" -Apply -ApprovedPlanPath "$HOME/.lizard-agent-layer/.tmp/project-update/update-plan.json" -ApprovedPlanSha256 <independently-reviewed-sha256> -HumanApproved
 ```
 
 Apply validates the independently supplied outer digest, the bound nested install plan, all current options and inputs, and target preconditions before locking. It revalidates after locking and before mutation. It then runs the exact nested `install.ps1` plan, executes `manifest-diff.ps1 -Strict`, and appends one JSONL entry to:
@@ -54,9 +54,9 @@ That history file records the previous version, current version, profile, reques
 Use this only after reviewing the generated update plan:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir .\.tmp\project-update -ForceManaged
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir "$HOME/.lizard-agent-layer/.tmp/project-update" -ForceManaged
 # review the new canonical plan, then repeat the same options with:
-pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir .\.tmp\project-update -ForceManaged -Apply -ApprovedPlanPath .\.tmp\project-update\update-plan.json -ApprovedPlanSha256 <sha256> -HumanApproved
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir "$HOME/.lizard-agent-layer/.tmp/project-update" -ForceManaged -Apply -ApprovedPlanPath "$HOME/.lizard-agent-layer/.tmp/project-update/update-plan.json" -ApprovedPlanSha256 <sha256> -HumanApproved
 ```
 
 `-ForceManaged` refreshes only exact manifest records whose current hash still matches their installed hash and whose ownership is `layer-owned`. User-owned, adopted, locally modified, legacy-ambiguous, missing-identity, or conflicting files remain untouched and are listed in the install plan and manifest conflicts.
@@ -70,9 +70,9 @@ Schema v2 targets migrate conservatively on apply. Because v2 cannot prove per-f
 Schemas newer than the current reader, unsupported old schemas, and malformed versions stop before report or target writes. A target created by a newer layer version can still produce a preview plan, but apply requires both explicit switches:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir .\.tmp\downgrade-plan -AllowDowngrade
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir "$HOME/.lizard-agent-layer/.tmp/downgrade-plan" -AllowDowngrade
 # after exact-plan review:
-pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir .\.tmp\downgrade-plan -AllowDowngrade -Apply -ApprovedPlanPath .\.tmp\downgrade-plan\update-plan.json -ApprovedPlanSha256 <sha256> -HumanApproved
+pwsh -NoProfile -File .\scripts\update-target.ps1 -TargetPath D:\path\to\project -OutputDir "$HOME/.lizard-agent-layer/.tmp/downgrade-plan" -AllowDowngrade -Apply -ApprovedPlanPath "$HOME/.lizard-agent-layer/.tmp/downgrade-plan/update-plan.json" -ApprovedPlanSha256 <sha256> -HumanApproved
 ```
 
 Applied update history records the old and new manifest schemas plus downgrade approval state. `upgrade.ps1` delegates installed targets to this same workflow.

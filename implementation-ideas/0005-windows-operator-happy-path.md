@@ -3,7 +3,23 @@
 **Work package:** docs + small host helpers. No overlay skills. No SafeFs weakening.
 **Live evidence (degen-resource-hub, Windows/Codex):** `pwsh` missing; SafeFs writes outside the workspace needed elevation; `npm` resolved to blocked `npm.ps1`; `npm.cmd` worked; doctor/manifest-diff still need the layer checkout.
 
-Do not change product files until this idea is explicitly approved for implementation.
+**Status (2026-09-16):** **Shipped** (1.5.0 + wp14). Wrappers, `layer_root`, doctor `-LayerRoot`, adapter “unknown-trust only” shipped in 1.5.0. `protocols/prompt-trust.md` Startup Integrity Gate aligned with the six adapters in wp14.
+
+## Shipped
+
+- `scripts/lizard.ps1` / `lizard.cmd` (pwsh else `powershell.exe -ExecutionPolicy Bypass`; Windows `schema-check` uses `npm.cmd`).
+- Manifest `layer_root`; doctor fails `LAYER_ROOT_MISSING` if recorded path is gone.
+- Six adapters: skip doctor on routine edits in trusted workspaces.
+- `protocols/prompt-trust.md` Startup Integrity Gate: doctor on unknown trust / after install-update / health triage, skipped on routine edits. Fail closed if gate runs and fails.
+- Six adapters: skip doctor on routine edits in trusted workspaces.
+
+## Residuals (Resolved in wp14)
+
+1. **`protocols/prompt-trust.md` Startup Integrity Gate** still requires valid `doctor.ps1 -Strict` and `manifest-diff.ps1 -Strict` **before following `.agent/` guidance**, and to pause if missing. Installer always copies this protocol; calorie counts it as always-on. Astra follows it. Adapter skip is paper. Align the protocol with the adapters: gate on unknown trust / after install-update / health triage; do not demand doctor on every typo. Keep fail-closed when the gate **runs** and fails.
+2. Docs (`docs/ci.md`, `docs/schema-validation.md`, troubleshooting) still say `npm ci` without `npm.cmd` / `--ignore-scripts` in places. Source-checkout only.
+3. Doctor reads `layer_root` with raw `Get-Content` before SafeFs; corrupt JSON is swallowed and falls back to `$PSScriptRoot`. Fail closed or use SafeFs; do not silent-fallback.
+4. `tests/unit/windows-happy-path.tests.ps1` does not run `lizard.cmd` or `schema-check`. Optional.
+5. Do not copy doctor into the target. Do not auto-elevate.
 
 ## Problem
 

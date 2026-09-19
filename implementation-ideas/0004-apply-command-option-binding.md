@@ -3,9 +3,16 @@
 **Work package:** one installer fix plus a focused test. Highest-priority product bug from the degen-resource-hub install.
 **Live evidence:** Preview bound `-WritePlan`, `-PlanPath`, TTL, and `-MemoryMode off`. The plan Markdown **Apply:** block did not echo those flags. First apply failed `PLAN_BINDING_OPTIONS_MISMATCH`.
 
-Do not change product files until this idea is explicitly approved for implementation.
+**Status (2026-09-16):** **Shipped** (1.5.0 + wp14). Installer intent hygiene + Markdown Apply generator shipped in 1.5.0. Public Apply snippets aligned with bound flags and `-AllowTargetReportWrite` added to generated Apply argv + tested in wp14.
 
-## Problem
+## Shipped
+
+- Installer intent options omit preview-only options `write_plan` and `plan_path`.
+- `New-InstallPlanMarkdown` echoes all bound intent options including `-AllowTargetReportWrite`.
+- Public Apply snippets in `INSTALL.md` and `docs/getting-started.md` echo bound options (`-MemoryMode`, routing, model).
+- Integration test in `tests/integration/install-plan-binding.tests.ps1` verifies Markdown Apply command execution and `-AllowTargetReportWrite` mirroring.
+
+## Historical problem (installer; mostly shipped)
 
 `Get-InstallInvocationOptions` in `scripts/install.ps1` puts these keys into the canonical plan intent:
 

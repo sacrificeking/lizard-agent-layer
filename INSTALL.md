@@ -131,7 +131,7 @@ Ask the user to correct this record. Do not infer approval from silence.
 Build the command with the confirmed values:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -MemoryMode <curated|private-episodic|off> -RoutingPolicy <routing-policy> -ModelMode inherit-current -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -MemoryMode <curated|private-episodic|off> -RoutingPolicy <routing-policy> -ModelMode inherit-current -WritePlan -PlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.md" -CanonicalPlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.json"
 ```
 
 Omit `-Packs` when none were selected. Review the console output and plan report. If existing instruction files require integration, generate metadata-only merge suggestions:
@@ -153,7 +153,7 @@ Under ADR 0024, default installations use summary mode: the operator approves th
 Only an explicit approval permits:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -MemoryMode <curated|private-episodic|off> -RoutingPolicy <routing-policy> -ModelMode inherit-current -Apply -ApprovedPlanPath .\.tmp\install-plan.json -HumanApproved
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath <absolute-target-path> -Profile <profile> -Harnesses <comma-separated-harnesses> -Packs <comma-separated-packs> -MemoryMode <curated|private-episodic|off> -RoutingPolicy <routing-policy> -ModelMode inherit-current -Apply -ApprovedPlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.json" -HumanApproved
 ```
 
 Do not add `-Force` or `-ForceManaged` during initial installation.
@@ -178,10 +178,10 @@ For experienced developers who prefer running direct commands without the intera
 ### Standard Local Installation (VS Code / Copilot or Cursor)
 ```powershell
 # 1. Preview installation (safe, dry-run)
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile standard -Harnesses github-copilot -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile standard -Harnesses github-copilot -WritePlan -PlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.md" -CanonicalPlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.json"
 
 # 2. Apply installation (Summary mode default)
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile standard -Harnesses github-copilot -Apply -ApprovedPlanPath .\.tmp\install-plan.json -HumanApproved
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile standard -Harnesses github-copilot -Apply -ApprovedPlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.json" -HumanApproved
 
 # 3. Verify health
 pwsh -NoProfile -File .\scripts\doctor.ps1 -TargetPath "C:\path\to\your-project" -Strict
@@ -192,7 +192,7 @@ pwsh -NoProfile -File .\scripts\doctor.ps1 -TargetPath "C:\path\to\your-project"
 ### Enterprise Full-Stack (Database / API / Frontend / Security)
 ```powershell
 # 1. Preview installation
-pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile enterprise-fullstack -Harnesses github-copilot -Packs frontend-engineering,database-backend,backend-api,security-hardening -WritePlan -PlanPath .\.tmp\install-plan.md -CanonicalPlanPath .\.tmp\install-plan.json
+pwsh -NoProfile -File .\scripts\install.ps1 -TargetPath "C:\path\to\your-project" -Profile enterprise-fullstack -Harnesses github-copilot -Packs frontend-engineering,database-backend,backend-api,security-hardening -WritePlan -PlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.md" -CanonicalPlanPath "$HOME/.lizard-agent-layer/.tmp/install-plan.json"
 ```
 > **Note:** By default, all profiles use summary mode approval (or opt-in `-PlanApprovalMode digest`). If your organization requires cryptographic signed approval, use `scripts/new-approval.ps1` to mint approval materials. On Windows without PowerShell 7 (`pwsh`), use `scripts\lizard.cmd` or `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ...`.
 

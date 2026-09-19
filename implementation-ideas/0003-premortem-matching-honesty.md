@@ -4,7 +4,7 @@
 **Source:** existing `skills/premortem/` plus Casaus thread (already absorbed). Keepable leftover: likelihood×impact labels; human trigger; 2-skill-cap honesty.
 **Do not** copy the viral 6-month narrative skill.
 
-Do not change product files until this idea is explicitly approved for implementation.
+**Status (2026-09-10):** **Shipped** in 1.5.0: premortem `likelihood`/`impact` L/M/H, operator-card premortem bullet, staged-execution “no third matching skill.” Named `premortem` is **not** in the default four-skill diet — that install-path honesty is [0006](0006-implementation-skill-and-matching-budget.md) residual, not a reopen of this file.
 
 ## Problem
 
