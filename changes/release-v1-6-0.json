@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "release-v1-6-0",
+  "date": "2026-09-19",
+  "summary": "Bump version to 1.6.0, establish 1.6.0 changelog, and finalize composite implementation, description diet, adapter task contract, and correction routing.",
+  "changed_paths": [
+    "package.json",
+    "package-lock.json",
+    "VERSION",
+    "CHANGELOG.md",
+    "registry/drift-baseline.json",
+    "changes/release-v1-6-0.json"
+  ],
+  "decision_records": [
+    "docs/adr/0001-source-of-truth-and-layer-boundaries.md",
+    "docs/adr/0005-schema-and-manifest-evolution.md",
+    "docs/adr/0009-provider-neutral-staged-routing.md",
+    "docs/adr/0015-effective-memory-modes.md",
+    "docs/adr/0018-prompt-trust-and-constrained-verification.md",
+    "docs/adr/0022-versioned-skill-package-lifecycle.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Version bump to 1.6.0. All existing target installations remain backward-compatible; new skills and routing improvements are opt-in or transparently inherited."
+  },
+  "compatibility": {
+    "impact": "additive",
+    "note": "Releases autonomous implementation skill, description diet across 10 skills, adapter output diet, and harvest classification buckets."
+  }
+}

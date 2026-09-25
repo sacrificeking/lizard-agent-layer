@@ -5,6 +5,22 @@ All notable public changes to `lizard-agent-layer` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.0 - 2026-09-19
+
+### Added
+- **Composite Implementation Autonomy (0006):** Inlined grounding ladder (`existing helper -> stdlib -> platform -> installed -> minimal code`), sortable premortem (`likelihood: L|M|H`, `impact: L|M|H`), and strict stop rules on repeated verification failures into `skills/implementation/SKILL.md` (44 lines, strictly under 80-line budget).
+- **Structured Review Packet (0006):** Split diff completion reports into discrete `Findings` (actionable defects) and informational `Human Callouts` (migrations, dependency changes, auth, breaking contracts, destructive actions) with optional one-word verdict.
+- **Harvest Classification Buckets & Correction Routing (0010):** Added classification taxonomy to `skills/project-decision-harvest/SKILL.md` routing learnings into `decision` (`DECISIONS.md`), `lesson` (`LESSONS.md`), `preference` (`PREFERENCES.md`), `local-skill` (`.agent/skills-local/`), `permissions-gate` (`permissions.md`), or `nowhere` (ephemeral/stale/secret).
+- **Operator Correction Routing Guidance (0010):** Added human operator reminders in `templates/operator-card.md` (`USING.md`) guiding developers on how to route assistant corrections into persistent memory layers instead of losing them in chat sessions.
+
+### Changed
+- **Skill Description Diet (0006):** Narrowed YAML frontmatter `description:` across 10 skills (`git-safety`, `research-audit`, `repo-grounded-change`, `staged-execution`, `premortem`, `backend-api`, `frontend-engineering`, `design-system`, `data-quality`, `security-hardening`) to eliminate competing L0 routing triggers and establish `implementation` as the primary code-modification skill.
+- **Task Contract Output Diet (0007):** Replaced static residual risk reporting in all 6 IDE adapters (`codex`, `claude-code`, `cursor`, `github-copilot`, `gemini`, `generic-agents-md`) with conditional output: residual risks are reported only when a permission gate fired or changes involve migrations, dependencies, auth, breaking contracts, or destructive actions.
+- **Prompt-Trust Startup Integrity Alignment (0005):** Synchronized `protocols/prompt-trust.md` with adapter doctor-skipping policy, requiring diagnostic checks only on unknown repository trust, after installation/update, or during health triage.
+- **Front-Door Plan Containment (0001):** Standardized all installation and update plan paths across public documentation to `$HOME/.lizard-agent-layer/.tmp/...`, preventing SafeFs containment conflicts when commands run from target repositories.
+- **Apply Option Binding Parity (0004):** Ensured `-AllowTargetReportWrite` and all bound intent flags are mirrored in generated Markdown `Apply:` blocks and tested in integration suites.
+- **Cursor Calorie Documentation (0007):** Documented Cursor rule opt-in configuration (`alwaysApply: false`) in `docs/adapter-matrix.md` to protect prompt calorie budgets.
+
 ## 1.5.1 - 2026-09-06
 
 ### Added
