@@ -63,6 +63,7 @@ function Invoke-TestPowerShell {
   try {
     $ErrorActionPreference = 'Continue'
     $output = & $hostPath @invokeArgs 2>&1 | Out-String
+    if ($output) { $output = $output -replace '\x1b\[[0-9;]*[a-zA-Z]', '' }
     $exitCode = [int]$LASTEXITCODE
   } finally {
     $ErrorActionPreference = $previousErrorAction

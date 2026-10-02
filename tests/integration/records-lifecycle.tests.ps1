@@ -36,7 +36,7 @@ function Invoke-Records {
   param([string]$Action, [string]$ReceiptId, [string]$PlanPath, [switch]$Apply, [string]$Sha256, [int]$FailAfterMutation = 0, [string[]]$Classes, [switch]$WithHold, [string]$SelectedExportRoot = $exportRoot)
   $arguments = @('-LayerRoot', $LayerRoot, '-TargetRoot', $target, '-Action', $Action, '-PolicyPath', $policyPath, '-PolicySha256', $policySha, '-AsOf', $asOf.ToString('o'))
   if (-not [string]::IsNullOrWhiteSpace($ReceiptId)) { $arguments += @('-ReceiptId', $ReceiptId) }
-  if (@($Classes).Count -gt 0) { $arguments += @('-Classes', ($Classes -join ',')) }
+  if ($PSBoundParameters.ContainsKey('Classes') -and @($Classes | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count -gt 0) { $arguments += @('-Classes', (($Classes | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -join ',')) }
   if (-not [string]::IsNullOrWhiteSpace($SelectedExportRoot)) { $arguments += @('-ExportRoot', $SelectedExportRoot) }
   if ($WithHold) { $arguments += @('-HoldEvidencePath', $script:holdPath, '-HoldTrustStorePath', $script:trust.trust_store_path, '-HoldTrustStoreSha256', $script:trust.trust_store_sha256, '-HoldChallengePath', $script:trust.challenge_path, '-HoldChallengeSha256', $script:trust.challenge_sha256) }
   if ($Apply) { $arguments += @('-Apply', '-ApprovedPlanPath', $PlanPath, '-ApprovedPlanSha256', $Sha256, '-HumanApproved') }

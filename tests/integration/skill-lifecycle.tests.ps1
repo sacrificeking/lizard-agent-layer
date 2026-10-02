@@ -57,7 +57,8 @@ try {
 
   $update = Invoke-ApprovedLifecycle -SelectedTarget $target -Action Update
   Assert-Equal 0 $update.apply.exit_code "Idempotent update must succeed. $($update.apply.output)"
-  Assert-True ($update.apply.output -match 'mutations\s*:\s*0' -or ($update.apply.output -match '\bmutations\b' -and $update.apply.output -match '\b0\b')) "Idempotent update must commit zero target mutations. Output: $($update.apply.output)"
+  $cleanOutput = if ($update.apply.output) { $update.apply.output -replace '\x1b\[[0-9;]*[a-zA-Z]', '' } else { '' }
+  Assert-True ($cleanOutput -match 'mutations\s*:\s*0' -or ($cleanOutput -match '\bmutations\b' -and ($cleanOutput -match ':\s*0' -or $cleanOutput -match '\b0\b'))) "Idempotent update must commit zero target mutations. Output: $($update.apply.output)"
 
   $installedInstructions = Join-Path $packageRoot 'SKILL.md'
   $originalInstructionBytes = Get-SafeBytes -AuthorizedRoot $target -Path $installedInstructions

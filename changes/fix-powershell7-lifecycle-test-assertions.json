@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "fix-powershell7-lifecycle-test-assertions",
+  "date": "2026-10-02",
+  "summary": "Strip ANSI escape sequences from test output and safely bind optional Classes parameter in records-lifecycle tests.",
+  "changed_paths": [
+    "tests/TestHelpers.psm1",
+    "tests/integration/records-lifecycle.tests.ps1",
+    "tests/integration/skill-lifecycle.tests.ps1",
+    "changes/fix-powershell7-lifecycle-test-assertions.json"
+  ],
+  "decision_records": [
+    "docs/adr/0022-versioned-skill-package-lifecycle.md",
+    "docs/adr/0023-records-retention-and-legal-hold.md"
+  ],
+  "migration": {
+    "disposition": "backward-compatible",
+    "note": "Non-breaking test runner and assertion stability fixes for PowerShell 7 ANSI output and parameter validation."
+  },
+  "compatibility": {
+    "impact": "none",
+    "note": "Purely test harness and assertion robustness improvements with zero impact on production contracts or schemas."
+  }
+}
